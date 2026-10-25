@@ -213,11 +213,9 @@ export default function Home() {
     <div className="shell">
       <header className="topbar">
         <a className="brand" href="/" style={{ color: 'inherit', textDecoration: 'none' }} title="Back to overview">
-          <div className="brand-mark" />
-          <div>
-            <h1>TRACEON</h1>
-            <small>Case file · VoltRide VR-48 thermal events</small>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo" src="/brand/traceon-header.png" alt="Traceon" width={882} height={160} />
+          <small>Case file · VoltRide VR-48 thermal events</small>
         </a>
         {/* Desktop: these controls sit in the top bar (display: contents). Phones: a left drawer. */}
         <div className={`controls ${drawer ? 'open' : ''}`} role={drawer ? 'dialog' : undefined} aria-label="Controls">

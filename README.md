@@ -357,6 +357,8 @@ tests/                        stats, scenarios, proof, degrade, registry and end
 scripts/                      eval, nemotron-check, zetaris export, check and mock
 vendor/                       Meterless H-MEM and Markovian reference engines (Apache-2.0)
 public/samples/               the sample defect photo (SVG and PNG)
+public/brand/                 the Traceon lockup (footer) and header logo
+src/app/icon.png              favicon (apple-icon.png for iOS)
 docs/                         Zetaris setup; the original hackathon plan, archived
 ARCHITECTURE.md               the full design
 DEMO_SCRIPT.md                the two-minute demo

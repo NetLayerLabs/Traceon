@@ -51,7 +51,11 @@ a { color: var(--link); text-underline-offset: 2px; }
   border-bottom: 1px solid var(--ink); background: var(--sheet);
 }
 .brand { display: flex; align-items: baseline; gap: 12px; }
-.brand-mark { width: 14px; height: 14px; background: var(--signal); align-self: center; flex: none; }
+.brand { align-items: center; }
+.brand-logo { display: block; height: 26px; width: auto; flex: none; }
+.brand small { padding-left: 12px; border-left: 1px solid var(--rule-2); white-space: nowrap; }
+.topbar .btn { white-space: nowrap; }
+@media (max-width: 1560px) { .brand small { display: none; } }
 .brand h1 { font: 600 15px/1 var(--mono); letter-spacing: 0.18em; margin: 0; }
 .brand small { color: var(--muted); font: 12px/1.2 var(--sans); }
 .chips { display: flex; gap: 14px; flex-wrap: wrap; margin-left: auto; }
@@ -273,7 +277,7 @@ main.pane { background: var(--sheet); }
   .shell { height: auto; min-height: 100dvh; display: block; }
   .topbar { position: sticky; top: 0; z-index: 30; height: 56px; padding: 0 12px; gap: 10px; background: rgba(250, 248, 243, 0.94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   .brand small { display: none; }
-  .brand h1 { font-size: 14px; }
+  .brand-logo { height: 22px; }
   #run-btn { margin-left: auto; min-height: 40px; padding: 0 14px; font-size: 13px; white-space: nowrap; }
 
   .burger-btn { order: -1; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 4.5px; width: 40px; height: 40px; flex: none; border: 1px solid var(--ink); background: var(--sheet); border-radius: var(--radius); }

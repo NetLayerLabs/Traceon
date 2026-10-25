@@ -496,7 +496,9 @@ export default function Landing() {
 
       <footer className="lp-footer">
         <div className="lp-wrap">
-          <span>TRACEON · Open Agent Hackathon 2026</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="lp-footer-logo" src="/brand/traceon-lockup.png" alt="Traceon: evidence leads to action." width={1199} height={240} />
+          <span>Open Agent Hackathon 2026</span>
           <span>VoltRide and its data are fictional, for demonstration.</span>
         </div>
       </footer>

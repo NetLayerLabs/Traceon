@@ -30,9 +30,9 @@ export function LandingNav() {
   return (
     <nav className={`lp-nav ${open ? 'open' : ''}`}>
       <div className="lp-wrap">
-        <a className="lp-logo" href="/">
-          <span className="brand-mark" />
-          TRACEON
+        <a className="lp-logo" href="/" aria-label="Traceon home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/traceon-header.png" alt="Traceon" width={882} height={160} />
         </a>
         <div className="lp-links">
           {LINKS.map(([href, label]) => (
@@ -51,8 +51,8 @@ export function LandingNav() {
       <div className="lp-drawer" id="lp-drawer" role="dialog" aria-label="Menu" aria-hidden={!open}>
         <div className="lp-drawer-head">
           <span className="lp-logo">
-            <span className="brand-mark" />
-            TRACEON
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/traceon-header.png" alt="Traceon" width={882} height={160} />
           </span>
           <button className="lp-drawer-close" aria-label="Close menu" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1}>
             ×
