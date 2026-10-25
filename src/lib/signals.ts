@@ -1,7 +1,7 @@
 // Signal ingestion: live U.S. federal safety feeds, Bright Data web signals,
 // and internal warranty claims. Live feeds are never faked: if a feed is
 // unreachable it comes back empty with status 'unreachable'.
-import { getEnterpriseMesh, getSimulatedChatter, PRODUCT_NAME } from './enterpriseData';
+import { getEnterpriseMesh, getSimulatedChatter, PRODUCT_NAME, resolveScenario } from './enterpriseData';
 
 export type FeedStatus = 'live' | 'unreachable' | 'simulated';
 
@@ -172,9 +172,9 @@ export async function fetchWebSignals(scenarioId = 'reference'): Promise<FeedRes
 export function fetchWarrantyClaims(scenarioId = 'reference'): FeedResult {
   const { claims } = getEnterpriseMesh(scenarioId);
   return {
-    feed: 'Warranty claims (Salesforce silo)',
+    feed: resolveScenario(scenarioId).custom ? 'Uploaded failures' : 'Warranty claims (Salesforce silo)',
     status: 'simulated',
-    note: `${claims.length} thermal claims for ${PRODUCT_NAME} (simulated enterprise data)`,
+    note: resolveScenario(scenarioId).custom ? `${claims.length} failures in the uploaded data` : `${claims.length} thermal claims for ${PRODUCT_NAME} (simulated enterprise data)`,
     items: claims.map((c) => ({
       id: c.claim_id,
       source: 'warranty',
@@ -200,6 +200,8 @@ export function symptomTags(text: string): string[] {
 }
 
 export async function fetchAllFeeds(scenarioId = 'reference'): Promise<FeedResult[]> {
+  // Uploaded data is someone else's product: the e-bike federal context does not apply.
+  if (resolveScenario(scenarioId).custom) return [fetchWarrantyClaims(scenarioId)];
   const [cpsc, fda, nhtsa, web] = await Promise.all([
     fetchCpscEbikeRecalls(),
     fetchOpenFdaBatteryEvents(),

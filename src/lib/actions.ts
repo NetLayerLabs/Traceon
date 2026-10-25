@@ -28,7 +28,7 @@ export async function executeRemediation(req: RemediationRequest) {
   const scenarioId = req.scenario || 'reference';
   const mesh = getEnterpriseMesh(scenarioId);
   for (const c of req.causes) {
-    if (!ACTIONABLE.has(c.column)) throw new Error(`Column ${c.column} is not actionable`);
+    if (!ACTIONABLE.has(c.column) && !(mesh.custom && /^f_[a-z0-9_]+$/.test(c.column))) throw new Error(`Column ${c.column} is not actionable`);
     if (!REMEDY[c.remedy]) throw new Error(`Unknown remedy ${c.remedy}`);
   }
   const quarantine = req.causes.filter((c) => c.remedy === 'QUARANTINE');

@@ -12,6 +12,7 @@
 //   - L-409 was shipped mostly to hot Sun Belt warehouses, so "heat exposure"
 //     and "Plant 2" look guilty on raw data. They are confounders.
 
+import { buildCustomMesh, getDataset } from './datasets';
 import { singleton } from './singleton';
 
 export const SKU = 'VR-48';
@@ -113,6 +114,21 @@ export interface Scenario {
   skewLot?: string;
   /** Firmware version rolled out first in the Sun Belt (heat confounder for firmware bugs). */
   skewFirmware?: string;
+  /** Investigate as of this date: only claims filed and units shipped by then exist. */
+  asOf?: string;
+  /** Planted causes are known (generated data), so the verdict can be scored. */
+  truthKnown: boolean;
+  /** Uploaded dataset rather than generated data. */
+  custom?: boolean;
+}
+
+/** A testable factor: one column in unit_fact and the hypothesis it stands for. */
+export interface DimensionSpec {
+  id: string;
+  column: string;
+  title: string;
+  claim: string;
+  silo: string;
 }
 
 export { SCENARIO_OPTIONS } from './scenarioOptions';
@@ -124,20 +140,37 @@ const REFERENCE_LOT = 'L-409';
 const LOT_IDS = Array.from({ length: 60 }, (_, i) => `L-${401 + i}`);
 
 export function resolveScenario(id: string | undefined | null): Scenario {
-  const sid = id || 'reference';
+  const full = id || 'reference';
+  const m = full.match(/^(.+?)(?:@(\d{4}-\d{2}-\d{2}))?$/);
+  const base = m?.[1] ?? full;
+  const asOf = m?.[2];
+  if (asOf && (Number.isNaN(Date.parse(asOf)) || asOf > AS_OF)) throw new Error(`Invalid as-of date "${asOf}"`);
+  let s: Scenario;
+  if (/^custom-[a-f0-9]{12}$/.test(base)) {
+    const ds = getDataset(base);
+    if (!ds) throw new Error(`Unknown dataset "${base}"`);
+    s = { id: base, label: ds.name, blurb: `Uploaded data: ${ds.rows.length.toLocaleString('en-US')} units, ${ds.mapping.factors.length} factors`, hidden: false, causes: [], baselineRate: 0, truthKnown: false, custom: true };
+  } else {
+    s = resolveBaseScenario(base);
+  }
+  if (!asOf) return s;
+  return { ...s, id: `${s.id}@${asOf}`, label: `${s.label} (as of ${asOf})`, asOf };
+}
+
+function resolveBaseScenario(sid: string): Scenario {
   const batchCause = (group: string, rate = 0.09): PlantedCause => ({ column: 'cell_batch', group, rate, flat: true, symptom: 'connector' });
   const fwCause = (group: string, rate: number): PlantedCause => ({ column: 'firmware', group, rate, flat: false, symptom: 'charging' });
   if (sid === 'reference') {
-    return { id: sid, label: SCENARIO_OPTIONS[0].label, blurb: SCENARIO_OPTIONS[0].blurb, hidden: false, causes: [batchCause(REFERENCE_BATCH)], baselineRate: 0.00007, skewLot: REFERENCE_LOT };
+    return { id: sid, label: SCENARIO_OPTIONS[0].label, blurb: SCENARIO_OPTIONS[0].blurb, hidden: false, causes: [batchCause(REFERENCE_BATCH)], baselineRate: 0.00007, skewLot: REFERENCE_LOT, truthKnown: true };
   }
   if (sid === 'firmware') {
-    return { id: sid, label: SCENARIO_OPTIONS[1].label, blurb: SCENARIO_OPTIONS[1].blurb, hidden: false, causes: [fwCause('v3.4', 0.0018)], baselineRate: 0.00007, skewFirmware: 'v3.4' };
+    return { id: sid, label: SCENARIO_OPTIONS[1].label, blurb: SCENARIO_OPTIONS[1].blurb, hidden: false, causes: [fwCause('v3.4', 0.0018)], baselineRate: 0.00007, skewFirmware: 'v3.4', truthKnown: true };
   }
   if (sid === 'two-causes') {
-    return { id: sid, label: SCENARIO_OPTIONS[2].label, blurb: SCENARIO_OPTIONS[2].blurb, hidden: false, causes: [batchCause(REFERENCE_BATCH), fwCause('v3.4', 0.0014)], baselineRate: 0.00007, skewLot: REFERENCE_LOT };
+    return { id: sid, label: SCENARIO_OPTIONS[2].label, blurb: SCENARIO_OPTIONS[2].blurb, hidden: false, causes: [batchCause(REFERENCE_BATCH), fwCause('v3.4', 0.0014)], baselineRate: 0.00007, skewLot: REFERENCE_LOT, truthKnown: true };
   }
   if (sid === 'noise') {
-    return { id: sid, label: SCENARIO_OPTIONS[3].label, blurb: SCENARIO_OPTIONS[3].blurb, hidden: false, causes: [], baselineRate: 0.0006 };
+    return { id: sid, label: SCENARIO_OPTIONS[3].label, blurb: SCENARIO_OPTIONS[3].blurb, hidden: false, causes: [], baselineRate: 0.0006, truthKnown: true };
   }
   const m = sid.match(/^random-(\d{1,9})$/);
   if (!m) throw new Error(`Unknown scenario "${sid}"`);
@@ -146,7 +179,7 @@ export function resolveScenario(id: string | undefined | null): Scenario {
   const pick = <T,>(xs: readonly T[]) => xs[Math.floor(r() * xs.length)];
   const between = (a: number, b: number) => a + r() * (b - a);
   const kind = pick(['cell_batch', 'firmware', 'plant_id', 'carrier', 'bms_supplier', 'two', 'none'] as const);
-  const base = { id: sid, label: `Hidden scenario #${seed}`, hidden: true, baselineRate: 0.00007 };
+  const base = { id: sid, label: `Hidden scenario #${seed}`, hidden: true, baselineRate: 0.00007, truthKnown: true };
   const lotIdx = Math.floor(r() * 60);
   const batch = batchIdFor(lotIdx, supplierFor(sid, lotIdx));
   switch (kind) {
@@ -265,7 +298,16 @@ export interface EnterpriseMesh {
   units: UnitFact[];
   claims: WarrantyClaim[];
   warehouses: Warehouse[];
+  /** The date the data runs to. */
+  asOf: string;
+  /** Factors to test; generated data uses the seven built-in dimensions. */
+  dimensions?: DimensionSpec[];
+  custom?: boolean;
+  /** Which optional analyses the data supports. */
+  capabilities: { dates: boolean; symptoms: boolean; daysInField: boolean; warehouses: boolean; lineage: boolean };
 }
+
+const FULL_CAPABILITIES = { dates: true, symptoms: true, daysInField: true, warehouses: true, lineage: true };
 
 // Each mesh is ~180k rows; keep a small cache.
 const cache = singleton('meshes', () => new Map<string, EnterpriseMesh>());
@@ -275,10 +317,33 @@ export function getEnterpriseMesh(scenarioId: string = 'reference'): EnterpriseM
   const scenario = resolveScenario(scenarioId);
   const hit = cache.get(scenario.id);
   if (hit) return hit;
-  const mesh = generate(scenario);
+  let mesh: EnterpriseMesh;
+  if (scenario.asOf) {
+    // A cutoff view of the full scenario: what was knowable on that date.
+    const baseId = scenario.id.slice(0, scenario.id.indexOf('@'));
+    mesh = cutoff(getEnterpriseMesh(baseId), scenario);
+  } else if (scenario.custom) {
+    mesh = buildCustomMesh(getDataset(scenario.id)!, scenario);
+  } else {
+    mesh = generate(scenario);
+  }
   cache.set(scenario.id, mesh);
-  while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!);
+  while (cache.size > CACHE_MAX + 2) cache.delete(cache.keys().next().value!);
   return mesh;
+}
+
+/** Only units shipped and claims filed by the cutoff exist; time in field is recomputed. */
+function cutoff(base: EnterpriseMesh, scenario: Scenario): EnterpriseMesh {
+  const date = scenario.asOf!;
+  const end = Date.parse(date);
+  const claims = base.claims.filter((c) => c.filed_date <= date);
+  const failedSerials = new Set(claims.map((c) => c.serial));
+  const units = base.scenario.custom
+    ? base.units.map((u) => ({ ...u, failed: failedSerials.has(u.serial) ? 1 : 0 }))
+    : base.units
+        .filter((u) => u.ship_date <= date)
+        .map((u) => ({ ...u, days_in_field: Math.max(0, Math.round((end - Date.parse(u.ship_date)) / DAY)), failed: failedSerials.has(u.serial) ? 1 : 0 }));
+  return { ...base, scenario, units, claims, asOf: date };
 }
 
 function generate(scenario: Scenario): EnterpriseMesh {
@@ -406,7 +471,7 @@ function generate(scenario: Scenario): EnterpriseMesh {
   }
 
   claims.sort((a, b) => a.filed_date.localeCompare(b.filed_date) || a.claim_id.localeCompare(b.claim_id));
-  return { scenario, lots, bom, units, claims, warehouses: WAREHOUSES };
+  return { scenario, lots, bom, units, claims, warehouses: WAREHOUSES, asOf: AS_OF, capabilities: FULL_CAPABILITIES };
 }
 
 // Simulated public chatter (stand-in for Bright Data review/forum scraping when
@@ -435,6 +500,12 @@ const REFERENCE_CHATTER: ChatterPost[] = [
 ];
 
 export function getSimulatedChatter(scenarioId: string = 'reference'): ChatterPost[] {
+  const sc = resolveScenario(scenarioId);
+  if (sc.custom) return [];
+  if (sc.asOf) {
+    const base = sc.id.slice(0, sc.id.indexOf('@'));
+    return getSimulatedChatter(base).filter((p) => p.date <= sc.asOf!);
+  }
   if ((scenarioId || 'reference') === 'reference') return REFERENCE_CHATTER;
   // Other scenarios: paraphrase a spread of real claims into anonymous posts.
   const { claims } = getEnterpriseMesh(scenarioId);
