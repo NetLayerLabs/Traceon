@@ -13,6 +13,7 @@ const hang = http.createServer(() => {});
 await new Promise<void>((r) => hang.listen(0, '127.0.0.1', r));
 const port = (hang.address() as { port: number }).port;
 process.env.NVIDIA_API_KEY = 'nvapi-test-key';
+process.env.NEMOTRON_CACHE = 'off'; // a warm reply cache would answer without the (dead) model
 process.env.NEMOTRON_TIMEOUT_MS = '500';
 process.env.NVIDIA_NIM_BASE_URL = `http://127.0.0.1:${port}/v1`;
 process.env.ZETARIS_API_URL = 'http://127.0.0.1:9'; // nothing listens on port 9
