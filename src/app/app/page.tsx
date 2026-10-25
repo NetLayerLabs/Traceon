@@ -63,6 +63,9 @@ export default function Home() {
   const [scenarioKind, setScenarioKind] = useState('reference');
   const [seed, setSeed] = useState<number>(() => newSeed());
   const [notice, setNotice] = useState<string | null>(null);
+  // Phones and tablets (<= 900px): one pane at a time plus a controls drawer.
+  const [mobileTab, setMobileTab] = useState<'intake' | 'investigation' | 'disposition'>('investigation');
+  const [drawer, setDrawer] = useState(false);
   const received = useRef(0); // events applied for the current run (for stream recovery)
   const scenarioId = scenarioKind === 'random' ? `random-${seed}` : scenarioKind;
 
@@ -126,6 +129,8 @@ export default function Home() {
     setNotice(null);
     received.current = 0;
     dispatch({ type: 'start' });
+    setMobileTab('investigation');
+    setDrawer(false);
     setRunKey((k) => k + 1);
     const v = vision ?? (await analyze());
     let runId: string | null = null;
@@ -192,6 +197,13 @@ export default function Home() {
     if (params.has('autorun')) setTimeout(() => document.getElementById('run-btn')?.click(), 50);
   }, []);
 
+  useEffect(() => {
+    if (!drawer) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrawer(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawer]);
+
   const modal = selection ? renderSelection(selection, state) : null;
   const stepIdx = STEPS.findIndex((s) => s.id === state.phase);
   const started = state.running || state.doneMs !== null || state.hypotheses.length > 0;
@@ -207,50 +219,94 @@ export default function Home() {
             <small>Case file · VoltRide VR-48 thermal events</small>
           </div>
         </a>
-        <div className="chips">
-          <span className={`chip ${status?.nemotron.live ? 'live' : 'sim'}`} title={status?.nemotron.model}>
-            <span className="dot" />
-            Nemotron {status?.nemotron.live ? 'live' : 'offline'}
-          </span>
-          <span
-            className={`chip ${status?.zetaris.mode === 'ZETARIS_CLOUD' && status.zetaris.parity?.ok ? 'live' : 'sim'}`}
-            title={status?.zetaris.parity ? status.zetaris.parity.probes.map((p) => `${p.ok ? 'PASS' : 'FAIL'} ${p.sql}${p.error ? ` (${p.error})` : ''}`).join('\n') : 'Queries run on the local federated mirror'}
-          >
-            <span className="dot" />
-            Zetaris {status?.zetaris.mode === 'ZETARIS_CLOUD' ? `cloud · ${status.zetaris.parity?.ok ? 'parity ok' : 'parity failed'}` : 'local mirror'}
-          </span>
-          <span className="chip live">
-            <span className="dot" />
-            H-MEM {status?.meterless.memories ?? 0} memories
-          </span>
-          <span className={`chip ${status?.brightdata.live ? 'live' : 'sim'}`}>
-            <span className="dot" />
-            Bright Data {status?.brightdata.live ? 'live' : 'simulated'}
-          </span>
-        </div>
-        <div className="scenario-pick" title={option.blurb}>
-          <select value={scenarioKind} onChange={(e) => setScenarioKind(e.target.value)} disabled={state.running} aria-label="Scenario">
-            {SCENARIO_OPTIONS.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          {scenarioKind === 'random' && (
-            <button className="btn ghost small" onClick={() => setSeed(newSeed())} disabled={state.running} title="Draw a new hidden scenario">
-              ↻ #{seed}
+        {/* Desktop: these controls sit in the top bar (display: contents). Phones: a left drawer. */}
+        <div className={`controls ${drawer ? 'open' : ''}`} role={drawer ? 'dialog' : undefined} aria-label="Controls">
+          <div className="drawer-head">
+            <span>Controls</span>
+            <button className="btn small" onClick={() => setDrawer(false)}>
+              Close
             </button>
-          )}
+          </div>
+          <div className="scenario-pick" title={option.blurb}>
+            <span className="drawer-label">Scenario</span>
+            <select
+              value={scenarioKind}
+              onChange={(e) => {
+                setScenarioKind(e.target.value);
+                setDrawer(false);
+              }}
+              disabled={state.running}
+              aria-label="Scenario"
+            >
+              {SCENARIO_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            {scenarioKind === 'random' && (
+              <button className="btn ghost small" onClick={() => setSeed(newSeed())} disabled={state.running} title="Draw a new hidden scenario">
+                ↻ #{seed}
+              </button>
+            )}
+          </div>
+          <div className="chips">
+            <span className="drawer-label">Integrations</span>
+            <span className={`chip ${status?.nemotron.live ? 'live' : 'sim'}`} title={status?.nemotron.model}>
+              <span className="dot" />
+              Nemotron {status?.nemotron.live ? 'live' : 'offline'}
+            </span>
+            <span
+              className={`chip ${status?.zetaris.mode === 'ZETARIS_CLOUD' && status.zetaris.parity?.ok ? 'live' : 'sim'}`}
+              title={status?.zetaris.parity ? status.zetaris.parity.probes.map((p) => `${p.ok ? 'PASS' : 'FAIL'} ${p.sql}${p.error ? ` (${p.error})` : ''}`).join('\n') : 'Queries run on the local federated mirror'}
+            >
+              <span className="dot" />
+              Zetaris {status?.zetaris.mode === 'ZETARIS_CLOUD' ? `cloud · ${status.zetaris.parity?.ok ? 'parity ok' : 'parity failed'}` : 'local mirror'}
+            </span>
+            <span className="chip live">
+              <span className="dot" />
+              H-MEM {status?.meterless.memories ?? 0} memories
+            </span>
+            <span className={`chip ${status?.brightdata.live ? 'live' : 'sim'}`}>
+              <span className="dot" />
+              Bright Data {status?.brightdata.live ? 'live' : 'simulated'}
+            </span>
+          </div>
+          <button className="btn ghost small" onClick={reset} disabled={state.running} title="Clear memory and ERP holds">
+            Reset demo
+          </button>
+          <a className="btn ghost small drawer-only" href="/">
+            Overview
+          </a>
         </div>
-        <button className="btn ghost small" onClick={reset} disabled={state.running} title="Clear memory and ERP holds">
-          Reset demo
+        <button className={`burger-btn ${drawer ? 'open' : ''}`} aria-expanded={drawer} aria-label="Toggle controls" onClick={() => setDrawer((d) => !d)}>
+          <span />
+          <span />
+          <span />
         </button>
         <button id="run-btn" className="btn primary" onClick={run} disabled={state.running || visionBusy}>
           {state.running ? 'Investigating…' : started ? 'Re-run investigation' : 'Run investigation'}
         </button>
       </header>
+      <button className={`drawer-backdrop ${drawer ? 'show' : ''}`} aria-label="Close controls" tabIndex={drawer ? 0 : -1} onClick={() => setDrawer(false)} />
 
-      <div className="panes">
+      {/* Phones: the three panes are the app's primary tabs. */}
+      <nav className="mtabs" aria-label="Case file sections">
+        {(
+          [
+            ['intake', 'Intake'],
+            ['investigation', 'Investigation'],
+            ['disposition', 'Disposition'],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} className={mobileTab === id ? 'on' : ''} aria-pressed={mobileTab === id} onClick={() => setMobileTab(id)}>
+            {label}
+            {id === 'disposition' && state.gate && <i className={state.gate.pass ? 'pass' : 'block'} aria-label={state.gate.pass ? 'action allowed' : 'action blocked'} />}
+          </button>
+        ))}
+      </nav>
+
+      <div className="panes" data-tab={mobileTab}>
         <SignalPane feeds={feeds} state={state} photo={photo} vision={vision} visionBusy={visionBusy} onPhoto={(d) => { setPhoto(d); setVision(null); }} onAnalyze={analyze} />
 
         <main className="pane">
