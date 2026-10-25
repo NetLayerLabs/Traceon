@@ -1,133 +1,385 @@
 # Traceon
 
-**An agent that finds the root cause of a product-safety defect, proves why every other explanation is wrong, and only then lets a human quarantine the exact affected units.**
+**Traceon is an AI investigator for product-safety teams: it finds the root cause of a defect, proves why every other explanation is wrong, and only then lets a named person quarantine the exact units at risk.**
 
-Open Agent Hackathon 2026 · Track 02, *The Agent That Can Explain Why* · NVIDIA Nemotron · Zetaris · Meterless · Bright Data
+It pulls scattered warning signs (warranty claims, reviews, federal safety reports) into one case, tests seven suspects against 180,000 units of factory data with federated SQL, separates real causes from look-alikes with stratified statistics, and hashes every query into a replayable proof. Everything is judged by one test: **does it name exactly the hidden cause, and act only when there is one?** On 250 held-out hidden scenarios it did, 250 times.
+
+Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: `<LIVE_URL>` · Demo: `<VIDEO_URL>` · Code: [github.com/mrnetwork0001/Traceon](https://github.com/mrnetwork0001/Traceon) (private, access on request)
+
+**Judges, start here:** open `/app?autorun=1` for a full investigation in about 30 seconds with no login, then `/app?scenario=random&autorun=1` to watch it solve a cause it has never seen. The design is in **[ARCHITECTURE.md](ARCHITECTURE.md)** and the two-minute walkthrough in **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)**.
 
 ---
 
-## The problem
+## Five things to try, no login or key needed
 
-Before a battery recall makes the news, the warning signs are already there, scattered across warranty claims, 1-star reviews, forum posts and federal safety databases. Quality teams spend weeks joining spreadsheets. When they finally act, they often recall everything because they can't prove which lot is bad.
+| Feature | What it is | Try it |
+| --- | --- | --- |
+| **Investigate** | 131 weak signals from six cities converge in Meterless H-MEM (hierarchical memory) into one incident cluster. Seven suspects (firmware, carrier, Sun Belt heat, plant, battery-management board, cell supplier, cell batch) are each tested with a federated SQL query and a chi-square test. The verdict: cell batch `CB-B-0917` in lot L-409, failing at 841 per 10,000 units against 0.5 elsewhere, a relative risk of 1,668×. | `/app?autorun=1` |
+| **Explain why** | Heat, the plant, the BMS board and the cell supplier all look guilty on raw data. A Cochran–Mantel–Haenszel test (a test that holds a second factor fixed) shows each effect vanishes once the batch is held fixed: heat goes from p = 1.6e-6 to p = 0.23. Every node in the proof graph opens its exhibit: the SQL, where it ran, the rows and the proof hash. *In our live runs, Nemotron's first guess was one of these look-alikes. The statistics overruled it, and the agent trace says so.* | Select any node in Fig. 1, or flip **Hold cell batch fixed** on `/` |
+| **Blind test** | Pick a hidden scenario: a firmware bug, a bad plant, transit damage, faulty BMS boards, two causes at once, or no defect. The agent investigates without the answer; the planted truth is revealed only after its verdict. With no defect, it finds nothing and **refuses to recall**. | `/app?scenario=random&autorun=1` · `/app?scenario=noise&autorun=1` · `/app?scenario=two-causes&autorun=1` |
+| **Act** | A seven-criterion evidence gate must pass before any action appears. A named approver then places an ERP hold on exactly 1,380 serials (SN-88400 to SN-89779) instead of recalling 180,000, saving $4,465,500 at $25 a unit, and Traceon drafts a stop-sale notice and a CPSC Section 15(b) report draft. Firmware causes get an over-the-air rollback instead of a quarantine. | Disposition pane: type a name, **Execute remediation** |
+| **Verify** | **Replay & verify** re-runs every SQL query in the case and rebuilds the SHA-256 chain. A tampered query, reordered evidence or the wrong scenario all fail. | Disposition pane: **Replay & verify**, or **Export proof bundle** |
 
-## What Traceon does
+### More to explore
 
-In about five seconds, on 180,000 units of factory data:
+| Feature | What it is | Where |
+| --- | --- | --- |
+| **Red team** | Nemotron Lightning attacks the verdict. Each objection is mapped to a deterministic check (confounding, geography, exposure time, chance, granularity, subgroups) and answered by it, or logged as an open question when the data cannot test it. | Investigation pane, Red team |
+| **Early-warning replay** | The claim history replayed day by day: the batch became statistically detectable on Oct 10 after 3 claims, and 113 later incidents came after that point. | Investigation pane, Early-warning replay |
+| **Subgroup table** | The cause's relative risk re-measured inside every firmware, carrier, climate, BMS and warehouse subgroup, shaded by effect size. | Investigation pane |
+| **Defect photo** | Nemotron Super VL inspects a customer photo, names the failure mode and component, and draws a bounding box. Upload your own. | Intake pane, Visual evidence |
+| **Fact-checked explanation** | The written explanation is checked figure by figure against the evidence; the badge reads, for example, "16/16 figures verified". | Investigation pane, Explain why |
+| **Memory across sessions** | After an approval, the finding becomes long-term H-MEM memory. The next investigation recalls it. | Intake pane, H-MEM convergence |
+| **Health check** | Query engine, storage, live feeds, models and any active run. | `/api/health` |
 
-1. **Converges weak signals.** Warranty claims, web chatter and live federal feeds go into Meterless H-MEM, which pulls 131 scattered reports into one thermal-connector cluster.
-2. **Tests every suspect.** Nemotron ranks seven hypotheses (firmware, carrier, heat, plant, BMS board, cell supplier, cell batch). Each is tested with SQL across the federated silos and a chi-square test.
-3. **Unmasks confounders.** Four suspects look guilty on raw data. Cochran–Mantel–Haenszel tests show their effect vanishes once the real cause is held fixed. Example: Sun Belt heat looks guilty only because the bad batch was shipped mostly to Phoenix and Austin.
-4. **Attacks its own verdict.** A Nemotron red-team pass raises objections. Each one is answered by a deterministic test, not by argument.
-5. **Refuses to act on weak evidence.** A 7-criterion evidence gate must pass before the quarantine button even appears.
-6. **Acts surgically, with a human in the loop.** It places an ERP hold on 1,380 serials instead of recalling 180,000, saving $4.47M. It also drafts the stop-sale notice and a CPSC Section 15(b) report.
-7. **Proves everything.** Every query and model output is hashed into a chain. "Replay & verify" re-executes all 45 SQL queries and checks every hash.
+The landing page (`/`) reads like an investigation report, with an animated proof figure, the interactive confounder experiment and the blind-test results. The app (`/app`) is a three-pane case file: **Intake**, **Investigation**, **Disposition**. The top bar shows which integrations are live, a scenario picker and **Reset demo**. On phones and tablets (900 px and below) the panes become tabs under a sticky top bar, the controls move into a left drawer, the proof graph scrolls sideways, and exhibits open as a full-screen sheet. There is no login.
 
-## Not scripted: blind scenarios
+## Why the statistics, not the model, have to decide
 
-The obvious objection is "you planted the defect, so of course it finds it." So the same agent runs blind on different hidden causes. Pick one in the app's scenario menu:
+A language model can sound certain about a correlation. A recall decision has to survive a regulator, a supplier and a lawyer.
 
-| Scenario | What's planted | What the agent must do |
-|---|---|---|
-| Reference | Bad cell batch, hidden behind heat and plant confounders | Find the batch, unmask 4 confounders |
-| Firmware bug | Firmware v3.4 overcharges; rolled out first in the Sun Belt | Confirm firmware, clear the batch, prescribe an OTA rollback |
-| Two causes | Bad batch **and** firmware bug at once | Find both, with a different remedy for each |
-| No defect | Complaints, but only baseline noise | Find nothing and **block** any recall |
-| Random | Hidden cause drawn from a seed (batch, firmware, plant, carrier, BMS, two causes or none) | Investigate blind; the truth is revealed only after the verdict |
-
-**Blind accuracy** (`npm run eval`): **304/304** correct on the four named scenarios plus random seeds 1–300, including **250/250 on held-out seeds 151–400** that were never used while tuning the method. "Correct" means exactly the planted causes were found, and action was allowed only if a cause exists. Zero runs acted on a wrong cause.
-
-Building this exposed three real methodology flaws, which are now fixed:
-- **Sparse tables.** The chi-square approximation overstates significance at low counts, for example a few baseline failures spread over 60 batches. Such tables now get a seeded Monte Carlo exact test.
-- **Post-hoc selection.** Picking the worst of 60 groups now pays a multiplicity correction.
-- **Two causes contaminating each other.** Each cause is now measured with the other causes' units excluded. A residual screen also checks that nothing unexplained remains.
-
-## What makes it different
-
-| | |
-|---|---|
-| **The LLM never makes up a statistic** | Nemotron plans, red-teams, inspects photos and explains. Every p-value, rate and dollar figure is computed in code. |
-| **Confounder detection** | The agent doesn't stop at "correlated". It shows which suspects are explained away by the real cause, and by how much. |
-| **Hallucination guard on the explanation** | Every number in the written explanation is checked against the evidence. Unverified figures are flagged in red. |
-| **Evidence gate** | The agent blocks its own action unless significance, confounder adjustment, subgroup consistency, no unexplained residual, a consistent failure signature, the red team and scope all pass. With no real cause, it refuses to recall. |
-| **Early-warning replay** | Replays the claim history day by day. The defect was statistically detectable on Oct 10 after 3 claims, and 113 later incidents were preventable. |
-| **Reproducible proof** | A SHA-256 hash chain covers every evidence item. Anyone can re-run the queries and get the same root hash. |
-| **Memory across sessions** | Once a human approves the quarantine, the finding becomes long-term H-MEM memory. The next investigation recalls it. |
-
-## Real vs simulated (stated plainly)
-
-| Component | Status |
-|---|---|
-| CPSC, openFDA MAUDE, NHTSA feeds | **Live** public APIs, no key needed. Shown as context (e-bike recall base rates, adjacent lithium-battery reports). |
-| Factory, BOM, warehouse and warranty data | **Simulated**: a fictional company (VoltRide) and SKU, generated deterministically with a planted defect. The agent is never told the answer. |
-| Web reviews and forums | **Simulated** unless `BRIGHTDATA_API_TOKEN` is set, in which case Reddit is fetched live through the Bright Data Web Unlocker. |
-| Nemotron | **Live** with `NVIDIA_API_KEY` (tested end to end): **Nemotron 3.5 Super VL** for vision and the explanation (thinking on, raced against a fast answer so latency spikes never stall the demo), **Nemotron 3.5 Lightning** for planning and the red team. Transient NIM errors are retried; replies are cached in `.nim-cache`. `npm run nemotron:check` runs a live check. Without a key, labeled templates are used and the statistics are identical. |
-| Zetaris | Implements the official Zetaris SaaS SQL API (start / page / close, per the published OpenAPI spec). It runs on your Zetaris instance when configured, with a hash-parity check against the demo data. Otherwise it uses a local federated SQL mirror (alasql). Every query is labeled with where it ran. See [docs/ZETARIS_SETUP.md](docs/ZETARIS_SETUP.md). |
-| Meterless | **Real**: the official H-MEM and Markovian reference engines, vendored from `github.com/Meterless/Meterless`. |
-
-The UI labels every one of these states, so judges always know what they are looking at.
-
-## Run it
-
-```bash
-npm install
-cp .env.example .env.local   # optional: add NVIDIA_API_KEY etc.
-npm run dev                  # http://localhost:3000 (landing) · /app (the app)
-```
-
-- `http://localhost:3000/app?autorun=1` starts an investigation on load (useful for recording).
-- **Reset demo** (top bar) clears H-MEM memory and ERP holds.
-- `http://localhost:3000/app?scenario=random&autorun=1` runs a random hidden scenario (`reference`, `firmware`, `two-causes`, `noise` and `random` also work).
-- `npm test` runs the full suite (30 tests, about a minute). It includes an end-to-end run against a real production server.
-- `npm run eval -- 300` runs the blind accuracy benchmark.
-- `GET /api/health` reports the query engine, storage, feeds, models and any active run (200 when the core works, 503 when it doesn't).
-- `npm run zetaris:export` writes the silos as CSVs for Zetaris; `npm run zetaris:check` verifies the live connection and data parity; `npm run zetaris:mock` starts a spec-conformant test double.
-
-## Tested, not just demoed
-
-`npm test` covers:
-
-| Area | What's checked |
-|---|---|
-| Statistics | Chi-square tails (log space), k×2 independence, Cochran–Mantel–Haenszel and relative-risk CIs match **scipy 1.18 / statsmodels 0.15** reference values ([tests/fixtures](tests/fixtures/scipy-reference.json)); sparse tables use the exact test |
-| Reasoning | Reference, firmware, two-cause and noise scenarios, plus 40 random seeds |
-| Proof | Every query replays to the same hash; a tampered query, reordered or dropped evidence, or the wrong scenario all fail verification |
-| Actions | ERP hold covers exactly 1,380 serials, is idempotent, rejects non-actionable columns and quoted-SQL injection, and is recalled by the next run |
-| Degradation | A hanging Nemotron times out and falls back to templates. Unreachable feeds are reported, never faked. Zetaris down falls back to the mirror and records why. The verdict is unchanged in all three cases |
-| Hardening | One run at a time (409, with the option to attach); a watchdog ends hung runs and frees the lock; a dropped stream is recovered from the server's event log; bad input gets 4xx |
+- **No adjustment, no explanation.** Raw data blames five suspects. Only `cochranMantelHaenszel()` in `src/lib/stats.ts`, applied pairwise in `src/lib/investigation.ts`, separates the one real cause from four look-alikes.
+- **No deterministic statistics, no trust.** Every p-value, rate and dollar figure is computed in `src/lib/stats.ts` and checked against scipy and statsmodels in `tests/stats.test.mts`. The model only plans, objects and writes, and `numberGuard()` checks its prose.
+- **No proof chain, no audit.** Each query result is hashed over canonical rows and chained (`ProofChain` in `src/lib/investigation.ts`); `verifyLedger()` in `src/lib/actions.ts` replays it.
+- **No gate, no action.** The gate's seven criteria are computed in `runInvestigation()`, and the server refuses a remediation for any run whose gate failed or for any cause it did not confirm (`authorizeRemediation()` in `src/lib/runRegistry.ts`).
+- **No blind tests, no claim of generality.** `scripts/eval.mts` scores the agent on hidden scenarios it was never told about.
 
 ## Architecture
 
-```
- Signals                     Context (Meterless)            Reasoning                     Action
- ─────────────────────       ─────────────────────          ─────────────────────         ─────────────────────
- Warranty claims (silo) ┐    H-MEM: durable memory,         Nemotron: rank hypotheses,    Evidence gate (7 checks)
- Bright Data web        ├──> hybrid retrieval, trust  ──>   red-team, vision, explain  ─> Human approval
- CPSC / openFDA / NHTSA ┘    ledger, approved insights      Stats engine: chi-square,     ERP hold (1,380 serials)
-                             Markovian: bounded chain       CMH, RR, Bonferroni           Stop-sale + CPSC 15(b)
-                             Lot world model                Zetaris: federated SQL        H-MEM long-term insight
-                                                                     │
-                                                    Proof chain: SHA-256 over every query + model output
+Traceon has five layers in one Node.js process:
+- **Signals:** warranty claims, reviews and forums, and live federal feeds.
+- **Context:** Meterless H-MEM stores and converges signals; the Markovian engine bounds the investigation chain.
+- **Reasoning:** Nemotron plans, red-teams, inspects photos and explains; the statistics engine decides.
+- **Data:** federated SQL through the Zetaris SQL API, with a local mirror as a labelled fallback.
+- **Action:** the evidence gate, the named approver, remediation and the proof chain.
+
+The full design, file by file, is in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
+### System overview
+
+```mermaid
+flowchart LR
+  SRC["Signal sources<br/>warranty · web · CPSC, FDA, NHTSA"] --> SIG["Ingest + H-MEM<br/>signals.ts · meterless.ts"]
+  SIG --> AG["Investigation agent<br/>investigation.ts + stats.ts"]
+  AG --> GATE{"Evidence gate<br/>7 criteria"}
+  GATE -- "pass + named approver" --> ACT["Remediation<br/>actions.ts"]
+  GATE -- "blocked" --> MON["Monitor<br/>no recall"]
+  AG <-- "plan, red team, explain" --> NIM["NVIDIA NIM<br/>Nemotron 3.5"]
+  AG -- "SQL" --> ZET["Zetaris SQL API"]
+  AG -. "fallback" .-> MIR[("Local mirror<br/>alasql")]
+  AG -- "every result" --> PROOF["Proof chain<br/>SHA-256"]
+  SIG <--> DISK[(".meterless-data")]
+  ACT -- "ERP holds" --> MIR
+  ACT -- "approved insight" --> DISK
 ```
 
-| File | Role |
-|---|---|
-| [src/lib/investigation.ts](src/lib/investigation.ts) | The agent: screen → adjudicate confounders → robustness → scope → vision → red team → replay → gate → explain |
-| [src/lib/stats.ts](src/lib/stats.ts) | Chi-square, Cochran–Mantel–Haenszel, relative risk, log-space p-values |
-| [src/lib/zetaris.ts](src/lib/zetaris.ts) | Zetaris SQL API client (auth, paging, table mapping), canonical proof hashes, local mirror fallback, parity check |
-| [src/lib/meterless.ts](src/lib/meterless.ts) | H-MEM ingestion and convergence, lot world model, Markovian chain |
-| [src/lib/nemotron.ts](src/lib/nemotron.ts) | NIM client (`chat_template_kwargs.enable_thinking`), reasoning-trace capture |
-| [src/lib/vision.ts](src/lib/vision.ts) | Nemotron 3.5 Super VL defect-photo forensics with bounding box |
-| [src/lib/signals.ts](src/lib/signals.ts) | Live federal feeds and Bright Data |
-| [src/lib/actions.ts](src/lib/actions.ts) | Remediation per cause type (ERP hold, OTA rollback, inspection), notices, memory commit, ledger replay |
-| [src/lib/runRegistry.ts](src/lib/runRegistry.ts) | One-run lock, watchdog, event log for stream recovery and attach |
-| [src/lib/enterpriseData.ts](src/lib/enterpriseData.ts) | Deterministic simulated silos and scenarios (planted causes, hidden random seeds) |
+Signals flow left to right into the agent, which reaches out to Nemotron for language tasks and to Zetaris for data, falling back to the local mirror with the reason recorded. Every result lands in the proof chain. Only a passed gate and a named approver lead to action; a blocked gate means monitoring, not a recall.
+
+### Who holds which key
+
+```mermaid
+flowchart LR
+  B["Browser<br/>no keys"] -- "investigate, read, approve" --> API["Traceon API"]
+  API -- "NVIDIA_API_KEY" --> NIM["NVIDIA NIM"]
+  API -- "Zetaris token, SELECT only" --> ZET["Zetaris"]
+  API -- "Bright Data token" --> BD["Bright Data"]
+  APPR["Named approver"] -- "confirmed causes of a passed run" --> API
+  API -- "writes holds" --> MIR[("Local ERP hold table")]
+```
+
+| Key or role | Lives in | Can | Can never |
+| --- | --- | --- | --- |
+| `NVIDIA_API_KEY` | Server environment only | Call NIM chat completions for planning, red team, vision and the explanation | Reach the browser, produce a statistic, or trigger an action |
+| Zetaris token or login | Server environment only | Send `SELECT` queries through the SQL API | Write to Zetaris: the app sends no write statements; holds go to the local ERP table |
+| `BRIGHTDATA_API_TOKEN` | Server environment only | Fetch public review and forum pages | Reach the browser |
+| Named approver | Typed in the browser | Approve the confirmed causes of a completed run whose gate passed | Act on a blocked run, an unconfirmed cause or an unknown ledger root (403) |
+| Anyone with the URL | Browser | Run investigations, open exhibits, replay proofs, reset the demo | Start a second run while one is active (409) |
+
+### The investigation pipeline
+
+```mermaid
+flowchart TB
+  subgraph Gather["Gather"]
+    direction LR
+    A1["Ingest feeds"] --> A2["Converge in H-MEM"] --> A3["Plan<br/>Nemotron Lightning"]
+  end
+  subgraph Test["Test"]
+    direction LR
+    B1["Screen 7 hypotheses<br/>chi-square"] --> B2["Adjudicate<br/>CMH, every pair"] --> B3["Clean strength<br/>other causes excluded"]
+  end
+  subgraph Prove["Prove"]
+    direction LR
+    C1["Robustness<br/>5 stratifications"] --> C2["Scope + concordance<br/>BOM join"] --> C3["Residual screen"] --> C4["Red team"]
+  end
+  subgraph Decide["Decide"]
+    direction LR
+    D1["Early-warning replay"] --> D2["Evidence gate<br/>7 criteria"] --> D3["Explanation<br/>number guard"] --> D4["Reveal"]
+  end
+  Gather --> Test --> Prove --> Decide
+```
+
+The Bonferroni-corrected significance level is 0.01 divided by 7. A suspect survives only if it stays significant when every other suspect is held fixed, paying a multiplicity correction for being picked as the worst of its groups. Each surviving cause is then measured with the other causes' units excluded, so two real causes cannot inflate each other. The residual screen re-tests everything with the confirmed causes removed: if any structure remains, the gate blocks.
+
+### One investigation, end to end
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant B as Browser
+  participant R as Run registry
+  participant E as Agent
+  participant M as H-MEM
+  participant N as Nemotron
+  participant Z as Zetaris or mirror
+
+  B->>R: POST /api/investigate
+  R->>E: start, watchdog 240 s
+  E->>M: ingest and converge signals
+  E->>N: rank the 7 suspects
+  loop each suspect
+    E->>Z: GROUP BY query
+    Z-->>E: rows, hashed into the proof chain
+  end
+  E->>Z: CMH pairs, robustness, scope, residual
+  E->>N: red team, then explanation
+  Note over E: every figure in the explanation is checked
+  alt gate passes
+    E-->>B: action plan, gate allowed
+  else gate blocks
+    E-->>B: no action, monitor
+  end
+  E-->>B: ledger root, then reveal of the hidden truth
+```
+
+Events stream to the browser as they happen. If the stream drops, the browser catches up from the run's event log; if another run is active, it attaches to that run instead.
+
+### Acting on a verdict
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as Approver
+  participant API as /api/quarantine
+  participant R as Run registry
+  participant A as Remediation
+  participant H as ERP holds
+  participant M as H-MEM
+
+  U->>API: causes, name, ledger root
+  API->>R: authorizeRemediation
+  alt unknown root, blocked gate or unconfirmed cause
+    R-->>U: 403 with the reason
+  else confirmed causes of a passed run
+    API->>A: executeRemediation
+    A->>H: BLOCKED_STOCK for each matching serial
+    A->>A: OTA or inspection orders for other causes
+    A->>M: approved finding as long-term memory
+    A-->>U: hold id, notices, CPSC 15(b) draft
+  end
+```
+
+The hold id is a hash of the scenario, ledger root and causes, so approving twice reports "already in place" instead of duplicating 1,380 rows.
+
+### When the proof fails
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant V as Reviewer
+  participant API as /api/verify
+  participant Z as Zetaris or mirror
+
+  V->>API: evidence bundle and scenario
+  loop each evidence item
+    API->>Z: re-run the stored SQL
+    Z-->>API: rows
+    API->>API: canonical hash and chain step
+  end
+  alt all hashes and the root match
+    API-->>V: ok, root
+  else a query, its order or the scenario changed
+    API-->>V: mismatches by evidence id
+  end
+```
+
+`tests/proof.test.mts` checks four tamper cases: an edited query, swapped evidence, dropped evidence, and a ledger checked against the wrong scenario.
+
+### From clone to live integrations
+
+```mermaid
+flowchart TB
+  subgraph S1["Run it, no keys"]
+    direction LR
+    A["npm install"] --> B["npm run dev"] --> C["/app?autorun=1<br/>templates + mirror"]
+  end
+  subgraph S2["Live models"]
+    direction LR
+    D["NVIDIA_API_KEY"] --> E["npm run nemotron:check"]
+  end
+  subgraph S3["Federated data"]
+    direction LR
+    F["npm run zetaris:export"] --> G["upload CSVs<br/>to Zetaris"] --> H["npm run zetaris:check<br/>parity ok"]
+  end
+  S1 -- "then" --> S2 -- "then" --> S3
+```
+
+Each step is optional. Without keys every model step uses a labelled template and every query runs on the local mirror; the statistics, verdicts and proofs are identical.
+
+**A verifiable end-to-end example.** `npm test` runs the reference investigation and asserts the result: cell batch `CB-B-0917` confirmed; heat, plant, BMS board and cell supplier marked as confounders; firmware and carrier ruled out; 1,380 units affected; $4,465,500 saved; the evidence gate passed; and the hidden truth matched. It then replays the ledger and holds the 1,380 serials. See [test status](#test-status) for the latest run.
+
+## Safety
+
+- **The model never decides.** Nemotron plans the order of tests, raises objections and writes prose. Every statistic, every verdict and every gate criterion is computed in code, and `numberGuard()` flags any figure in the prose that is not in the evidence.
+- **The gate is enforced twice.** The UI shows the remediation control only after all seven criteria pass, and `/api/quarantine` refuses (403) any request whose ledger root does not belong to a completed run that passed, or that names a cause the run did not confirm.
+- **Input protection.** Only seven cause columns are actionable, values are SQL-escaped, and request bodies are validated (bad input gets a 4xx, never a crash). Vision accepts only `data:image/` URLs under about 6 MB.
+- **One investigation at a time.** A second start gets 409 and can attach. A watchdog ends a run after 240 seconds (`RUN_TIMEOUT_MS`) and frees the lock.
+- **Every external call has a deadline.** Federal feeds 9 s; Zetaris 30 s per page; Nemotron 20 to 75 s depending on the call, capped by `NEMOTRON_TIMEOUT_MS`; thinking requests race a fast answer so latency spikes never stall a run.
+- **Nothing is faked when it fails.** An unreachable feed is shown as unreachable; a Zetaris failure falls back to the mirror with the reason in the exhibit; a model failure falls back to a labelled template with the reason in the agent trace.
+- **Open by design for judging.** There is no login, and `/api/reset` clears memory and holds for anyone. Put the app behind authentication before any real use.
+- **Test coverage.** 31 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2) and a real production server end to end (5).
+
+## What's real and what's simulated
+
+| Real | Simulated |
+| --- | --- |
+| CPSC, openFDA and NHTSA data, fetched live on each run | The company (VoltRide), its 180,000 units, lots, suppliers, warehouses and warranty claims |
+| Nemotron 3.5 Super VL and Lightning calls through NVIDIA NIM, with reasoning traces when thinking wins the race | Reviews and forum posts, unless `BRIGHTDATA_API_TOKEN` is set |
+| Every statistic, verdict, gate decision and proof hash | The planted causes in each scenario (the agent is never told them) |
+| The Meterless H-MEM and Markovian engines, running locally | The ERP hold table and notices: written locally, not sent to any real ERP, distributor or regulator |
+| The Zetaris SQL API client, built from Zetaris's published OpenAPI spec | Zetaris queries run on the local mirror until a Zetaris instance is configured; tested against a spec-conformant test double |
+| The sample defect photo's analysis, when a key is set | The sample photo itself is an illustration; upload a real one to analyse it |
+
+## Tech stack
+
+Next.js 15.5 (App Router), React 19.3, TypeScript 5.9, alasql 4.21 (in-process SQL for the federated mirror), NVIDIA NIM with `nvidia/nemotron-3.5-super-vl-120b-a12b` and `nvidia/nemotron-3.5-lightning-30b-a3b`, the Zetaris SaaS SQL API, the Meterless H-MEM and Markovian reference engines, Bright Data Web Unlocker, the CPSC SaferProducts, openFDA and NHTSA APIs, `next/font` with Newsreader and IBM Plex, and Node's built-in test runner through tsx.
+
+## Run it locally
+
+**Prerequisites:** Node.js 18.18 or newer (developed on Node 26.5) and npm. No database.
+
+```bash
+npm install
+cp .env.example .env.local   # every value is optional
+npm run dev                  # landing at http://localhost:3000, the app at /app
+```
+
+With no keys, everything runs: model steps use labelled templates, queries run on the local mirror, and memory is written to `.meterless-data/`.
+
+| Variable | What it does | Default or when unset |
+| --- | --- | --- |
+| `NVIDIA_API_KEY` | Live Nemotron for planning, red team, vision and the explanation | Unset: labelled templates; the statistics are unchanged |
+| `NVIDIA_NIM_BASE_URL` | NIM endpoint | `https://integrate.api.nvidia.com/v1` |
+| `NEMOTRON_MODEL` / `NEMOTRON_FAST_MODEL` | Vision and explanation model / planning and red-team model | `nvidia/nemotron-3.5-super-vl-120b-a12b` / `nvidia/nemotron-3.5-lightning-30b-a3b` |
+| `NEMOTRON_TIMEOUT_MS` | Cap on every model call | No cap beyond each call's own deadline |
+| `NEMOTRON_THINKING_DEADLINE_MS` | How long a thinking answer may take before the fast answer is used | 20,000 for the explanation, 25,000 for vision |
+| `NEMOTRON_CACHE` | Reply cache in `.nim-cache/` for instant demo re-runs | On; set `off` to always call the model |
+| `ZETARIS_API_URL`, `ZETARIS_ORG_ID` | Zetaris SQL API host and organisation | Unset: every query runs on the local mirror |
+| `ZETARIS_API_TOKEN`, or `ZETARIS_USERNAME` + `ZETARIS_PASSWORD` | Zetaris authentication (token, or Basic login with automatic refresh) | Required for the cloud path |
+| `ZETARIS_SCHEMA`, `ZETARIS_TABLE_MAP` | Where the tables live in Zetaris, for example `traceon`, or a per-table JSON map | Unqualified table names |
+| `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_ZONE` | Live review and forum fetch through the Web Unlocker | Unset: labelled simulated posts; zone `web_unlocker1` |
+| `OPENFDA_API_KEY` | Higher openFDA rate limits | openFDA works without a key |
+| `METERLESS_STORAGE_DIR` | Where H-MEM and the world model persist | `./.meterless-data` (`/tmp/meterless-data` on Vercel) |
+| `DEMO_PACING_MS` | Delay between steps so a demo is watchable | 350 |
+| `RUN_TIMEOUT_MS` | Watchdog for one investigation | 240,000 |
+
+The same list with comments is in [`.env.example`](.env.example).
+
+```bash
+npm test                     # the full suite, including a production build and server
+npm run eval -- 300          # blind accuracy on random seeds 1-300 plus the four named scenarios
+npm run nemotron:check       # live check of every Nemotron call (needs NVIDIA_API_KEY)
+npm run zetaris:export       # write the five tables as CSV for Zetaris
+npm run zetaris:check        # Zetaris connection and hash-parity check
+npm run zetaris:mock         # spec-conformant Zetaris test double on :4599
+```
+
+### Test status
+
+Run on 2026-10-25 at 21:20 UTC (`npm test`, which includes a production build and server):
+
+```
+ℹ tests 31
+ℹ pass 31
+ℹ fail 0
+```
+
+Blind accuracy, run on 2026-10-25 at 21:06 UTC (`npm run eval`):
+
+```
+seeds 1-300 + 4 named:    304/304 correct (100.0%)   wrong but safely blocked: 0 · wrong and acted: 0
+held-out seeds 151-400:   250/250 random seeds correct (254/254 including the 4 named)
+```
+
+| Planted cause | Seeds 1-300 + named |
+| --- | --- |
+| Cell batch | 46/46 |
+| Assembly plant | 47/47 |
+| Firmware release | 36/36 |
+| BMS board supplier | 44/44 |
+| Carrier | 41/41 |
+| Two causes at once | 44/44 |
+| No defect | 46/46 |
+
+The method was tuned on seeds 1-150 (three statistical flaws were found and fixed there: sparse tables, post-hoc group selection, and causes contaminating each other). Seeds 151-400 were never used for tuning.
 
 ## Deploying
 
-Use a single long-running Node host (Railway, Render, Fly). The local federated mirror and the ERP holds live in process memory, and H-MEM writes to disk. On serverless platforms like Vercel, those reset between instances and `.meterless-data` falls back to `/tmp`. The analysis still works there, but cross-session memory won't persist reliably.
+1. **Host on one long-running Node server** such as Railway, Render or Fly. The mirror, the ERP holds and the run registry live in process memory, so serverless platforms that spread requests across instances would lose them. `npm run build && npm start`.
+2. **Persist two folders** on a volume: `.meterless-data/` (or `METERLESS_STORAGE_DIR`) for memory, and `.nim-cache/` for instant demo re-runs.
+3. **Set the environment** from the table above. Point the host's health check at `/api/health`, which returns 200 when the core works and 503 when it does not.
+4. **Zetaris (optional).** Create a cluster, run `npm run zetaris:export`, upload the CSVs to a database named `traceon`, set the Zetaris variables, and confirm `npm run zetaris:check` prints `parity OK`. Step by step: [docs/ZETARIS_SETUP.md](docs/ZETARIS_SETUP.md).
+5. **Warm the cache before recording.** Run each scenario once with `NEMOTRON_THINKING_DEADLINE_MS=60000` so the cache holds answers with thinking traces.
+6. **Live URL:** `<LIVE_URL>`, not deployed yet.
 
-```bash
-npm run build && npm start
+## Repository map
+
+```
+src/app/page.tsx              landing page (/), report style, with the confounder experiment
+src/app/landing.css           landing styles, motion and the mobile drawer
+src/app/app/page.tsx          the case file (/app): three panes, scenario picker, stream recovery, mobile tabs
+src/app/globals.css           design system: paper, ink, one signal colour; responsive rules
+src/app/layout.tsx            fonts (Newsreader, IBM Plex Sans and Mono)
+src/app/api/                  investigate, signals, vision, quarantine, verify, status, reset, health
+src/lib/enterpriseData.ts     the fictional company, 180,000 units and the planted scenarios
+src/lib/stats.ts              chi-square, Monte Carlo exact test, Cochran–Mantel–Haenszel, relative risk
+src/lib/investigation.ts      the agent: screen, adjudicate, robustness, residual, red team, gate, explanation
+src/lib/zetaris.ts            Zetaris SQL API client, canonical proof hashes, local mirror, parity check
+src/lib/meterless.ts          H-MEM ingestion and convergence, world model, Markovian chain
+src/lib/nemotron.ts           NVIDIA NIM client: thinking race, retries, cache, de-duplication
+src/lib/vision.ts             defect-photo forensics
+src/lib/signals.ts            federal feeds, Bright Data, warranty claims
+src/lib/actions.ts            remediation and proof replay
+src/lib/runRegistry.ts        one-run lock, watchdog, event log, server-side gate check
+src/lib/singleton.ts          process-wide state shared by every route
+src/lib/scenarioOptions.ts    the scenario menu
+src/components/               proof graph, panes, exhibits, landing motion, confounder table, landing nav
+tests/                        stats, scenarios, proof, degrade, registry and end-to-end suites; scipy fixtures
+scripts/                      eval, nemotron-check, zetaris export, check and mock
+vendor/                       Meterless H-MEM and Markovian reference engines (Apache-2.0)
+public/samples/               the sample defect photo (SVG and PNG)
+docs/                         Zetaris setup; the original hackathon plan, archived
+ARCHITECTURE.md               the full design
+DEMO_SCRIPT.md                the two-minute demo
+TODO_BEFORE_SUBMISSION.md     the pre-submission checklist
 ```
 
-See [DEMO_SCRIPT.md](DEMO_SCRIPT.md) for the 2-minute demo walkthrough. The original planning documents are in [docs/plan/](docs/plan/).
+## Data and naming
+
+VoltRide, the VR-48 battery pack and all factory, supplier, warehouse and warranty data are fictional and generated by `src/lib/enterpriseData.ts`. No real company's data is used or implied. The federal data comes from public U.S. government APIs. The Section 15(b) report is a draft for counsel and is never sent anywhere. The sample defect photo is an illustration, not a photograph of a real product.
+
+## Pre-existing work and credits
+
+- **Meterless H-MEM and Markovian reference engines**, vendored unmodified from [Meterless/Meterless](https://github.com/Meterless/Meterless) under Apache-2.0 (`vendor/README.md`).
+- **alasql** (MIT) for the in-process SQL mirror. Other open-source packages are listed in `package.json`.
+- **Fonts:** Newsreader, IBM Plex Sans and IBM Plex Mono (SIL Open Font License), served through `next/font`.
+- **APIs and data:** NVIDIA NIM, the Zetaris SaaS SQL API (built from its published OpenAPI spec), Bright Data Web Unlocker, CPSC SaferProducts, openFDA and NHTSA.
+- **Statistics reference values** generated with scipy 1.18.1 and statsmodels 0.15.0.
+- **No prior Traceon code.** The configuration was written by hand (no `create-next-app` template), and everything else was written for the Open Agent Hackathon 2026.
+
+## License
+
+There is no license file for Traceon's own code yet. The vendored Meterless engines are Apache-2.0.
+
+---
+
+Traceon is an Open Agent Hackathon 2026 project. VoltRide and its data are fictional. Results come from simulated enterprise data and are a demonstration of method, not advice about any real product or recall.
