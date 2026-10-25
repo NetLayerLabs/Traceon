@@ -267,3 +267,7 @@
   .lp-footer .lp-wrap { align-items: flex-start; }
   .lp-footer-logo { height: 44px; }
 }
+.lp-def dt a { color: inherit; text-decoration: none; background: linear-gradient(var(--signal), var(--signal)) 0 100% / 0 1px no-repeat; transition: background-size 0.25s; }
+.lp-def dt a:hover { background-size: 100% 1px; }
+.lp-def dt a::after { content: ' →'; color: var(--signal); }
+.lp-def dt::before { text-transform: uppercase; }

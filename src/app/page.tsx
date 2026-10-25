@@ -422,6 +422,39 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="lp-section" id="beyond">
+        <div className="lp-wrap">
+          <div className="lp-head" data-reveal>
+            <div className="lp-num">— Beyond one case</div>
+            <div>
+              <h2>Before the case, after the verdict, and on real recalls.</h2>
+              <p>The same tests watch the warranty stream every day, run on your own data, are checked against public recall history, and keep checking after the fix.</p>
+            </div>
+          </div>
+          <div className="lp-body">
+            <dl className="lp-defs" data-reveal data-stagger>
+              {(
+                [
+                  ['/backtest', 'Real recalls', 'Would the signal have fired first?', 'Public NHTSA complaint histories replayed day by day through a standard safety-signal test. The Chevrolet Bolt EV fire signal fires 14 days before recall 20V701000; on 3 of 5 vehicles it comes first.'],
+                  ['/watch', 'Watch', 'Screen every day, open a case on alert', 'The warranty stream is screened daily across every factor. The day it fires, a case opens on the data as it stood that day.'],
+                  ['/data', 'Your data', 'Bring a CSV', 'One row per unit, a failure column and your suspects. Same agent, same tests, same evidence gate. A 12,000-unit sample is included.'],
+                  ['/app?autorun=1', 'In the case', 'Ask, test and challenge the verdict', 'Ask questions answered only from the exhibits, move what-if sliders that re-run the statistics, see every interval, and read what would prove the verdict wrong.'],
+                  ['/app?autorun=1', 'After the fix', 'Verify, or reopen', 'Thirty simulated days after the fix are checked against the pre-registered falsifiers. Act on a confounder instead and the case reopens.'],
+                  ['/app?autorun=1', 'For others', 'Reports, review and a timestamp', 'An 8D report and a supplier claim that cite their exhibits, a read-only case link for reviewers to comment on, and a signed root anchored with OpenTimestamps.'],
+                ] as const
+              ).map(([href, n, t, d]) => (
+                <div className="lp-def" key={n}>
+                  <dt data-n={n}>
+                    <a href={href}>{t}</a>
+                  </dt>
+                  <dd>{d}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
+      </section>
+
       <section className="lp-section" id="stack">
         <div className="lp-wrap">
           <div className="lp-head" data-reveal>
