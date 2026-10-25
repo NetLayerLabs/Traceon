@@ -88,3 +88,22 @@ test('a stream dropped mid-run is recovered from the event log, and the proof re
   assert.equal(v.ok, true);
   assert.equal(v.root, events.find((e) => e.type === 'ledger').root);
 });
+
+test('the API enforces the evidence gate: only confirmed causes of a passed run can be acted on', async () => {
+  const res = await json('/api/investigate', { scenario: 'noise' });
+  const noiseEvents = await poll(res.headers.get('x-run-id')!);
+  const noiseRoot = noiseEvents.find((e) => e.type === 'ledger').root;
+  const blocked = await json('/api/quarantine', { causes: [{ column: 'cell_batch', group: 'CB-B-0917', remedy: 'QUARANTINE' }], approvedBy: 'e2e', ledgerRoot: noiseRoot });
+  assert.equal(blocked.status, 403, 'gate did not pass for the noise run');
+  assert.equal((await json('/api/quarantine', { causes: [{ column: 'carrier', group: 'DHL', remedy: 'CARRIER_INSPECTION' }], approvedBy: 'e2e', ledgerRoot: 'f'.repeat(64) })).status, 403, 'unknown ledger');
+
+  const ref = await json('/api/investigate', { scenario: 'reference' });
+  const refEvents = await poll(ref.headers.get('x-run-id')!);
+  const root = refEvents.find((e) => e.type === 'ledger').root;
+  const causes = refEvents.find((e) => e.type === 'action').plan.causes.map((c: any) => ({ column: c.column, group: c.group, remedy: c.remedy }));
+  const wrong = await json('/api/quarantine', { causes: [{ column: 'plant_id', group: 'P2', remedy: 'QUARANTINE' }], approvedBy: 'e2e', ledgerRoot: root });
+  assert.equal(wrong.status, 403, 'a cause the run did not confirm');
+  const ok = await json('/api/quarantine', { causes, approvedBy: 'e2e', ledgerRoot: root });
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).unitsHeld, 1380);
+});
