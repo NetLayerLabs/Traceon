@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Documents, FollowUp, StampProof } from './CaseTools';
 import type { InvState } from './state';
 
 const usd = (n: number) => (n >= 1e6 ? `$${(n / 1e6).toFixed(2)}M` : `$${Math.round(n).toLocaleString('en-US')}`);
@@ -41,7 +42,7 @@ function download(name: string, text: string, type = 'application/json') {
   URL.revokeObjectURL(url);
 }
 
-export function ActionPane({ state, onQuarantined }: { state: InvState; onQuarantined: () => void }) {
+export function ActionPane({ state, onQuarantined, caseId, readOnly }: { state: InvState; onQuarantined?: () => void; caseId?: string; readOnly?: boolean }) {
   const [approver, setApprover] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RemediationResult | null>(null);
@@ -53,6 +54,7 @@ export function ActionPane({ state, onQuarantined }: { state: InvState; onQuaran
   const gate = state.gate;
   const scenario = state.scenario?.id ?? 'reference';
   const noCause = Boolean(gate) && !a;
+  const id = caseId ?? state.runId;
 
   const execute = async () => {
     if (!a || !state.ledger) return;
@@ -69,7 +71,7 @@ export function ActionPane({ state, onQuarantined }: { state: InvState; onQuaran
       if (!res.ok) throw new Error(data.error);
       setResult(data);
       setTab(Object.keys(data.notices)[0] ?? '');
-      onQuarantined();
+      onQuarantined?.();
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -172,7 +174,7 @@ export function ActionPane({ state, onQuarantined }: { state: InvState; onQuaran
               ))}
             </div>
             <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-              <b className="warn">{a.incidentsSoFar}</b> incidents so far. Without action, about <b className="bad">{a.projectedIncidents30d}</b> more in 30 days (constant-hazard projection).
+              <b className="warn">{a.incidentsSoFar}</b> incidents so far. Without action, about <b className="bad">{a.projectedIncidents30d}</b> more in 30 days (90% range {a.projectedRange.lo}–{a.projectedRange.hi}; constant-hazard projection).
             </div>
           </>
         )}
@@ -210,8 +212,8 @@ export function ActionPane({ state, onQuarantined }: { state: InvState; onQuaran
         ) : (
           <ul className="criteria">
             {gate.criteria.map((c) => (
-              <li key={c.id}>
-                <span className={c.pass ? 'good' : 'bad'}>{c.pass ? '✓' : '✗'}</span>
+              <li key={c.id} className={c.na ? 'na' : undefined}>
+                <span className={c.na ? 'faint' : c.pass ? 'good' : 'bad'}>{c.na ? 'N/A' : c.pass ? '✓' : '✗'}</span>
                 <span>{c.label}</span>
                 <span className="d">{c.detail}</span>
               </li>
@@ -220,7 +222,7 @@ export function ActionPane({ state, onQuarantined }: { state: InvState; onQuaran
         )}
       </div>
 
-      {gate?.pass && a && (
+      {gate?.pass && a && !readOnly && (
         <div className="card approve">
           <h3>Human approval</h3>
           {!result ? (
@@ -257,6 +259,10 @@ export function ActionPane({ state, onQuarantined }: { state: InvState; onQuaran
         </div>
       )}
 
+      {gate?.pass && a && (result || readOnly) && <FollowUp id={id} />}
+
+      <Documents id={id} state={state} shared={readOnly} />
+
       <div className="card">
         <h3>
           Proof ledger
@@ -283,6 +289,7 @@ export function ActionPane({ state, onQuarantined }: { state: InvState; onQuaran
                   : `Verification failed for ${verify.mismatches.length} item(s): ${verify.mismatches.map((m) => m.id).join(', ')}`}
               </div>
             )}
+            {state.doneMs !== null && <StampProof id={id} root={state.ledger.root} />}
             {err && !gate?.pass && <div className="bad" style={{ marginTop: 6, fontSize: 12 }}>{err}</div>}
           </>
         )}

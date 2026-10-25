@@ -1,8 +1,66 @@
 'use client';
 import { useEffect, useState } from 'react';
+import type { CaseComment } from '@/lib/cases';
 import type { EvidenceItem } from './state';
 
-export function EvidenceModal(props: { title: string; subtitle?: string; body?: React.ReactNode; evidence: EvidenceItem[]; onClose: () => void }) {
+export interface ReviewProps {
+  comments: CaseComment[];
+  onAdd: (exhibitId: string | null, author: string, text: string) => Promise<void>;
+}
+
+/** Comments pinned to one exhibit (or to the whole case), with a form to add one. */
+export function CommentThread({ exhibitId, review }: { exhibitId: string | null; review: ReviewProps }) {
+  const [author, setAuthor] = useState(() => {
+    try {
+      return localStorage.getItem('traceon-reviewer') ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const mine = review.comments.filter((c) => c.exhibitId === exhibitId);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setErr(null);
+    try {
+      await review.onAdd(exhibitId, author, text);
+      setText('');
+      try {
+        localStorage.setItem('traceon-reviewer', author);
+      } catch {}
+    } catch (e2) {
+      setErr((e2 as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div className="lbl-mono">Reviewer comments{exhibitId ? ` on ${exhibitId}` : ''} · {mine.length}</div>
+      {mine.map((c) => (
+        <div key={c.id} className="comment">
+          <div className="who">
+            {c.author} · {c.role} · {c.at.slice(0, 16).replace('T', ' ')} UTC
+          </div>
+          <div style={{ whiteSpace: 'pre-wrap' }}>{c.text}</div>
+        </div>
+      ))}
+      <form onSubmit={submit} className="ask-form" style={{ flexWrap: 'wrap' }}>
+        <input type="text" placeholder="Your name" value={author} onChange={(e) => setAuthor(e.target.value)} style={{ flex: '0 1 160px' }} aria-label="Your name" maxLength={60} />
+        <input type="text" placeholder={exhibitId ? `Comment on ${exhibitId}…` : 'Comment on the case…'} value={text} onChange={(e) => setText(e.target.value)} aria-label="Comment" maxLength={2000} />
+        <button className="btn small primary" disabled={busy || !author.trim() || !text.trim()}>
+          Post
+        </button>
+      </form>
+      {err && <div className="bad" style={{ fontSize: 12 }}>{err}</div>}
+    </div>
+  );
+}
+
+export function EvidenceModal(props: { title: string; subtitle?: string; body?: React.ReactNode; evidence: EvidenceItem[]; onClose: () => void; review?: ReviewProps }) {
   const [selected, setSelected] = useState<EvidenceItem | null>(props.evidence[0] ?? null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && props.onClose();
@@ -34,7 +92,10 @@ export function EvidenceModal(props: { title: string; subtitle?: string; body?: 
             <div className="ev-list">
               {props.evidence.map((e) => (
                 <button key={e.id} className="ev-item" style={selected?.id === e.id ? { background: 'var(--signal-soft)', boxShadow: 'inset 3px 0 0 var(--signal)' } : undefined} onClick={() => setSelected(e)}>
-                  <span className="id">{e.id}</span>
+                  <span className="id">
+                    {e.id}
+                    {props.review && props.review.comments.some((c) => c.exhibitId === e.id) && <i className="pin" title="Has reviewer comments" />}
+                  </span>
                   <span style={{ fontWeight: 600, fontSize: 12 }}>{e.label}</span>
                   <span className="s">{e.summary}</span>
                 </button>
@@ -105,6 +166,7 @@ export function EvidenceModal(props: { title: string; subtitle?: string; body?: 
                 {JSON.stringify(selected.payload, null, 2).slice(0, 6000)}
               </pre>
             )}
+            {props.review && <CommentThread exhibitId={selected.id} review={props.review} />}
           </div>
         )}
       </div>

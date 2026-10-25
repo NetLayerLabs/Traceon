@@ -133,17 +133,19 @@ export function RevealCard({ state }: { state: InvState }) {
   if (!r) return null;
   const fmt = (xs: { column: string; group: string }[]) => (xs.length ? xs.map((x) => `${x.column} = ${x.group}`).join(' + ') : 'no defect');
   return (
-    <div className="card reveal" data-correct={r.correct}>
+    <div className="card reveal" data-correct={r.outcome !== 'wrong'}>
       <h3>
         Hidden truth revealed
-        <span className={`tag ${r.correct ? 'good' : 'bad'}`}>{r.correct ? 'agent correct' : 'agent wrong'}</span>
+        <span className={`tag ${r.outcome === 'correct' ? 'good' : r.outcome === 'insufficient' ? 'warn' : 'bad'}`}>
+          {r.outcome === 'correct' ? 'agent correct' : r.outcome === 'insufficient' ? 'not enough evidence yet (safe)' : 'agent wrong'}
+        </span>
       </h3>
       <div style={{ fontSize: 13 }}>
         <div>
           <span className="muted">Scenario:</span> <b>{r.label}</b> · {r.blurb}
         </div>
         <div style={{ marginTop: 4 }} className="mono">
-          <span className="muted">planted:</span> {fmt(r.truth)}
+          <span className="muted">{r.scenarioId.includes('@') ? 'shipped by then:' : 'planted:'}</span> {fmt(r.truth)}
           <br />
           <span className="muted">found:&nbsp;&nbsp;</span> {fmt(r.found)} · gate {r.gateBlocked ? 'blocked' : 'allowed action'}
         </div>

@@ -2,6 +2,7 @@
 import type {
   ActionPlan,
   EvidenceItem,
+  ForestRow,
   GateCriterion,
   HypothesisNode,
   InvestigationEvent,
@@ -26,6 +27,7 @@ export interface InvState {
   hypotheses: HypothesisNode[];
   evidence: EvidenceItem[];
   robustness: RobustnessRow[];
+  forest: ForestRow[];
   granularity: Ev<'granularity'>['data'] | null;
   vision: Ev<'vision'>['data'] | null;
   redteam: Omit<Ev<'redteam'>, 'type'> | null;
@@ -54,6 +56,7 @@ export const initialState: InvState = {
   hypotheses: [],
   evidence: [],
   robustness: [],
+  forest: [],
   granularity: null,
   vision: null,
   redteam: null,
@@ -100,6 +103,8 @@ export function reducer(s: InvState, a: Action): InvState {
       return { ...s, evidence: [...s.evidence, e.item] };
     case 'robustness':
       return { ...s, robustness: e.data };
+    case 'forest':
+      return { ...s, forest: e.rows };
     case 'granularity':
       return { ...s, granularity: e.data };
     case 'vision':
@@ -128,4 +133,9 @@ export function reducer(s: InvState, a: Action): InvState {
   }
 }
 
-export type { VisionFinding, EvidenceItem, HypothesisNode, ActionPlan, Reveal };
+export type { VisionFinding, EvidenceItem, HypothesisNode, ActionPlan, Reveal, ForestRow };
+
+/** Fold a finished event log into state (reviewer mode, saved cases). */
+export function foldEvents(events: InvestigationEvent[], runId: string | null = null): InvState {
+  return events.reduce((s, event) => reducer(s, { type: 'event', event }), { ...initialState, runId });
+}

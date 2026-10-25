@@ -1,11 +1,14 @@
 'use client';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { ActionPane } from '@/components/ActionPane';
+import { AppNav } from '@/components/AppNav';
+import { AskCase, Falsifiers, Uncertainty, WhatIf } from '@/components/CaseTools';
 import { CausalDag } from '@/components/CausalDag';
-import type { DagSelection } from '@/components/CausalDag';
 import { EvidenceModal } from '@/components/EvidenceModal';
 import { AgentLog, Narrative, RedTeam, RevealCard, Robustness, TimeMachine } from '@/components/Insights';
 import { SignalPane } from '@/components/SignalPane';
+import { renderSelection } from '@/components/Selection';
+import type { DagSelection } from '@/components/Selection';
 import { initialState, reducer } from '@/components/state';
 import type { VisionFinding } from '@/components/state';
 import type { InvestigationEvent } from '@/lib/investigation';
@@ -48,6 +51,17 @@ async function toPngDataUrl(src: string): Promise<string> {
   return canvas.toDataURL('image/png');
 }
 
+/** Scenario ids beyond the menu: an uploaded dataset, or any scenario as of a past date (from watch mode). */
+const EXTRA_ID = /^(custom-[a-f0-9]{12}|[a-z0-9-]+@\d{4}-\d{2}-\d{2})$/;
+function describeScenario(id: string) {
+  const known = SCENARIO_OPTIONS.find((o) => o.id === id);
+  if (known) return known;
+  if (id.startsWith('custom-')) return { id, label: 'Uploaded dataset', blurb: 'Your own data: one row per unit, an outcome column and the factors to test.' };
+  const [base, date] = id.split('@');
+  const b = SCENARIO_OPTIONS.find((o) => o.id === base);
+  return { id, label: `${b ? b.label.split(':')[0] : base} as of ${date}`, blurb: `Only the units shipped and claims filed by ${date}: what the agent could have known that day.` };
+}
+
 const newSeed = () => Math.floor(Math.random() * 1_000_000) + 1;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -66,6 +80,7 @@ export default function Home() {
   // Phones and tablets (<= 900px): one pane at a time plus a controls drawer.
   const [mobileTab, setMobileTab] = useState<'intake' | 'investigation' | 'disposition'>('investigation');
   const [drawer, setDrawer] = useState(false);
+  const [exhibit, setExhibit] = useState<string | null>(null);
   const received = useRef(0); // events applied for the current run (for stream recovery)
   const scenarioId = scenarioKind === 'random' ? `random-${seed}` : scenarioKind;
 
@@ -193,7 +208,7 @@ export default function Home() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sc = params.get('scenario');
-    if (sc && SCENARIO_OPTIONS.some((o) => o.id === sc)) setScenarioKind(sc);
+    if (sc && (SCENARIO_OPTIONS.some((o) => o.id === sc) || EXTRA_ID.test(sc))) setScenarioKind(sc);
     if (params.has('autorun')) setTimeout(() => document.getElementById('run-btn')?.click(), 50);
   }, []);
 
@@ -207,7 +222,9 @@ export default function Home() {
   const modal = selection ? renderSelection(selection, state) : null;
   const stepIdx = STEPS.findIndex((s) => s.id === state.phase);
   const started = state.running || state.doneMs !== null || state.hypotheses.length > 0;
-  const option = SCENARIO_OPTIONS.find((o) => o.id === scenarioKind)!;
+  const option = describeScenario(scenarioKind);
+  const extra = !SCENARIO_OPTIONS.some((o) => o.id === scenarioKind);
+  const exhibitItem = exhibit ? state.evidence.find((e) => e.id === exhibit) : null;
 
   return (
     <div className="shell">
@@ -225,6 +242,7 @@ export default function Home() {
               Close
             </button>
           </div>
+          <AppNav />
           <div className="scenario-pick" title={option.blurb}>
             <span className="drawer-label">Scenario</span>
             <select
@@ -236,6 +254,7 @@ export default function Home() {
               disabled={state.running}
               aria-label="Scenario"
             >
+              {extra && <option value={scenarioKind}>{option.label}</option>}
               {SCENARIO_OPTIONS.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
@@ -250,22 +269,23 @@ export default function Home() {
           </div>
           <div className="chips">
             <span className="drawer-label">Integrations</span>
-            <span className={`chip ${status?.nemotron.live ? 'live' : 'sim'}`} title={status?.nemotron.model}>
+            <span className={`chip ${status?.nemotron.live ? 'live' : 'sim'}`} title={status?.nemotron.model} data-short="Nemotron">
               <span className="dot" />
               Nemotron {status?.nemotron.live ? 'live' : 'offline'}
             </span>
             <span
               className={`chip ${status?.zetaris.mode === 'ZETARIS_CLOUD' && status.zetaris.parity?.ok ? 'live' : 'sim'}`}
+              data-short="Zetaris"
               title={status?.zetaris.parity ? status.zetaris.parity.probes.map((p) => `${p.ok ? 'PASS' : 'FAIL'} ${p.sql}${p.error ? ` (${p.error})` : ''}`).join('\n') : 'Queries run on the local federated mirror'}
             >
               <span className="dot" />
               Zetaris {status?.zetaris.mode === 'ZETARIS_CLOUD' ? `cloud · ${status.zetaris.parity?.ok ? 'parity ok' : 'parity failed'}` : 'local mirror'}
             </span>
-            <span className="chip live">
+            <span className="chip live" data-short="H-MEM">
               <span className="dot" />
               H-MEM {status?.meterless.memories ?? 0} memories
             </span>
-            <span className={`chip ${status?.brightdata.live ? 'live' : 'sim'}`}>
+            <span className={`chip ${status?.brightdata.live ? 'live' : 'sim'}`} data-short="Bright Data">
               <span className="dot" />
               Bright Data {status?.brightdata.live ? 'live' : 'simulated'}
             </span>
@@ -311,7 +331,7 @@ export default function Home() {
           <div className="pane-title">
             II · Investigation
             <span className="count" style={{ marginLeft: 'auto', letterSpacing: '0.06em' }}>
-              {state.scenario ? `${state.scenario.label}` : SCENARIO_OPTIONS.find((o) => o.id === scenarioKind)!.label}
+              {state.scenario ? `${state.scenario.label}` : option.label}
               {state.runId ? ` · run ${state.runId.slice(0, 8)}` : ''}
             </span>
           </div>
@@ -349,6 +369,13 @@ export default function Home() {
             <RedTeam state={state} />
             <Robustness state={state} />
             <TimeMachine state={state} />
+            <Uncertainty state={state} />
+            <Falsifiers state={state} />
+          </div>
+          <div className="pane-title case-tools-title">Case tools</div>
+          <div className="grid2">
+            <AskCase id={state.runId} state={state} onOpenExhibit={setExhibit} />
+            <WhatIf id={state.runId} state={state} />
           </div>
           <AgentLog state={state} />
         </main>
@@ -356,110 +383,8 @@ export default function Home() {
         <ActionPane key={`a-${runKey}`} state={state} onQuarantined={loadStatus} />
       </div>
 
+      {exhibitItem && <EvidenceModal key={exhibitItem.id} title={`${exhibitItem.id} · ${exhibitItem.label}`} subtitle={exhibitItem.summary} evidence={[exhibitItem]} onClose={() => setExhibit(null)} />}
       {modal && <EvidenceModal key={JSON.stringify(selection)} {...modal} onClose={() => setSelection(null)} />}
     </div>
   );
-}
-
-function renderSelection(sel: DagSelection, state: typeof initialState) {
-  const byIds = (ids: string[]) => state.evidence.filter((e) => ids.includes(e.id));
-  if (sel.kind === 'hypothesis') {
-    const h = state.hypotheses.find((x) => x.id === sel.id);
-    if (!h) return null;
-    return {
-      title: `${h.id} · ${h.title}`,
-      subtitle: h.claim,
-      evidence: byIds(h.evidenceIds),
-      body: (
-        <div style={{ fontSize: 13 }}>
-          <div className="muted" style={{ marginBottom: 6 }}>
-            <b>Why it was tested:</b> {h.rationale}
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <b>Verdict:</b> {h.verdict ?? 'pending'}
-          </div>
-          {h.rawTest && (
-            <div className="bars">
-              {[...h.rawTest.groups]
-                .sort((a, b) => b.ratePer10k - a.ratePer10k)
-                .slice(0, 8)
-                .map((g) => {
-                  const max = Math.max(...h.rawTest!.groups.map((x) => x.ratePer10k));
-                  return (
-                    <div className="bar-row" key={g.group} style={{ gridTemplateColumns: '110px 1fr 130px' }}>
-                      <span className="mono muted">{g.group}</span>
-                      <div className="bar-track">
-                        <div className="bar-fill" style={{ width: `${(g.ratePer10k / max) * 100}%`, background: g.group === h.hotGroup ? 'var(--signal)' : 'var(--ink)' }} />
-                      </div>
-                      <span className="mono faint">
-                        {g.failures}/{g.units.toLocaleString('en-US')} · {g.ratePer10k.toFixed(1)}/10k
-                      </span>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-          {h.adjusted && h.adjusted.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <b>After adjustment (Cochran–Mantel–Haenszel):</b>
-              {h.adjusted.map((a) => (
-                <div key={a.controlFor} className="mono muted" style={{ fontSize: 11.5 }}>
-                  holding {a.controlLabel} fixed → {a.pLabel}, common OR {Number.isFinite(a.commonOddsRatio) ? a.commonOddsRatio.toFixed(2) : '∞'}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ),
-    };
-  }
-  if (sel.kind === 'cluster') {
-    return {
-      title: 'Incident cluster',
-      subtitle: 'Signals converged by Meterless H-MEM hybrid retrieval',
-      evidence: state.evidence.filter((e) => e.kind === 'feed' || e.kind === 'memory'),
-      body: state.convergence ? (
-        <div className="signal-list" style={{ maxHeight: 220, overflow: 'auto' }}>
-          {state.convergence.matched.slice(0, 40).map((m) => (
-            <div className="signal" key={m.id}>
-              <div className="meta">
-                <b>{m.source}</b>
-                <span>{m.date}</span>
-                <span>relevance {m.relevance}</span>
-              </div>
-              <div className="body">{m.content}</div>
-            </div>
-          ))}
-        </div>
-      ) : undefined,
-    };
-  }
-  if (sel.kind === 'root') {
-    const c = state.hypotheses.find((h) => h.status === 'CONFIRMED');
-    return {
-      title: c ? `Root cause: ${state.hypotheses.filter((h) => h.status === 'CONFIRMED').map((h) => h.hotGroup).join(' + ')}` : 'Root cause',
-      subtitle: c?.verdict,
-      evidence: state.evidence.filter(
-        (e) =>
-          state.hypotheses.some((h) => h.status === 'CONFIRMED' && h.evidenceIds.includes(e.id)) ||
-          /^(BOM lineage join|Supplier granularity|Symptom concordance|Exposure-time|Blast radius|Residual|Combined coverage|Defect photo forensics)/.test(e.label)
-      ),
-    };
-  }
-  return {
-    title: 'Evidence gate',
-    subtitle: state.gate?.pass ? 'All criteria met; action allowed with human approval.' : 'Action blocked until every criterion is met.',
-    evidence: state.evidence.filter((e) => e.kind === 'model' || e.kind === 'stat'),
-    body: (
-      <ul className="criteria">
-        {state.gate?.criteria.map((c) => (
-          <li key={c.id}>
-            <span className={c.pass ? 'good' : 'bad'}>{c.pass ? '✓' : '✗'}</span>
-            <span>{c.label}</span>
-            <span className="d">{c.detail}</span>
-          </li>
-        ))}
-      </ul>
-    ),
-  };
 }
