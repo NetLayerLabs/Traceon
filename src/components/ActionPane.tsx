@@ -86,7 +86,8 @@ export function ActionPane({ state, onQuarantined, caseId, readOnly }: { state: 
       const res = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ evidence: state.evidence, scenario }),
+        // The server replays what it recorded for this run, not what the browser holds.
+        body: JSON.stringify(id ? { id } : { evidence: state.evidence, scenario }),
         signal: AbortSignal.timeout(60_000),
       });
       const data = await res.json();
@@ -130,7 +131,7 @@ export function ActionPane({ state, onQuarantined, caseId, readOnly }: { state: 
             <div className="cost-compare">
               <div className="cost-box">
                 <div className="lbl">Blanket recall</div>
-                <div className="big-num bad">{usd(180_000 * 25)}</div>
+                <div className="big-num bad">{usd(gate?.blanket?.costUsd ?? 180_000 * 25)}</div>
                 <div className="faint">would fix nothing</div>
               </div>
               <div className="cost-box surgical">

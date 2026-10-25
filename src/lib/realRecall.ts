@@ -60,7 +60,9 @@ export async function fetchNhtsa(kind: 'complaints' | 'recalls', make: string, m
   const endpoint = kind === 'complaints' ? 'complaints/complaintsByVehicle' : 'recalls/recallsByVehicle';
   try {
     const res = await fetch(`https://api.nhtsa.gov/${endpoint}?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${year}`, { signal: AbortSignal.timeout(30_000) });
-    const rows = res.ok ? ((await res.json()).results ?? []) : []; // 400 = no such model year
+    // 400 means no such model year (cache the empty answer); 429 and 5xx are transient (do not).
+    if (!res.ok && res.status !== 400 && res.status !== 404) return [];
+    const rows = res.ok ? ((await res.json()).results ?? []) : [];
     try {
       fs.mkdirSync(cacheDir(), { recursive: true });
       fs.writeFileSync(cached, JSON.stringify(rows));

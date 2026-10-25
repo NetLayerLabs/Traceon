@@ -32,7 +32,7 @@ export interface InvState {
   vision: Ev<'vision'>['data'] | null;
   redteam: Omit<Ev<'redteam'>, 'type'> | null;
   timeline: Ev<'timeline'>['data'] | null;
-  gate: { pass: boolean; criteria: GateCriterion[] } | null;
+  gate: { pass: boolean; criteria: GateCriterion[]; blanket?: { units: number; costUsd: number } } | null;
   narrative: Omit<Ev<'narrative'>, 'type'> | null;
   action: ActionPlan | null;
   markovian: Ev<'markovian'>['data'] | null;
@@ -114,7 +114,7 @@ export function reducer(s: InvState, a: Action): InvState {
     case 'timeline':
       return { ...s, timeline: e.data };
     case 'gate':
-      return { ...s, gate: { pass: e.pass, criteria: e.criteria } };
+      return { ...s, gate: { pass: e.pass, criteria: e.criteria, blanket: e.blanket } };
     case 'narrative':
       return { ...s, narrative: { source: e.source, text: e.text, reasoning: e.reasoning, guard: e.guard } };
     case 'action':

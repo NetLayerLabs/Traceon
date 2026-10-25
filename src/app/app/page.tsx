@@ -91,10 +91,15 @@ export default function Home() {
   // The signal radar follows the selected scenario.
   useEffect(() => {
     setFeeds(null);
+    // A slower answer for the previous scenario must not overwrite this one.
+    let current = true;
     fetch(`/api/signals?scenario=${encodeURIComponent(scenarioId)}`, { signal: AbortSignal.timeout(30_000) })
       .then((r) => r.json())
-      .then((d) => setFeeds(d.feeds ?? []))
-      .catch(() => setFeeds([]));
+      .then((d) => current && setFeeds(d.feeds ?? []))
+      .catch(() => current && setFeeds([]));
+    return () => {
+      current = false;
+    };
   }, [scenarioId]);
 
   useEffect(() => {
@@ -147,7 +152,8 @@ export default function Home() {
     setMobileTab('investigation');
     setDrawer(false);
     setRunKey((k) => k + 1);
-    const v = vision ?? (await analyze());
+    // The sample photo is of the demo battery; it says nothing about uploaded data.
+    const v = vision ?? (scenarioId.startsWith('custom-') && photo === SAMPLE_PHOTO ? null : await analyze());
     let runId: string | null = null;
     try {
       const res = await fetch('/api/investigate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vision: v, scenario: scenarioId }) });
@@ -232,7 +238,7 @@ export default function Home() {
         <a className="brand" href="/" style={{ color: 'inherit', textDecoration: 'none' }} title="Back to overview">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="brand-logo" src="/brand/traceon-header.png" alt="Traceon" width={882} height={160} />
-          <small>Case file · VoltRide VR-48 thermal events</small>
+          <small>{scenarioKind.startsWith('custom-') ? 'Case file · uploaded data' : 'Case file · VoltRide VR-48 thermal events'}</small>
         </a>
         {/* Desktop: these controls sit in the top bar (display: contents). Phones: a left drawer. */}
         <div className={`controls ${drawer ? 'open' : ''}`} role={drawer ? 'dialog' : undefined} aria-label="Controls">

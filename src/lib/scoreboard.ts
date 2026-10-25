@@ -14,6 +14,7 @@ export interface ScoreRecord {
   agreed: boolean; // the model's top guess is among the confirmed causes
   truthKnown: boolean;
   modelTopCorrect: boolean | null; // the model's top guess is a planted cause
+  ledgerRoot?: string; // identical runs (e.g. replayed from the reply cache) count once
   statsCorrect: boolean | null; // the statistics found exactly the planted causes (or none)
 }
 
@@ -30,6 +31,7 @@ export function readScoreboard(): ScoreRecord[] {
 
 export function recordScore(r: ScoreRecord) {
   const all = readScoreboard();
+  if (r.ledgerRoot && all.some((x) => x.ledgerRoot === r.ledgerRoot && x.modelTop === r.modelTop)) return;
   all.push(r);
   try {
     fs.mkdirSync(path.dirname(file()), { recursive: true });

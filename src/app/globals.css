@@ -377,7 +377,9 @@ main.pane { background: var(--sheet); }
 }
 @media (min-width: 901px) and (max-width: 1180px) {
   .topbar .chips { display: none; }
-  .section-nav a { padding: 0 8px; }
+  .topbar { gap: 12px; padding: 0 14px; }
+  .section-nav a { padding: 0 7px; }
+  .topbar .scenario-pick select { max-width: 170px; }
 }
 
 /* ---------- Case tools ---------- */
