@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3f45"/>
+      <stop offset="1" stop-color="#1e2226"/>
+    </linearGradient>
+    <linearGradient id="casing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2f33"/>
+      <stop offset="0.5" stop-color="#202326"/>
+      <stop offset="1" stop-color="#15171a"/>
+    </linearGradient>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e9e4d6"/>
+      <stop offset="1" stop-color="#bdb6a3"/>
+    </linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9c7a2e"/>
+      <stop offset="0.5" stop-color="#e3c46b"/>
+      <stop offset="1" stop-color="#8a6a25"/>
+    </linearGradient>
+    <radialGradient id="scorch" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0b0806"/>
+      <stop offset="0.35" stop-color="#231509" stop-opacity="0.95"/>
+      <stop offset="0.65" stop-color="#5b3412" stop-opacity="0.75"/>
+      <stop offset="0.85" stop-color="#8a5a24" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#8a5a24" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.18 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+    <filter id="blur"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <rect width="800" height="560" fill="url(#bg)"/>
+  <!-- battery casing -->
+  <rect x="40" y="70" width="720" height="440" rx="34" fill="url(#casing)"/>
+  <rect x="40" y="70" width="720" height="440" rx="34" fill="#000" filter="url(#rough)"/>
+  <text x="80" y="128" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#8c949c" letter-spacing="3">VOLTRIDE</text>
+  <text x="80" y="160" font-family="Helvetica, Arial, sans-serif" font-size="17" fill="#6b737b">VR-48  48V 14Ah  Li-ion</text>
+  <text x="80" y="470" font-family="Courier New, monospace" font-size="16" fill="#6b737b">SN-88731   LOT L-409</text>
+  <!-- connector housing -->
+  <rect x="250" y="200" width="380" height="190" rx="14" fill="url(#housing)"/>
+  <rect x="268" y="218" width="344" height="154" rx="10" fill="#2a2620"/>
+  <!-- pins: 1..6 -->
+  <g>
+    <rect x="290" y="250" width="34" height="90" rx="6" fill="url(#brass)"/>
+    <rect x="342" y="250" width="34" height="90" rx="6" fill="url(#brass)"/>
+    <rect x="394" y="250" width="34" height="90" rx="6" fill="url(#brass)"/>
+    <rect x="498" y="250" width="34" height="90" rx="6" fill="url(#brass)"/>
+    <rect x="550" y="250" width="34" height="90" rx="6" fill="url(#brass)"/>
+  </g>
+  <!-- heat discoloration spreading onto housing around pin 4 -->
+  <ellipse cx="463" cy="292" rx="110" ry="120" fill="url(#scorch)" filter="url(#blur)"/>
+  <!-- pin 4: blackened, deformed -->
+  <path d="M447 252 q16 -8 32 0 l2 46 q-6 22 -14 40 q-10 4 -20 -2 q-4 -30 0 -84z" fill="#1a120b"/>
+  <path d="M452 262 q10 -4 20 0 l0 30 q-8 10 -18 4z" fill="#4a2f17" opacity="0.8"/>
+  <!-- melted plastic drip -->
+  <path d="M430 372 q12 30 6 58 q-4 14 10 14 q14 0 8 -18 q-6 -26 4 -54z" fill="#3b2a1a" opacity="0.9"/>
+  <!-- soot streaks -->
+  <path d="M470 205 q30 -40 70 -60" stroke="#120d09" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.55" filter="url(#blur)"/>
+  <path d="M440 205 q-10 -50 -40 -80" stroke="#120d09" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.4" filter="url(#blur)"/>
+  <!-- pin labels -->
+  <g font-family="Helvetica, Arial, sans-serif" font-size="14" fill="#cfc8b4" text-anchor="middle">
+    <text x="307" y="236">1</text><text x="359" y="236">2</text><text x="411" y="236">3</text>
+    <text x="463" y="236" fill="#6d5a40">4</text><text x="515" y="236">5</text><text x="567" y="236">6</text>
+  </g>
+</svg>
