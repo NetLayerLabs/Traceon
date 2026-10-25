@@ -1,0 +1,33 @@
+{
+  "name": "traceon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Traceon: explainable defect forensics and surgical recall agent (Open Agent Hackathon 2026)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "zetaris:export": "tsx scripts/export-zetaris.mts",
+    "zetaris:check": "tsx scripts/zetaris-check.mts",
+    "zetaris:mock": "tsx scripts/mock-zetaris.mts",
+    "test": "tsx --test --test-concurrency=1 'tests/**/*.test.mts'",
+    "test:unit": "tsx --test --test-concurrency=1 tests/stats.test.mts tests/scenarios.test.mts tests/proof.test.mts tests/degrade.test.mts tests/registry.test.mts",
+    "test:e2e": "tsx --test tests/e2e.test.mts",
+    "eval": "tsx scripts/eval.mts",
+    "nemotron:check": "tsx scripts/nemotron-check.mts"
+  },
+  "dependencies": {
+    "alasql": "4.21.0",
+    "next": "15.5.28",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "~5.9.0"
+  }
+}
