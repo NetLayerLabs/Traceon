@@ -74,3 +74,25 @@ export function startRun(scenarioId: string, vision: VisionFinding | null): Run 
     });
   return run;
 }
+
+/**
+ * Server-side evidence gate for actions: a remediation is allowed only for a
+ * completed run (still in the registry) whose ledger root matches, whose gate
+ * passed, and which confirmed every requested cause. The UI hides the button
+ * otherwise; this makes the API enforce the same rule.
+ */
+export function authorizeRemediation(ledgerRoot: string, causes: { column: string; group: string; remedy: string }[]): { ok: true; run: Run } | { ok: false; reason: string } {
+  for (const run of [...state.recent.values()].reverse()) {
+    const ledger = run.events.find((e): e is Extract<InvestigationEvent, { type: 'ledger' }> => e.type === 'ledger');
+    if (!ledger || ledger.root !== ledgerRoot) continue;
+    if (run.finishedAt === null) return { ok: false, reason: 'The investigation is still running' };
+    const gate = run.events.find((e): e is Extract<InvestigationEvent, { type: 'gate' }> => e.type === 'gate');
+    if (!gate?.pass) return { ok: false, reason: 'The evidence gate did not pass for this investigation' };
+    const action = run.events.find((e): e is Extract<InvestigationEvent, { type: 'action' }> => e.type === 'action');
+    const confirmed = new Set((action?.plan.causes ?? []).map((c) => `${c.column}=${c.group}=${c.remedy}`));
+    const extra = causes.find((c) => !confirmed.has(`${c.column}=${c.group}=${c.remedy}`));
+    if (extra) return { ok: false, reason: `${extra.column}=${extra.group} was not confirmed by this investigation` };
+    return { ok: true, run };
+  }
+  return { ok: false, reason: 'Unknown ledger root: run the investigation again before acting' };
+}
