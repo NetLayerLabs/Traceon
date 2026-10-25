@@ -168,13 +168,22 @@ export function updateWorldModel(states: LotRiskState[], scenarioId = 'reference
     // A quarantine is sticky: re-running an investigation never un-quarantines a lot.
     model[s.lotId] = prev?.status === 'QUARANTINED' ? { ...s, status: 'QUARANTINED', note: prev.note } : s;
   }
-  fs.mkdirSync(scenarioDir(scenarioId), { recursive: true });
-  fs.writeFileSync(worldFile(scenarioId), JSON.stringify(model, null, 2));
+  try {
+    fs.mkdirSync(scenarioDir(scenarioId), { recursive: true });
+    fs.writeFileSync(worldFile(scenarioId), JSON.stringify(model, null, 2));
+  } catch {
+    // Read-only storage: the world model lasts for this call only.
+  }
   return model;
 }
 
+/**
+ * Clears demo memory only: H-MEM, the lot world model and per-scenario state.
+ * Shared cases, uploaded datasets, the signing key and stamps, the scoreboard
+ * and the NHTSA cache live in the same folder and are kept.
+ */
 export function resetMeterless() {
-  fs.rmSync(STORAGE_DIR, { recursive: true, force: true });
+  for (const p of ['hmem', 'lot-world-model.json', 'scenarios']) fs.rmSync(path.join(STORAGE_DIR, p), { recursive: true, force: true });
   hmems.clear();
 }
 

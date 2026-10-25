@@ -7,7 +7,8 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as RemediationRequest | null;
-  if (!body?.causes?.length || !body.approvedBy?.trim() || !body.ledgerRoot) {
+  const ok = (c: unknown) => !!c && typeof c === 'object' && ['column', 'group', 'remedy'].every((k) => typeof (c as Record<string, unknown>)[k] === 'string');
+  if (!Array.isArray(body?.causes) || !body.causes.length || !body.causes.every(ok) || typeof body.approvedBy !== 'string' || !body.approvedBy.trim() || typeof body.ledgerRoot !== 'string') {
     return NextResponse.json({ error: 'causes, approvedBy and ledgerRoot are required' }, { status: 400 });
   }
   // The evidence gate is enforced here too, not just by hiding the button.

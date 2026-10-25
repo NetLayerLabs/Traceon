@@ -24,7 +24,7 @@ export async function GET(req: Request) {
 
 // POST {make, model, years} runs the same test live against api.nhtsa.gov.
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { make?: string; model?: string; years?: number[] };
+  const body = ((await req.json().catch(() => null)) ?? {}) as { make?: string; model?: string; years?: number[] };
   const make = String(body.make ?? '').trim().toUpperCase();
   const model = String(body.model ?? '').trim().toUpperCase();
   const years = (Array.isArray(body.years) ? body.years : []).map(Number).filter((y) => y >= 1995 && y <= 2030).slice(0, 6);

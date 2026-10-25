@@ -11,3 +11,4 @@ exports
 .env
 .DS_Store
 *.log
+.next-audit

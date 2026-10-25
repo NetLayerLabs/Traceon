@@ -7,7 +7,7 @@ export const maxDuration = 60;
 
 // POST {id, question}: id is a run id or a saved case id.
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { id?: string; question?: string };
+  const body = ((await req.json().catch(() => null)) ?? {}) as { id?: string; question?: string };
   const question = String(body.question ?? '').trim().slice(0, 500);
   if (!body.id || !question) return NextResponse.json({ error: 'id and question are required' }, { status: 400 });
   const events = loadEvents(body.id);

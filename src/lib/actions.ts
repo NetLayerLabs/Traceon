@@ -2,14 +2,18 @@
 // inspection) and the proof replay.
 import crypto from 'node:crypto';
 import { AS_OF, getEnterpriseMesh, PRODUCT_NAME, SKU, UNIT_COST_USD } from './enterpriseData';
-import { chainGenesis, REMEDY } from './investigation';
+import { chainGenesis, chainStep, REMEDY } from './investigation';
 import type { EvidenceItem, RemedyKind } from './investigation';
 import { commitRootCauseInsight, convergeSignals, readWorldModel, updateWorldModel } from './meterless';
 import { hashRows, mirrorExec, runFederatedQuery } from './zetaris';
 
 // Only these columns can be targeted by an action; values are SQL-escaped.
 const ACTIONABLE = new Set(['cell_batch', 'cell_supplier', 'plant_id', 'bms_supplier', 'firmware', 'carrier', 'climate_zone']);
-const sqlStr = (v: string) => `'${v.replace(/'/g, "''")}'`;
+const sqlStr = (v: string) => {
+  // alasql reads \' as an escaped quote, so a backslash could end the literal early.
+  if (/[\\\u0000-\u001f]/.test(v)) throw new Error('Values with backslashes or control characters cannot be targeted');
+  return `'${v.replace(/'/g, "''")}'`;
+};
 
 export interface RemediationCause {
   column: string;
@@ -99,37 +103,38 @@ export async function executeRemediation(req: RemediationRequest) {
     scenarioId
   );
 
+  const custom = Boolean(mesh.custom);
+  const product = custom ? mesh.scenario.label : PRODUCT_NAME;
   const lots = mesh.lots.filter((l) => lotIds.has(l.lot_id));
-  const serialRanges = lots.length <= 4 ? lots.map((l) => `SN-${l.serial_start} through SN-${l.serial_end}`).join('; ') : `${lots.length} lots (${lots.map((l) => l.lot_id).join(', ')})`;
+  const serialRanges = custom ? `every unit with ${quarantine.map((c) => `${c.column.replace(/^f_/, '').replace(/_/g, ' ')} = ${c.group}`).join(' or ')}` : lots.length <= 4 ? lots.map((l) => `SN-${l.serial_start} through SN-${l.serial_end}`).join('; ') : `${lots.length} lots (${lots.map((l) => l.lot_id).join(', ')})`;
   const failuresHeld = quarantine.length ? mesh.units.filter((u) => u.failed && quarantine.some((c) => String((u as unknown as Record<string, unknown>)[c.column]) === c.group)).length : 0;
   const causeText = req.causes.map((c) => `${c.column.replace('_', ' ')} ${c.group}`).join(' and ');
 
   const notices: Record<string, string> = {};
   if (quarantine.length) {
-    notices.distributor = `URGENT: STOP SALE AND HOLD — ${PRODUCT_NAME}
+    const locations = [...byWarehouse.entries()].filter(([wh]) => wh && wh !== 'undefined');
+    notices.distributor = `URGENT: STOP SALE AND HOLD — ${product}
 Hold reference: ${holdId}    Date: ${now.slice(0, 10)}
 
 Effective immediately, place the following on hold and remove from sale:
   ${serialRanges}  (${unitsHeld.toLocaleString('en-US')} units)
 
-No other ${SKU} serials are affected by this hold. Do not pull unaffected stock.
-Units per location:
-${[...byWarehouse.entries()].map(([wh, v]) => `  ${wh} (${v.region}): ${v.units} units`).join('\n')}
-
-Reason: ${quarantine.map((c) => `${c.column.replace('_', ' ')} ${c.group}`).join(', ')} can overheat in use.
+No other ${custom ? '' : `${SKU} `}serials are affected by this hold. Do not pull unaffected stock.
+${locations.length ? `Units per location:\n${locations.map(([wh, v]) => `  ${wh} (${v.region}): ${v.units} units`).join('\n')}\n` : ''}
+Reason: ${quarantine.map((c) => `${c.column.replace(/^f_/, '').replace(/_/g, ' ')} ${c.group}`).join(', ')} ${custom ? 'is the confirmed cause of the recorded failures' : 'can overheat in use'}.
 Evidence reference (proof root): ${req.ledgerRoot.slice(0, 16)}…`;
   }
   for (const a of otherActions) {
     notices[a.remedy === 'OTA_ROLLBACK' ? 'ota' : 'operations'] =
       a.remedy === 'OTA_ROLLBACK'
-        ? `OTA ROLLBACK ORDER — ${PRODUCT_NAME}
+        ? `OTA ROLLBACK ORDER — ${product}
 Job: ${a.jobId}    Date: ${now.slice(0, 10)}
 
 Roll back firmware ${a.group} on ${a.units.toLocaleString('en-US')} connected packs to the previous stable release, and
 apply a temporary 90% charge limit until a fixed release ships. Packs that are offline get the rollback on next connect.
 No units need to be returned for this cause.
 Evidence reference (proof root): ${req.ledgerRoot.slice(0, 16)}…`
-        : `${a.label.toUpperCase()} ORDER — ${PRODUCT_NAME}
+        : `${a.label.toUpperCase()} ORDER — ${product}
 Job: ${a.jobId}    Date: ${now.slice(0, 10)}
 
 ${a.label} for ${a.units.toLocaleString('en-US')} units (${a.column.replace('_', ' ')} ${a.group}).
@@ -138,11 +143,11 @@ Evidence reference (proof root): ${req.ledgerRoot.slice(0, 16)}…`;
   notices.regulator = `DRAFT — Section 15(b) Report to the U.S. Consumer Product Safety Commission
 (Prepared by Traceon for review by counsel before submission.)
 
-Firm: VoltRide (fictional demonstration company)
-Product: ${PRODUCT_NAME}, model ${SKU}
+Firm: ${custom ? '[your company]' : 'VoltRide (fictional demonstration company)'}
+Product: ${custom ? product : `${PRODUCT_NAME}, model ${SKU}`}
 Root cause: ${causeText}
-${quarantine.length ? `Units held: ${unitsHeld.toLocaleString('en-US')} (${serialRanges})\nIncidents known in held population as of ${AS_OF}: ${failuresHeld}\n` : ''}${otherActions.map((a) => `${a.label}: ${a.units.toLocaleString('en-US')} units (${a.jobId})`).join('\n')}
-Hazard: thermal event in the battery pack (overheating, smoke, swelling, fire)
+${quarantine.length ? `Units held: ${unitsHeld.toLocaleString('en-US')} (${serialRanges})\nIncidents known in held population as of ${mesh.asOf ?? AS_OF}: ${failuresHeld}\n` : ''}${otherActions.map((a) => `${a.label}: ${a.units.toLocaleString('en-US')} units (${a.jobId})`).join('\n')}
+Hazard: ${custom ? 'the failure mode recorded in the uploaded data (describe it here)' : 'thermal event in the battery pack (overheating, smoke, swelling, fire)'}
 Corrective action: ${[quarantine.length ? `stop sale and quarantine (${holdId})` : '', ...otherActions.map((a) => `${a.label.toLowerCase()} (${a.jobId})`)].filter(Boolean).join('; ')}; consumer notification to follow.
 Supporting evidence: Traceon proof ledger root ${req.ledgerRoot}`;
 
@@ -152,7 +157,7 @@ Supporting evidence: Traceon proof ledger root ${req.ledgerRoot}`;
     unitsHeld,
     warehouses: [...byWarehouse.entries()].map(([warehouse_id, v]) => ({ warehouse_id, ...v })),
     otherActions,
-    costUsd: unitsHeld * UNIT_COST_USD + otherActions.reduce((a, x) => a + x.costUsd, 0),
+    costUsd: unitsHeld * (mesh.unitCost ?? UNIT_COST_USD) + otherActions.reduce((a, x) => a + x.costUsd, 0),
     holdQueryHash,
     memoryInsightId: insight.id,
     notices,
@@ -169,11 +174,15 @@ export async function verifyLedger(items: EvidenceItem[], scenarioId = 'referenc
     let replayed = false;
     let match = true;
     if (it.query?.sql) {
-      const rerun = await runFederatedQuery(it.query.sql, it.query.sourceSilos, scenarioId);
       replayed = true;
-      match = hashRows(it.query.sql, rerun.rows) === it.proofHash;
+      try {
+        const rerun = await runFederatedQuery(String(it.query.sql), Array.isArray(it.query.sourceSilos) ? it.query.sourceSilos : [], scenarioId);
+        match = hashRows(it.query.sql, rerun.rows) === it.proofHash;
+      } catch {
+        match = false; // refused (not a read-only SELECT) or failed: it cannot be the agent's query
+      }
     }
-    head = crypto.createHash('sha256').update(head).update(it.proofHash).update(it.label).digest('hex');
+    head = chainStep(head, String(it.proofHash), String(it.label), String(it.summary ?? ''));
     results.push({ id: it.id, label: it.label, replayed, match, chainOk: head === it.chainHash });
   }
   return {

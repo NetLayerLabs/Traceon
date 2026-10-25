@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolveScenario } from '@/lib/enterpriseData';
 import type { InvestigationEvent, VisionFinding } from '@/lib/investigation';
 import { activeRun, BusyError, getRun, startRun } from '@/lib/runRegistry';
+import { getVisionFinding } from '@/lib/vision';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export const maxDuration = 300;
 // POST starts an investigation and streams its events as NDJSON. The run itself
 // lives in the run registry, so a dropped stream never loses the result.
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { vision?: VisionFinding | null; scenario?: string };
+  const body = ((await req.json().catch(() => null)) ?? {}) as { vision?: Partial<VisionFinding> | null; scenario?: string };
   let scenarioId: string;
   try {
     scenarioId = resolveScenario(body.scenario).id;
@@ -19,7 +20,8 @@ export async function POST(req: Request) {
   }
   let run;
   try {
-    run = startRun(scenarioId, body.vision ?? null);
+    // Use the server's own copy of the photo analysis; a client-supplied finding is ignored.
+    run = startRun(scenarioId, getVisionFinding(body.vision?.id));
   } catch (err) {
     if (err instanceof BusyError) {
       return NextResponse.json({ error: err.message, runId: err.run.id, scenarioId: err.run.scenarioId }, { status: 409 });

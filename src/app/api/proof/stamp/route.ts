@@ -7,7 +7,7 @@ export const maxDuration = 60;
 
 // POST {id}: sign and timestamp the ledger root of a finished run or case.
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { id?: string };
+  const body = ((await req.json().catch(() => null)) ?? {}) as { id?: string };
   const events = body.id ? loadEvents(body.id) : null;
   if (!events) return NextResponse.json({ error: 'Unknown investigation' }, { status: 404 });
   const view = buildCaseView(events);

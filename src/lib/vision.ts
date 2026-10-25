@@ -2,7 +2,23 @@
 // call fails) it returns a reference analysis of the bundled sample photo,
 // marked live=false so the UI can label it.
 import { extractJson, nemotronChat, NEMOTRON_MODEL } from './nemotron';
+import crypto from 'node:crypto';
 import type { VisionFinding } from './investigation';
+import { singleton } from './singleton';
+
+// Findings are kept server-side and referred to by id, so an investigation
+// only ever uses an analysis this server actually produced.
+const findings = singleton('vision', () => new Map<string, VisionFinding>());
+function keep(f: VisionFinding): VisionFinding {
+  const id = crypto.randomUUID();
+  const out = { ...f, id };
+  findings.set(id, out);
+  while (findings.size > 50) findings.delete(findings.keys().next().value!);
+  return out;
+}
+export function getVisionFinding(id: unknown): VisionFinding | null {
+  return typeof id === 'string' ? findings.get(id) ?? null : null;
+}
 
 const REFERENCE: VisionFinding = {
   live: false,
@@ -33,8 +49,8 @@ bbox is the damaged region as fractions of image width/height. If the image does
     maxTokens: 4096,
     timeoutMs: 75_000,
   });
-  if (!reply.live) return { ...REFERENCE, reasoning: reply.error };
+  if (!reply.live) return keep({ ...REFERENCE, reasoning: reply.error });
   const parsed = extractJson<Omit<VisionFinding, 'live' | 'model'>>(reply.text);
-  if (!parsed?.physicalFailureMode) return { ...REFERENCE, reasoning: `Model reply was not valid JSON: ${reply.text.slice(0, 200)}` };
-  return { ...parsed, live: true, model: reply.model, reasoning: reply.reasoning.slice(0, 1500) };
+  if (!parsed?.physicalFailureMode) return keep({ ...REFERENCE, reasoning: `Model reply was not valid JSON: ${reply.text.slice(0, 200)}` });
+  return keep({ ...parsed, live: true, model: reply.model, reasoning: reply.reasoning.slice(0, 1500) });
 }

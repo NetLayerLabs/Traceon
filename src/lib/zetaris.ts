@@ -206,14 +206,31 @@ export async function runCloudQuery(sql: string): Promise<Record<string, unknown
 
 let querySeq = 0;
 
+/**
+ * Every query the agent runs is a single read-only SELECT. Anything else is
+ * refused before it reaches the mirror or Zetaris, because a replayed proof
+ * bundle can come from outside (alasql can write files with SELECT INTO).
+ */
+export function assertReadOnlySelect(sql: string) {
+  const code = sql.replace(/'(?:[^']|'')*'/g, "''"); // ignore string literals
+  if (!/^\s*SELECT\b/i.test(code)) throw new Error('Only SELECT queries can run');
+  if (/[;\\]/.test(code) || /\b(INTO|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|ATTACH|DETACH|USE|REQUIRE|SOURCE|DECLARE|EXEC|EXECUTE)\b/i.test(code) || /\b(TXT|CSV|TSV|TAB|JSON|JSONL|XLSX|XLS|FILE|SQLITE|IDB|LOCALSTORAGE)\s*\(/i.test(code)) {
+    throw new Error('Query rejected: only plain read-only SELECT statements can run');
+  }
+}
+
 export async function runFederatedQuery(sql: string, sourceSilos: string[], scenarioId = 'reference'): Promise<FederatedQueryResult> {
+  assertReadOnlySelect(sql);
   const start = performance.now();
   let rows: Record<string, unknown>[] | null = null;
   let executedVia: ExecutedVia = 'ZETARIS_CLOUD';
   let fallbackReason: string | undefined;
   // Only the reference scenario's data is loaded into Zetaris.
   const cloudSql = cloudConfig() && scenarioId === 'reference' ? toCloudSql(sql) : undefined;
-  if (cloudConfig() && scenarioId !== 'reference') fallbackReason = `scenario "${scenarioId}" is simulated locally; Zetaris holds the reference scenario`;
+  if (cloudConfig() && scenarioId !== 'reference')
+    fallbackReason = scenarioId.startsWith('custom-')
+      ? 'uploaded data is queried on the local engine; Zetaris holds the reference scenario'
+      : `scenario "${scenarioId}" is generated locally; Zetaris holds the reference scenario`;
   if (cloudSql) {
     try {
       rows = await runCloudQuery(cloudSql);

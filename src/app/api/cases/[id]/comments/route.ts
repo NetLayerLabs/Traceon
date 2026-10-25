@@ -8,7 +8,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const body = (await req.json().catch(() => ({}))) as { exhibitId?: string | null; author?: string; role?: string; text?: string };
+  const body = ((await req.json().catch(() => null)) ?? {}) as { exhibitId?: string | null; author?: string; role?: string; text?: string };
   try {
     return NextResponse.json(addComment((await params).id, { exhibitId: body.exhibitId, author: String(body.author ?? ''), role: body.role, text: String(body.text ?? '') }));
   } catch (err) {

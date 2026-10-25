@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 // POST {id, mode}: simulate the 30 days after the planned fix, or after acting
 // on the leading confounder instead ("wrong-fix").
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { id?: string; mode?: string };
+  const body = ((await req.json().catch(() => null)) ?? {}) as { id?: string; mode?: string };
   const events = body.id ? loadEvents(body.id) : null;
   if (!events) return NextResponse.json({ error: 'Unknown investigation' }, { status: 404 });
   const view = buildCaseView(events);

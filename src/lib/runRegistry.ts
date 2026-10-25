@@ -15,6 +15,8 @@ export interface Run {
   scenarioId: string;
   startedAt: number;
   finishedAt: number | null;
+  /** The agent's promise has settled. A run closed by the watchdog keeps the lock until then. */
+  settled?: boolean;
   events: InvestigationEvent[];
   listeners: Set<(e: InvestigationEvent) => void>;
 }
@@ -29,7 +31,8 @@ export class BusyError extends Error {
 
 export function activeRun(): Run | null {
   const r = state.active;
-  return r && r.finishedAt === null ? r : null;
+  // A timed-out run may still be writing memory; no second run starts until it stops.
+  return r && (r.finishedAt === null || !r.settled) ? r : null;
 }
 
 export function getRun(id: string): Run | undefined {
@@ -69,6 +72,7 @@ export function startRun(scenarioId: string, vision: VisionFinding | null): Run 
   runInvestigation((e) => push(run, e), { vision, scenarioId })
     .catch((err) => push(run, { type: 'error', message: (err as Error).message }))
     .finally(() => {
+      run.settled = true;
       clearTimeout(watchdog);
       if (run.finishedAt === null) push(run, { type: 'error', message: 'Investigation ended without a result' });
     });
