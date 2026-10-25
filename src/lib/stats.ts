@@ -241,3 +241,37 @@ export function formatP(p: number, negLog10P: number): string {
   }
   return `p = ${p.toFixed(p < 0.01 ? 4 : 2)}`;
 }
+
+/** Wilson score interval for a proportion k/n (95% by default). */
+export function wilson(k: number, n: number, z = Z975) {
+  if (n <= 0) return { p: 0, lo: 0, hi: 0 };
+  const p = k / n;
+  const d = 1 + (z * z) / n;
+  const c = p + (z * z) / (2 * n);
+  const r = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
+  return { p, lo: Math.max(0, (c - r) / d), hi: Math.min(1, (c + r) / d) };
+}
+
+/** Chi-square quantile by bisection on the survival function (accurate to ~1e-9). */
+export function chiSquareQuantile(prob: number, df: number): number {
+  // prob is the lower-tail probability; find x with P(X <= x) = prob.
+  let lo = 0;
+  let hi = Math.max(10, df * 10);
+  while (1 - chiSquarePValue(hi, df).p < prob) hi *= 2;
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2;
+    if (1 - chiSquarePValue(mid, df).p < prob) lo = mid;
+    else hi = mid;
+    if (hi - lo < 1e-9 * Math.max(1, hi)) break;
+  }
+  return (lo + hi) / 2;
+}
+
+/** Exact (Garwood) confidence interval for a Poisson count k. */
+export function poissonInterval(k: number, level = 0.95) {
+  const a = 1 - level;
+  return {
+    lo: k === 0 ? 0 : chiSquareQuantile(a / 2, 2 * k) / 2,
+    hi: chiSquareQuantile(1 - a / 2, 2 * k + 2) / 2,
+  };
+}
