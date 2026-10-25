@@ -1,0 +1,226 @@
+{
+ "sf": [
+  {
+   "stat": 3.841458820694124,
+   "df": 1,
+   "p": 0.04999999999999994,
+   "log10p": -1.3010299956639817
+  },
+  {
+   "stat": 23.0,
+   "df": 1,
+   "p": 1.6200139824664679e-06,
+   "log10p": -5.790481237011798
+  },
+  {
+   "stat": 10.0,
+   "df": 5,
+   "p": 0.07523524614651216,
+   "log10p": -1.1235786538122852
+  },
+  {
+   "stat": 0.5,
+   "df": 2,
+   "p": 0.7788007830714049,
+   "log10p": -0.10857362047581294
+  },
+  {
+   "stat": 120.0,
+   "df": 59,
+   "p": 4.73064245336988e-06,
+   "log10p": -5.325079875117036
+  },
+  {
+   "stat": 900.0,
+   "df": 59,
+   "p": 9.975104487371441e-151,
+   "log10p": -150.00108254646312
+  },
+  {
+   "stat": 2000.0,
+   "df": 2,
+   "p": 0.0,
+   "log10p": -434.2944819032518,
+   "note": "analytic: chi2(2) survival is exp(-x/2); scipy underflows to 0"
+  },
+  {
+   "stat": 40.0,
+   "df": 6,
+   "p": 4.5551495055892125e-07,
+   "log10p": -6.341497364379925
+  }
+ ],
+ "indep": {
+  "firmware_like": {
+   "groups": [
+    {
+     "failures": 31,
+     "units": 53935
+    },
+    {
+     "failures": 41,
+     "units": 53832
+    },
+    {
+     "failures": 53,
+     "units": 72233
+    }
+   ],
+   "chi2": 1.6240229088144489,
+   "p": 0.443964153838444,
+   "df": 2
+  },
+  "three_even": {
+   "groups": [
+    {
+     "failures": 10,
+     "units": 10000
+    },
+    {
+     "failures": 12,
+     "units": 10000
+    },
+    {
+     "failures": 9,
+     "units": 10000
+    }
+   ],
+   "chi2": 0.45208005261350714,
+   "p": 0.7976861725952398,
+   "df": 2
+  },
+  "one_hot": {
+   "groups": [
+    {
+     "failures": 116,
+     "units": 1380
+    },
+    {
+     "failures": 5,
+     "units": 60000
+    },
+    {
+     "failures": 4,
+     "units": 59000
+    },
+    {
+     "failures": 0,
+     "units": 59620
+    }
+   ],
+   "chi2": 13926.705309867299,
+   "p": 0.0,
+   "df": 3
+  },
+  "two_groups": {
+   "groups": [
+    {
+     "failures": 79,
+     "units": 75663
+    },
+    {
+     "failures": 46,
+     "units": 104337
+    }
+   ],
+   "chi2": 22.997009511145926,
+   "p": 1.622535956691779e-06,
+   "df": 1
+  }
+ },
+ "cmh": {
+  "heat_given_batch": {
+   "strata": [
+    {
+     "exposedFailures": 77,
+     "exposedUnits": 971,
+     "unexposedFailures": 39,
+     "unexposedUnits": 409
+    },
+    {
+     "exposedFailures": 2,
+     "exposedUnits": 74692,
+     "unexposedFailures": 7,
+     "unexposedUnits": 103928
+    }
+   ],
+   "chi2": 1.4209627204620965,
+   "p": 0.2332450090085353,
+   "or": 0.773564059600433
+  },
+  "batch_given_heat": {
+   "strata": [
+    {
+     "exposedFailures": 77,
+     "exposedUnits": 971,
+     "unexposedFailures": 2,
+     "unexposedUnits": 74692
+    },
+    {
+     "exposedFailures": 39,
+     "exposedUnits": 409,
+     "unexposedFailures": 7,
+     "unexposedUnits": 103928
+    }
+   ],
+   "chi2": 11079.146053939807,
+   "p": 0.0,
+   "or": 2370.353366822882
+  },
+  "null_like": {
+   "strata": [
+    {
+     "exposedFailures": 5,
+     "exposedUnits": 1000,
+     "unexposedFailures": 6,
+     "unexposedUnits": 1100
+    },
+    {
+     "exposedFailures": 3,
+     "exposedUnits": 900,
+     "unexposedFailures": 2,
+     "unexposedUnits": 800
+    },
+    {
+     "exposedFailures": 7,
+     "exposedUnits": 1500,
+     "unexposedFailures": 8,
+     "unexposedUnits": 1600
+    }
+   ],
+   "chi2": 0.016525956941718604,
+   "p": 0.8977111023175014,
+   "or": 0.9815226975882281
+  }
+ },
+ "rr": [
+  {
+   "a": 116,
+   "n1": 1380,
+   "c": 9,
+   "n2": 178620,
+   "rr": 1668.270531400966,
+   "lo": 848.4589944022656,
+   "hi": 3280.213403715
+  },
+  {
+   "a": 79,
+   "n1": 75663,
+   "c": 46,
+   "n2": 104337,
+   "rr": 2.368230925574444,
+   "lo": 1.6466756899167012,
+   "hi": 3.4059637554562427
+  },
+  {
+   "a": 30,
+   "n1": 1000,
+   "c": 10,
+   "n2": 1000,
+   "rr": 3.0,
+   "lo": 1.4745052273578412,
+   "hi": 6.103742348968852
+  }
+ ],
+ "_source": "Generated with scipy 1.18.1 and statsmodels 0.15.0 (chi2.sf/logsf, chi2_contingency correction=False, StratifiedTable.test_null_odds(correction=True), relative_risk Katz CI)"
+}
