@@ -250,26 +250,28 @@ Each step is optional. Without keys every model step uses a labelled template an
 
 - **The model never decides.** Nemotron plans the order of tests, raises objections and writes prose. Every statistic, every verdict and every gate criterion is computed in code, and `numberGuard()` flags any figure in the prose that is not in the evidence.
 - **The gate is enforced twice.** The UI shows the remediation control only after all seven criteria pass, and `/api/quarantine` refuses (403) any request whose ledger root does not belong to a completed run that passed, or that names a cause the run did not confirm.
-- **Input protection.** Only seven cause columns are actionable, values are SQL-escaped, and request bodies are validated (bad input gets a 4xx, never a crash). Vision accepts only `data:image/` URLs under about 6 MB.
-- **One investigation at a time.** A second start gets 409 and can attach. A watchdog ends a run after 240 seconds (`RUN_TIMEOUT_MS`) and frees the lock.
+- **Input protection.** Every query passes a read-only check before it runs (a single `SELECT`, no `INTO`, no file functions), so even a replayed proof bundle cannot write files or change data. Only confirmed cause columns are actionable and values are SQL-escaped; uploaded values with backslashes or control characters are refused. Request bodies are validated (bad input gets a 4xx, never a crash). Vision accepts only `data:image/` URLs under about 6 MB, and an investigation uses a photo finding only by the id the server issued for it.
+- **Proof covers what people read.** Each chain step hashes the exhibit's content, label and summary, and **Replay & verify** replays what the server recorded and compares the rebuilt root with the one it published.
+- **One investigation at a time.** A second start gets 409 and can attach. A watchdog ends a run after 240 seconds (`RUN_TIMEOUT_MS`); the lock is released once the timed-out run has actually stopped.
 - **Every external call has a deadline.** Federal feeds 9 s; Zetaris 30 s per page; Nemotron 20 to 75 s depending on the call, capped by `NEMOTRON_TIMEOUT_MS`; thinking requests race a fast answer so latency spikes never stall a run.
 - **Nothing is faked when it fails.** An unreachable feed is shown as unreachable; a Zetaris failure falls back to the mirror with the reason in the exhibit; a model failure falls back to a labelled template with the reason in the agent trace.
-- **Open by design for judging.** There is no login, and `/api/reset` clears memory and holds for anyone. Put the app behind authentication before any real use.
+- **Open by design for judging.** There is no login. `/api/reset` clears demo memory and holds (shared cases, uploads and the signing key are kept); set `TRACEON_DISABLE_RESET=1` to turn it off. Put the app behind authentication before any real use.
 - **Shared data is not private.** Uploaded datasets, shared cases and their comments are stored on the server as plain JSON and are readable by anyone with the link.
-- **Test coverage.** 44 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), and the features built on a finished case (13).
+- **Test coverage.** 51 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case (13), and regressions for every fix from the end-to-end audit (7).
 
 ## What's real and what's simulated
 
-| Real | Simulated |
+| Real | Simulated or local |
 | --- | --- |
 | CPSC, openFDA and NHTSA data, fetched live on each run | The company (VoltRide), its 180,000 units, lots, suppliers, warehouses and warranty claims |
-| Nemotron 3.5 Super VL and Lightning calls through NVIDIA NIM, with reasoning traces when thinking wins the race | Reviews and forum posts, unless `BRIGHTDATA_API_TOKEN` is set |
+| Nemotron 3.5 Super VL and Lightning calls through NVIDIA NIM, with reasoning traces when thinking wins the race | Reviews and forum posts, unless `BRIGHTDATA_API_TOKEN` is set (labelled *simulated* in the app) |
 | Every statistic, verdict, gate decision and proof hash | The planted causes in each scenario (the agent is never told them) |
-| The Meterless H-MEM and Markovian engines, running locally | The ERP hold table and notices: written locally, not sent to any real ERP, distributor or regulator |
-| The Zetaris SQL API client, built from Zetaris's published OpenAPI spec | Zetaris queries run on the local mirror until a Zetaris instance is configured; tested against a spec-conformant test double |
-| The sample defect photo's analysis, when a key is set | The sample photo itself is an illustration; upload a real one to analyse it |
+| The Meterless H-MEM and Markovian engines, running locally | The ERP hold table, stop-sale notice, OTA order and CPSC draft: written locally, never sent to any ERP, distributor or regulator |
+| The Zetaris SQL API client, built from Zetaris's published OpenAPI spec, with a hash-parity check | Until a Zetaris instance is configured, queries run on the local alasql mirror; with Zetaris, only the reference scenario runs there and every other scenario and upload runs locally, labelled in each exhibit |
+| Your own CSV on **Your data**: real data, analysed with the same tests | The 12,000-unit charger sample offered there (`scripts/make-sample-csv.mts`) |
 | NHTSA complaints and recalls behind the backtest (snapshots in `data/nhtsa/`, or live) | The 30 days after a fix in **Verify the fix**, drawn from the scenario's own failure rates |
-| OpenTimestamps proofs from the public calendars, and the Ed25519 signature | The 12,000-unit charger sample for **Your data** (`scripts/make-sample-csv.mts`) |
+| OpenTimestamps proofs from the public calendars, and the Ed25519 signature | The sample defect photo is an illustration; without a key its analysis is a labelled offline reference, which never counts as evidence in the gate |
+| The scoreboard, recorded from real runs with Nemotron | Watch mode replays the scenario's history day by day; it does not read a live warranty feed |
 
 ## Tech stack
 
@@ -303,6 +305,7 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | `METERLESS_STORAGE_DIR` | Where H-MEM and the world model persist | `./.meterless-data` (`/tmp/meterless-data` on Vercel) |
 | `DEMO_PACING_MS` | Delay between steps so a demo is watchable | 350 |
 | `RUN_TIMEOUT_MS` | Watchdog for one investigation | 240,000 |
+| `TRACEON_DISABLE_RESET` | Set to `1` on a shared deployment so nobody can clear demo memory | Unset: **Reset demo** works |
 | `TRACEON_SIGNING_KEY` | Ed25519 private key (PEM) that signs proof roots, so a deployment keeps one identity | Unset: a key is generated once and kept in the storage folder |
 
 The same list with comments is in [`.env.example`](.env.example).

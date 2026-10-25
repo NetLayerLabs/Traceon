@@ -280,6 +280,7 @@ flowchart LR
 | `tests/degrade.test.mts` | 5 | A hanging model, dead feeds and an unreachable Zetaris all degrade cleanly |
 | `tests/registry.test.mts` | 2 | The one-run lock and the watchdog |
 | `tests/e2e.test.mts` | 5 | A real production server: health, validation, 409 and attach, dropped-stream recovery, replay over HTTP, and the server-side evidence gate |
+| `tests/hardening.test.mts` | 7 | Regressions for the Oct 25 audit: read-only SQL, replayed bundles cannot write or forge summaries, upload validation (backslashes, single suspect, duplicate serials, malformed mapping, unparseable dates, full-content ids), strict scenario ids, reset scope, server-issued photo findings |
 | `tests/features.test.mts` | 13 | Bolt EV backtest; an uploaded CSV solved with its confounder ruled out; watch alert and that day's verdict; as-of truth; falsifiers and intervals; counterfactual inputs; follow-up verified vs reopened; stamp signatures; reviewer cases and comments; cited Q&A; reports; scoreboard |
 
 `scripts/eval.mts` (`npm run eval`) runs the agent blind on hidden scenarios and reports accuracy by cause type and whether any wrong cause was acted on.
@@ -290,6 +291,8 @@ flowchart LR
 - **Fixed dimensions per dataset.** The demo tests seven factors and an upload tests the columns it maps. Nemotron can name others, which are logged as untestable rather than tested.
 - **Follow-up is simulated.** Verification after the fix runs on simulated days drawn from the scenario's observed hazards. With real data the same checks would run on the claims that arrive.
 - **Backtest matching is approximate.** A signal and a recall are matched by component family and fire wording, not proven to be the same defect, and complaints have no sales denominator.
-- **No access control.** Shared cases, comments and uploaded datasets are stored as plain JSON on the server and anyone with the URL can read them. Add authentication before real use.
+- **No access control.** Shared cases, comments and uploaded datasets are stored as plain JSON on the server and anyone with the URL can read them; `GET /api/investigate` reveals the active run. Add authentication before real use. `TRACEON_DISABLE_RESET=1` turns off the demo reset.
+- **CPU per new scenario.** Each new `random-<seed>` (1 to 999,999) builds a 180,000-row mesh and, in watch mode, about a second of screening. Meshes and replays are cached, but there is no rate limit.
+- **Bright Data live mode** searches the web for the fictional product name; any real posts it finds replace the simulated set, so the reference proof root is reproducible only without a token.
 - **Single process.** The mirror, holds and run registry are in memory. Restarting the server clears holds (memory on disk survives).
 - **Zetaris not yet run against a live cluster.** The adapter is tested against a spec-conformant test double (`scripts/mock-zetaris.mts`); a live parity check is pending account setup.
