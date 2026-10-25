@@ -42,7 +42,7 @@ export function SignalPane(props: {
         {!feeds && <div className="empty">Polling federal feeds…</div>}
         {feeds?.map((f) => (
           <div className="feed-row" key={f.feed}>
-            <span className={`chip ${f.status === 'live' ? 'live' : f.status === 'simulated' ? 'sim' : ''}`} style={{ padding: '1px 7px' }}>
+            <span className={`chip ${f.status === 'live' || f.status === 'uploaded' ? 'live' : f.status === 'simulated' ? 'sim' : ''}`} style={{ padding: '1px 7px' }}>
               <span className="dot" />
               {f.status}
             </span>

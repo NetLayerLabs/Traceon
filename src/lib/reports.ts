@@ -101,14 +101,15 @@ export function supplierPacket(view: CaseView): string {
   const body = causes
     .map((c) => {
       const supplier = c.supplier ?? (c.column.includes('supplier') ? c.group : 'the supplier of record');
-      const claim = c.units * UNIT_COST_USD;
+      const perUnit = c.units ? c.costUsd / c.units : UNIT_COST_USD;
+      const claim = c.costUsd;
       return `<h2>Claim against ${esc(supplier)}</h2>
 <p>We hold that the parts identified below were defective when delivered, and that the defect caused the field incidents listed. The finding is statistical and was reached after every other recorded explanation was tested and excluded.</p>
 ${causeFacts(view, c)}
 ${ruledOut(view, c)}
 ${view.vision ? `<h3>Physical evidence</h3><p>${esc(view.vision.visualEvidenceSummary)} (failure mode: ${esc(view.vision.physicalFailureMode)}; component: ${esc(view.vision.suspectedComponent)})${cite(view.evidence.find((e) => e.kind === 'vision'))}</p>` : ''}
 <h3>Amount claimed</h3>
-<table><tbody><tr><th>Units quarantined</th><td class="num">${n(c.units)}</td></tr><tr><th>Cost per unit (logistics, replacement, handling)</th><td class="num">${usd(UNIT_COST_USD)}</td></tr><tr><th>Total</th><td class="num"><b>${usd(claim)}</b></td></tr></tbody></table>
+<table><tbody><tr><th>Units quarantined</th><td class="num">${n(c.units)}</td></tr><tr><th>Cost per unit (logistics, replacement, handling)</th><td class="num">${usd(perUnit)}</td></tr><tr><th>Total</th><td class="num"><b>${usd(claim)}</b></td></tr></tbody></table>
 <h3>Requested remedy</h3>
 <p>Credit or replacement for the units above, the supplier's 8D response for the affected batch within 10 working days, and containment of any other material from the same batch.</p>`;
     })
@@ -117,6 +118,7 @@ ${view.vision ? `<h3>Physical evidence</h3><p>${esc(view.vision.visualEvidenceSu
 }
 
 export function eightD(view: CaseView): string {
+  const custom = Boolean(view.scenario?.id.startsWith('custom-'));
   const plan = view.action;
   const causes = plan?.causes ?? [];
   const gate = view.gate;
@@ -126,7 +128,7 @@ export function eightD(view: CaseView): string {
 <h2>D1. Team</h2>
 <table><tbody><tr><th>Investigation</th><td>Traceon agent (Nemotron plans and explains; deterministic statistics decide)</td></tr><tr><th>Quality lead</th><td>&nbsp;</td></tr><tr><th>Supplier quality</th><td>&nbsp;</td></tr><tr><th>Field service</th><td>&nbsp;</td></tr></tbody></table>
 <h2>D2. Problem description</h2>
-<p>${esc(plan ? `${n(plan.incidentsSoFar)} thermal incidents explained among ${n(plan.blanketUnits)} units in the field.` : 'Thermal incidents reported in the field.')} ${esc(view.narrative?.text.split('\n')[0] ?? '')}</p>
+<p>${esc(plan ? `${n(plan.incidentsSoFar)} ${custom ? 'failures' : 'thermal incidents'} explained among ${n(plan.blanketUnits)} units in the field.` : custom ? 'Failures recorded in the uploaded data.' : 'Thermal incidents reported in the field.')} ${esc(view.narrative?.text.split('\n')[0] ?? '')}</p>
 <h2>D3. Containment</h2>
 ${plan ? `<p>${causes.map((c) => `${esc(c.remedy === 'QUARANTINE' ? 'Quarantine' : c.remedy.replace('_', ' ').toLowerCase())} of ${n(c.units)} units (${esc(c.column.replace(/_/g, ' '))} ${esc(c.group)})`).join('; ')}, instead of recalling all ${n(plan.blanketUnits)} units. Cost ${usd(plan.surgicalCostUsd)} against ${usd(plan.blanketCostUsd)} for a blanket recall. Without containment, about ${plan.projectedIncidents30d} more incidents are projected in 30 days (90% range ${plan.projectedRange.lo} to ${plan.projectedRange.hi}).</p>` : '<p>No containment: the evidence gate did not pass.</p>'}
 <h2>D4. Root cause</h2>

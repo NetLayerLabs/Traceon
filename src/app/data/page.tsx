@@ -33,6 +33,7 @@ export default function DataPage() {
   const [failValues, setFailValues] = useState<string[]>([]);
   const [factors, setFactors] = useState<string[]>([]);
   const [opt, setOpt] = useState({ serial: '', date: '', symptom: '', daysInField: '' });
+  const [unitCost, setUnitCost] = useState('25');
   const [listed, setListed] = useState<Listed[]>([]);
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function DataPage() {
     setBusy(true);
     setErr(null);
     try {
-      const mapping = { outcome, failValues, factors, ...Object.fromEntries(Object.entries(opt).filter(([, v]) => v)) };
+      const mapping = { outcome, failValues, factors, unitCost: Number(unitCost) || 0, ...Object.fromEntries(Object.entries(opt).filter(([, v]) => v)) };
       const r = await fetch('/api/datasets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ csv, name, mapping }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
@@ -237,6 +238,10 @@ export default function DataPage() {
               </div>
               <div className="card">
                 <h3>Investigate</h3>
+                <label className="field" style={{ marginBottom: 10 }}>
+                  <span>Cost to hold one unit (USD) · logistics, replacement, handling</span>
+                  <input type="number" min={0} step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} />
+                </label>
                 <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
                   {factors.length} suspect{factors.length === 1 ? '' : 's'}, {failCount.toLocaleString('en-US')} failures in {prof.rowCount.toLocaleString('en-US')} units. Checks without their column are marked N/A in the evidence gate rather than passed.
                 </p>

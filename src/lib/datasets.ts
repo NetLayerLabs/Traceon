@@ -18,6 +18,8 @@ export interface DatasetMapping {
   date?: string; // failure / claim date, YYYY-MM-DD
   symptom?: string;
   daysInField?: string;
+  /** Cost of holding one unit (logistics, replacement, handling); the demo uses $25. */
+  unitCost?: number;
 }
 
 export interface StoredDataset {
@@ -29,7 +31,7 @@ export interface StoredDataset {
   mapping: DatasetMapping;
 }
 
-export const LIMITS = { maxRows: 250_000, maxFactors: 12, maxGroups: 500, maxBytes: 25_000_000 } as const;
+export const LIMITS = { maxRows: 250_000, maxFactors: 12, maxGroups: 500, maxBytes: 25_000_000, maxDatasets: 50, inMemory: 4 } as const;
 
 const dir = () => path.join(process.env.METERLESS_STORAGE_DIR || (process.env.VERCEL ? '/tmp/meterless-data' : path.join(process.cwd(), '.meterless-data')), 'datasets');
 const store = singleton('datasets', () => new Map<string, StoredDataset>());
@@ -90,13 +92,19 @@ export const factorColumn = (name: string) => `f_${slug(name)}`;
 
 export function validateMapping(columns: string[], rows: string[][], m: DatasetMapping): string | null {
   const has = (c?: string) => !c || columns.includes(c);
+  const str = (x: unknown) => typeof x === 'string';
+  if (!m || !str(m.outcome) || !Array.isArray(m.failValues) || !Array.isArray(m.factors) || ![...m.failValues, ...m.factors].every(str)) return 'Malformed mapping';
+  if (![m.serial, m.date, m.symptom, m.daysInField].every((x) => x === undefined || str(x))) return 'Malformed mapping';
   if (!columns.includes(m.outcome)) return `Outcome column "${m.outcome}" not found`;
-  if (!m.failValues?.length) return 'Choose which outcome values mean "failed"';
-  if (!m.factors?.length) return 'Choose at least one factor column to test';
+  if (!m.failValues.length) return 'Choose which outcome values mean "failed"';
+  // One suspect alone cannot be checked for confounding or subgroup consistency.
+  if (m.factors.length < 2) return 'Choose at least two suspect columns, so each can be checked against the others';
+  if (m.factors.includes(m.outcome)) return 'The outcome column cannot also be a suspect';
   if (m.factors.length > LIMITS.maxFactors) return `At most ${LIMITS.maxFactors} factor columns`;
   for (const f of m.factors) if (!columns.includes(f)) return `Factor column "${f}" not found`;
   if (new Set(m.factors.map(factorColumn)).size !== m.factors.length) return 'Two factor columns have names that collide; rename one';
   if (![m.serial, m.date, m.symptom, m.daysInField].every(has)) return 'An optional column was not found';
+  if (m.unitCost !== undefined && !(Number.isFinite(m.unitCost) && m.unitCost >= 0 && m.unitCost <= 1e6)) return 'Cost per unit must be between 0 and 1,000,000';
   if (rows.length > LIMITS.maxRows) return `At most ${LIMITS.maxRows.toLocaleString('en-US')} rows`;
   const fails = new Set(m.failValues.map((v) => v.trim().toLowerCase()));
   const oc = columns.indexOf(m.outcome);
@@ -107,30 +115,58 @@ export function validateMapping(columns: string[], rows: string[][], m: DatasetM
     const c = columns.indexOf(f);
     const distinct = new Set(rows.map((r) => r[c])).size;
     if (distinct < 2) return `Factor "${f}" has only one value`;
+    // alasql reads \' as an escaped quote; a backslash in a value could break out of a SQL literal.
+    const bad = rows.find((r) => /[\\\u0000-\u001f]/.test(r[c] ?? ''));
+    if (bad) return `Factor "${f}" has a value with a backslash or control character (${JSON.stringify(String(bad[c]).slice(0, 30))}); clean it and upload again`;
     if (distinct > LIMITS.maxGroups) return `Factor "${f}" has ${distinct} values; categorical factors need at most ${LIMITS.maxGroups}`;
+  }
+  if (m.serial) {
+    const sc = columns.indexOf(m.serial);
+    const seen = new Set<string>();
+    for (const r of rows) {
+      if (seen.has(r[sc])) return `Serial "${String(r[sc]).slice(0, 30)}" appears more than once; one row per unit`;
+      seen.add(r[sc]);
+    }
   }
   return null;
 }
 
 export function saveDataset(name: string, columns: string[], rows: string[][], mapping: DatasetMapping): StoredDataset {
-  const id = `custom-${crypto.createHash('sha256').update(JSON.stringify([columns, mapping, rows.length, rows.slice(0, 50)])).digest('hex').slice(0, 12)}`;
+  // Content address over every row: the same upload gets the same id, and any change gets a new one.
+  const h = crypto.createHash('sha256').update(JSON.stringify([columns, mapping]));
+  for (const r of rows) h.update(JSON.stringify(r));
+  const id = `custom-${h.digest('hex').slice(0, 12)}`;
+  const existing = getDataset(id);
+  if (existing) return existing;
+  if (listDatasets().length >= LIMITS.maxDatasets) throw new Error(`This server already holds ${LIMITS.maxDatasets} datasets`);
   const ds: StoredDataset = { id, name: name.slice(0, 80) || 'Uploaded data', createdAt: new Date().toISOString(), columns, rows, mapping };
-  store.set(id, ds);
+  remember(ds);
   try {
     fs.mkdirSync(dir(), { recursive: true });
     fs.writeFileSync(path.join(dir(), `${id}.json`), JSON.stringify(ds));
+    fs.writeFileSync(path.join(dir(), `${id}.meta.json`), JSON.stringify(meta(ds)));
   } catch {
     // A read-only filesystem keeps the dataset in memory only.
   }
   return ds;
 }
 
+const meta = (d: StoredDataset) => ({ id: d.id, name: d.name, createdAt: d.createdAt, rows: d.rows.length, factors: d.mapping.factors });
+
+/** Keep only a few full datasets in memory; the rest stay on disk. */
+function remember(ds: StoredDataset) {
+  store.delete(ds.id);
+  store.set(ds.id, ds);
+  while (store.size > LIMITS.inMemory) store.delete(store.keys().next().value!);
+}
+
 export function getDataset(id: string): StoredDataset | null {
+  if (!/^custom-[a-f0-9]{12}$/.test(id)) return null;
   const hit = store.get(id);
   if (hit) return hit;
   try {
     const ds = JSON.parse(fs.readFileSync(path.join(dir(), `${id}.json`), 'utf-8')) as StoredDataset;
-    store.set(id, ds);
+    remember(ds);
     return ds;
   } catch {
     return null;
@@ -141,10 +177,18 @@ export function listDatasets() {
   try {
     return fs
       .readdirSync(dir())
-      .filter((f) => f.startsWith('custom-') && f.endsWith('.json'))
-      .map((f) => getDataset(f.replace('.json', '')))
-      .filter((d): d is StoredDataset => Boolean(d))
-      .map((d) => ({ id: d.id, name: d.name, createdAt: d.createdAt, rows: d.rows.length, factors: d.mapping.factors }));
+      .filter((f) => /^custom-[a-f0-9]{12}\.json$/.test(f))
+      .map((f) => {
+        const id = f.replace('.json', '');
+        try {
+          return JSON.parse(fs.readFileSync(path.join(dir(), `${id}.meta.json`), 'utf-8')) as ReturnType<typeof meta>;
+        } catch {
+          const d = getDataset(id); // written before the metadata index existed
+          return d ? meta(d) : null;
+        }
+      })
+      .filter((d): d is ReturnType<typeof meta> => Boolean(d))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   } catch {
     return [];
   }
@@ -161,8 +205,13 @@ export function buildCustomMesh(ds: StoredDataset, scenario: Scenario): Enterpri
   const fc = idx(m.daysInField);
   const fails = new Set(m.failValues.map((v) => v.trim().toLowerCase()));
   const factorIdx = m.factors.map((f) => ({ name: f, col: factorColumn(f), i: idx(f) }));
-  const dates = dc >= 0 ? ds.rows.map((r) => (r[dc] ?? '').slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort() : [];
-  const asOf = dates[dates.length - 1] ?? new Date().toISOString().slice(0, 10);
+  const isDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+  const failedRows = ds.rows.filter((r) => fails.has((r[oc] ?? '').trim().toLowerCase()));
+  // Dates drive the early-warning replay; use them only if most failures have a valid one.
+  const datesUsable = dc >= 0 && failedRows.length > 0 && failedRows.filter((r) => isDate((r[dc] ?? '').slice(0, 10))).length / failedRows.length >= 0.8;
+  const dates = datesUsable ? ds.rows.map((r) => (r[dc] ?? '').slice(0, 10)).filter(isDate).sort() : [];
+  // Without usable dates, the upload day stands in, so the same dataset always gives the same tables.
+  const asOf = dates[dates.length - 1] ?? ds.createdAt.slice(0, 10);
 
   const units: UnitFact[] = [];
   const claims: WarrantyClaim[] = [];
@@ -174,7 +223,7 @@ export function buildCustomMesh(ds: StoredDataset, scenario: Scenario): Enterpri
     if (fc >= 0) u.days_in_field = Number(r[fc]) || 0;
     units.push(u as unknown as UnitFact);
     if (failed) {
-      const date = dc >= 0 && /^\d{4}-\d{2}-\d{2}/.test(r[dc] ?? '') ? r[dc].slice(0, 10) : asOf;
+      const date = datesUsable && isDate((r[dc] ?? '').slice(0, 10)) ? r[dc].slice(0, 10) : asOf;
       const symptom = yc >= 0 ? String(r[yc] ?? '') : '';
       claims.push({ claim_id: `C-${n + 1}`, serial, lot_id: '', filed_date: date, region: '', symptom, severity: 'OVERHEAT', narrative: symptom || 'Failure recorded in uploaded data' });
     }
@@ -203,6 +252,7 @@ export function buildCustomMesh(ds: StoredDataset, scenario: Scenario): Enterpri
     asOf,
     dimensions,
     custom: true,
-    capabilities: { dates: dc >= 0, symptoms: yc >= 0, daysInField: fc >= 0, warehouses: false, lineage: false },
+    unitCost: m.unitCost,
+    capabilities: { dates: datesUsable, symptoms: yc >= 0, daysInField: fc >= 0, warehouses: false, lineage: false },
   };
 }

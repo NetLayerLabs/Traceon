@@ -144,7 +144,9 @@ export function resolveScenario(id: string | undefined | null): Scenario {
   const m = full.match(/^(.+?)(?:@(\d{4}-\d{2}-\d{2}))?$/);
   const base = m?.[1] ?? full;
   const asOf = m?.[2];
-  if (asOf && (Number.isNaN(Date.parse(asOf)) || asOf > AS_OF)) throw new Error(`Invalid as-of date "${asOf}"`);
+  // A real calendar date (2026-02-31 does not round-trip) no later than the data.
+  if (asOf && (Number.isNaN(Date.parse(asOf)) || new Date(`${asOf}T00:00:00Z`).toISOString().slice(0, 10) !== asOf || asOf > AS_OF || asOf < '2000-01-01'))
+    throw new Error(`Invalid as-of date "${asOf}"`);
   let s: Scenario;
   if (/^custom-[a-f0-9]{12}$/.test(base)) {
     const ds = getDataset(base);
@@ -172,7 +174,8 @@ function resolveBaseScenario(sid: string): Scenario {
   if (sid === 'noise') {
     return { id: sid, label: SCENARIO_OPTIONS[3].label, blurb: SCENARIO_OPTIONS[3].blurb, hidden: false, causes: [], baselineRate: 0.0006, truthKnown: true };
   }
-  const m = sid.match(/^random-(\d{1,9})$/);
+  // Seeds 1 to 999,999, with no leading zeros, so each scenario has exactly one id.
+  const m = sid.match(/^random-([1-9]\d{0,5})$/);
   if (!m) throw new Error(`Unknown scenario "${sid}"`);
   const seed = Number(m[1]);
   const r = mulberry32(seed * 7919 + 13);
@@ -303,6 +306,8 @@ export interface EnterpriseMesh {
   /** Factors to test; generated data uses the seven built-in dimensions. */
   dimensions?: DimensionSpec[];
   custom?: boolean;
+  /** Cost of holding one unit; uploads may set their own (default UNIT_COST_USD). */
+  unitCost?: number;
   /** Which optional analyses the data supports. */
   capabilities: { dates: boolean; symptoms: boolean; daysInField: boolean; warehouses: boolean; lineage: boolean };
 }

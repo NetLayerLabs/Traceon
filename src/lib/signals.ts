@@ -3,7 +3,7 @@
 // unreachable it comes back empty with status 'unreachable'.
 import { getEnterpriseMesh, getSimulatedChatter, PRODUCT_NAME, resolveScenario } from './enterpriseData';
 
-export type FeedStatus = 'live' | 'unreachable' | 'simulated';
+export type FeedStatus = 'live' | 'unreachable' | 'simulated' | 'uploaded';
 
 export interface RadarItem {
   id: string;
@@ -173,7 +173,7 @@ export function fetchWarrantyClaims(scenarioId = 'reference'): FeedResult {
   const { claims } = getEnterpriseMesh(scenarioId);
   return {
     feed: resolveScenario(scenarioId).custom ? 'Uploaded failures' : 'Warranty claims (Salesforce silo)',
-    status: 'simulated',
+    status: resolveScenario(scenarioId).custom ? 'uploaded' : 'simulated',
     note: resolveScenario(scenarioId).custom ? `${claims.length} failures in the uploaded data` : `${claims.length} thermal claims for ${PRODUCT_NAME} (simulated enterprise data)`,
     items: claims.map((c) => ({
       id: c.claim_id,
