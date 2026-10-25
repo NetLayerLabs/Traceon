@@ -45,6 +45,8 @@ Generation is seeded (`mulberry32(409)`), so the same scenario always produces i
 | `two-causes` | The reference batch and firmware v3.4 together | Each cause inflates the other's baseline |
 | `noise` | None; baseline rate 0.0006 | About 100 complaints with no structure |
 | `random-<seed>` | Drawn from batch, firmware, plant, carrier, BMS board, two causes or none | The description stays hidden until the verdict |
+| `<id>@YYYY-MM-DD` | Any of the above, as it stood on that date | Only units shipped and claims filed by then exist; time in field is recomputed. Watch mode opens cases with these ids. A planted cause whose units had not shipped yet is not counted as truth |
+| `custom-<12 hex>` | An uploaded CSV (`src/lib/datasets.ts`) | No known truth, so no reveal. The factors are the uploaded columns, renamed `f_<slug>` for SQL |
 
 The reference scenario keeps its historical random stream and plant-to-supplier mapping, so its published numbers never move. Other scenarios assign suppliers independently of plants (`supplierFor()`), so a plant defect and a supplier defect are distinguishable. `scenarioTruth()` exposes the planted causes, and only `runInvestigation()`'s final `reveal` event reads it.
 
@@ -230,10 +232,45 @@ sequenceDiagram
 
 - **Landing page** (`src/app/page.tsx`, `src/app/landing.css`): a report-style page with an animated proof figure. `src/components/ConfounderTable.tsx` lets the reader flip "Hold cell batch fixed" and watch four suspects collapse into confounders. `src/components/LandingMotion.tsx` adds scroll reveals, count-ups and a scroll-spy, only when JavaScript runs and the visitor allows motion.
 - **Case file** (`src/app/app/page.tsx`): three panes. Intake (`SignalPane`), investigation (`CausalDag`, `Insights`), disposition (`ActionPane`). Every graph node opens an exhibit (`EvidenceModal`) with its SQL, where it ran, the rows and both hashes.
+- **Section menu** (`src/components/AppNav.tsx`): Case file, Watch, Real recalls, Your data and Scoreboard sit in the app's top bar (and its drawer on phones); the other pages use `SiteHeader`, which carries the same menu. The landing page keeps its own four-item menu.
+- **In-case tools** (`src/components/CaseTools.tsx`) sit next to the evidence they use. In the investigation pane: Uncertainty and What would prove this wrong beside the red team and subgroup table, then Ask the case and What if under "Case tools". In the disposition pane: Verify the fix after approval, Reports and review, and the signed timestamp inside the proof ledger. A citation in an answer opens its exhibit.
 - **Design system** (`src/app/globals.css`): paper, ink and hairline rules; Newsreader, IBM Plex Sans and IBM Plex Mono through `next/font`; one signal colour for the cause and the actions it drives.
 - **Phones and tablets** (900 px and below): the three panes become tabs under a sticky top bar, with a marker on Disposition once the gate has decided. The scenario picker, integration status and Reset move into a left drawer (the same `.controls` element, which is layout-transparent on desktop through `display: contents`). The proof graph keeps legible text by scrolling sideways inside its frame, and exhibits open as a full-screen sheet. Inputs are 16 px so iOS does not zoom on focus, and primary controls are at least 44 px tall. The landing page gets the same burger and left drawer (`src/components/LandingNav.tsx`).
 
-## 12. Testing and evaluation
+## 12. Beyond one case
+
+Every feature below reads a finished investigation from its own event log, through one function: `buildCaseView()` in `src/lib/caseView.ts`. `loadEvents(id)` accepts either a run id (still in the registry) or a saved case id. So the Q&A, the reports, the what-if simulator and the follow-up all see exactly what the agent produced, and none of them recompute the verdict.
+
+```mermaid
+flowchart LR
+  RUN["Run registry<br/>event log"] --> CV["buildCaseView()<br/>caseView.ts"]
+  CASE[("Saved case<br/>cases/*.json")] --> CV
+  CV --> ASK["Ask the case<br/>ask.ts + numberGuard"]
+  CV --> CF["What if<br/>counterfactual.ts"]
+  CV --> FU["Verify the fix<br/>followup.ts"]
+  CV --> REP["8D and supplier claim<br/>reports.ts"]
+  CV --> ST["Signed timestamp<br/>stamp.ts"]
+  RUN -- "Share for review" --> CASE
+  W["Watch<br/>watch.ts"] -- "alert: id@date" --> RUN
+  D["Your data<br/>datasets.ts"] -- "custom-id" --> RUN
+  BT["Real recalls<br/>realRecall.ts"] --- NHTSA[("data/nhtsa<br/>snapshots")]
+```
+
+| Feature | Code | API | How it works |
+| --- | --- | --- | --- |
+| Real-recall backtest | `src/lib/realRecall.ts`, `data/nhtsa/*.json`, `scripts/snapshot-nhtsa.mts` | `GET /api/backtest[?case=]`, `POST /api/backtest` | Disproportionality analysis (Evans et al., 2001): a vehicle's share of fire complaints per component family against ten comparator vehicles. Signal when PRR ≥ 2, Yates chi-square ≥ 4 and at least 3 cases. A lead time counts only against a fire-related recall of the same component family. Five cases ship as snapshots so it works offline; `POST` runs any vehicle live against api.nhtsa.gov |
+| Your data | `src/lib/datasets.ts` | `GET/POST /api/datasets` | RFC 4180 parser, column profile, mapping validation (at least 3 failures, 2 to 500 values per factor, at most 12 factors and 250,000 rows). Optional columns switch on the date, symptom, exposure and serial checks; the gate marks checks without data as N/A instead of passing them. The failure signature on uploaded data is the word most of the cause's claims share |
+| Watch | `src/lib/watch.ts` | `GET /api/watch?scenario=` | Units and claims are added day by day; each day every factor gets a chi-square screen against 0.01/k. The first day past the bar with at least 5 failures in the hottest group opens `<id>@<date>`. The screen only flags association; the investigation decides |
+| Ask the case | `src/lib/ask.ts` | `POST /api/ask` | The case record is flattened into facts, each tied to its exhibit (one fact per CMH adjustment, citing that exact test). Nemotron Lightning answers from the record only; citations to unknown exhibits are flagged and every figure passes `numberGuard()`. Without the model, the closest facts are returned as they are |
+| What if | `src/lib/counterfactual.ts`, `WhatIf` in `src/components/CaseTools.tsx` | `GET /api/counterfactual?id=` | The server sends the tested k×2 table and the cause's claims by date; the browser re-runs `chiSquareIndependence()` from `stats.ts` as the sliders move: the action date, the share of the excess failures that is real, and the share of the data available |
+| Falsifiers and intervals | `src/lib/investigation.ts` step 11b, `src/lib/stats.ts` | `forest` event, `CauseFinding.falsifiers` | Wilson intervals for rates and coverage, an exact Poisson 90% range for the 30-day projection, a forest plot of every suspect's relative risk, and four pre-registered conditions that would overturn each cause |
+| Verify the fix | `src/lib/followup.ts` | `POST /api/followup` | Simulates 30 days on the scenario's own hazards (seeded from the ledger root), then checks that failures return to baseline (exact Poisson) and that no factor concentrates the new failures. `wrong-fix` acts on the leading confounder instead, which reopens the case. Labelled as a simulation in the UI |
+| Reports | `src/lib/reports.ts` | `GET /api/report?id=&kind=8d|supplier` | Printable HTML. Every claim cites its exhibit; the exhibit index and the proof root close the document |
+| Signed timestamp | `src/lib/stamp.ts` | `POST /api/proof/stamp`, `GET /api/proof/stamp?root=&file=`, `GET /api/proof/key` | An Ed25519 signature (key in storage, or `TRACEON_SIGNING_KEY`) over a short statement naming the root, plus an OpenTimestamps proof of that statement from the public calendars. The `.ots` file verifies with the standard `ots` client; if no calendar answers, the stamp is signature-only and says so |
+| Reviewer mode | `src/lib/cases.ts`, `src/app/case/[id]/page.tsx` | `POST /api/cases`, `GET /api/cases/[id]`, `GET/POST /api/cases/[id]/comments` | Freezes a finished run's events as a case whose id derives from the ledger root. The case page folds the events through the same reducer as the live app and is read-only; comments pin to an exhibit or to the whole case |
+| Scoreboard | `src/lib/scoreboard.ts` | `GET /api/scoreboard` | Each run where Nemotron planned records whether its first-ranked suspect was confirmed and, on generated data, whether it and the tested verdict matched the planted truth |
+
+## 13. Testing and evaluation
 
 | File | Tests | What it proves |
 | --- | --- | --- |
@@ -243,12 +280,16 @@ sequenceDiagram
 | `tests/degrade.test.mts` | 5 | A hanging model, dead feeds and an unreachable Zetaris all degrade cleanly |
 | `tests/registry.test.mts` | 2 | The one-run lock and the watchdog |
 | `tests/e2e.test.mts` | 5 | A real production server: health, validation, 409 and attach, dropped-stream recovery, replay over HTTP, and the server-side evidence gate |
+| `tests/features.test.mts` | 13 | Bolt EV backtest; an uploaded CSV solved with its confounder ruled out; watch alert and that day's verdict; as-of truth; falsifiers and intervals; counterfactual inputs; follow-up verified vs reopened; stamp signatures; reviewer cases and comments; cited Q&A; reports; scoreboard |
 
 `scripts/eval.mts` (`npm run eval`) runs the agent blind on hidden scenarios and reports accuracy by cause type and whether any wrong cause was acted on.
 
-## 13. Known limitations
+## 14. Known limitations
 
 - **Simulated enterprise data.** The factory, supplier and warranty silos are generated. The method is real; the company is not.
-- **Seven fixed dimensions.** Hypotheses are drawn from a catalogue of seven testable factors. Nemotron can name others, which are logged as untestable rather than tested.
+- **Fixed dimensions per dataset.** The demo tests seven factors and an upload tests the columns it maps. Nemotron can name others, which are logged as untestable rather than tested.
+- **Follow-up is simulated.** Verification after the fix runs on simulated days drawn from the scenario's observed hazards. With real data the same checks would run on the claims that arrive.
+- **Backtest matching is approximate.** A signal and a recall are matched by component family and fire wording, not proven to be the same defect, and complaints have no sales denominator.
+- **No access control.** Shared cases, comments and uploaded datasets are stored as plain JSON on the server and anyone with the URL can read them. Add authentication before real use.
 - **Single process.** The mirror, holds and run registry are in memory. Restarting the server clears holds (memory on disk survives).
 - **Zetaris not yet run against a live cluster.** The adapter is tested against a spec-conformant test double (`scripts/mock-zetaris.mts`); a live parity check is pending account setup.

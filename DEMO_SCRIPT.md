@@ -30,6 +30,12 @@ Type an approver name, click **Execute**, then click **Replay & verify**.
 **Optional 15 s · "Is it rigged?"** (if time allows, or as a second clip)
 > "Fair question: did we plant the answer? Here's a random hidden scenario." Pick **Random hidden scenario**, run it, and point at the reveal card: "It found a plant defect this time, and flagged the batch as a confounder. Across 250 held-out hidden scenarios it's 250 for 250. With no defect at all, it refuses to recall."
 
+**Optional clips** (a second video, or swap one in if a section runs short)
+- **Real recalls, 15 s** (`/backtest`): "Is this only a simulation? Here is public NHTSA data. The same kind of signal test, replayed day by day, flags the Chevy Bolt's battery fires on October 30th, 2020, two weeks before GM's recall." Point at the signal and recall markers, then the three fire complaints that came first.
+- **Ask the case, 10 s**: in Case tools, click *Why is the Sun Belt heat ruled out?* "Answers come only from the exhibits. It cites E-18, the test that holds the batch fixed, and every figure is checked." Click the citation.
+- **Verify the fix, 10 s**: after approval, click *After the wrong fix*. "If we had blamed the heat, thirty days later the batch would still be failing, and the case reopens. The real fix verifies."
+- **Watch, 10 s** (`/watch`, *Start watching*): "Run as a daily screen, it fires on October 11th after 13 claims and opens the case on that day's data."
+
 **1:55–2:00 · Close**
 > "Every claim is backed by a hashed, replayable query. Traceon doesn't just answer. It proves why."
 
@@ -39,3 +45,4 @@ Type an approver name, click **Execute**, then click **Replay & verify**.
 - No network: the federal feeds show *unreachable* and everything else runs offline.
 - No NVIDIA key: every model step falls back to a labeled template, and the statistics are identical.
 - `/app?autorun=1` starts the run without a click.
+- The backtest runs on NHTSA snapshots bundled in the repo, so it works without network.

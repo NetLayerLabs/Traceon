@@ -2,11 +2,11 @@
 
 **Traceon is an AI investigator for product-safety teams: it finds the root cause of a defect, proves why every other explanation is wrong, and only then lets a named person quarantine the exact units at risk.**
 
-It pulls scattered warning signs (warranty claims, reviews, federal safety reports) into one case, tests seven suspects against 180,000 units of factory data with federated SQL, separates real causes from look-alikes with stratified statistics, and hashes every query into a replayable proof. Everything is judged by one test: **does it name exactly the hidden cause, and act only when there is one?** On 250 held-out hidden scenarios it did, 250 times.
+It pulls scattered warning signs (warranty claims, reviews, federal safety reports) into one case, tests seven suspects against 180,000 units of factory data with federated SQL, separates real causes from look-alikes with stratified statistics, and hashes every query into a replayable proof. Everything is judged by one test: **does it name exactly the hidden cause, and act only when there is one?** On 250 held-out hidden scenarios it did, 250 times. Replayed on real public complaint data, the same kind of test flags the Chevrolet Bolt EV battery-fire signal 14 days before GM's recall.
 
-Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: `<LIVE_URL>` · Demo: `<VIDEO_URL>` · Code: [github.com/mrnetwork0001/Traceon](https://github.com/mrnetwork0001/Traceon) (private, access on request)
+Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: `<LIVE_URL>` · Demo: `<VIDEO_URL>` · Code: [github.com/NetLayerLabs/Traceon](https://github.com/NetLayerLabs/Traceon) (private, access on request) · Team: NetLayer Labs
 
-**Judges, start here:** open `/app?autorun=1` for a full investigation in about 30 seconds with no login, then `/app?scenario=random&autorun=1` to watch it solve a cause it has never seen. The design is in **[ARCHITECTURE.md](ARCHITECTURE.md)** and the two-minute walkthrough in **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)**.
+**Judges, start here:** open `/app?autorun=1` for a full investigation in about 30 seconds with no login, then `/app?scenario=random&autorun=1` to watch it solve a cause it has never seen, and `/backtest` for real recalls. The design is in **[ARCHITECTURE.md](ARCHITECTURE.md)** and the two-minute walkthrough in **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)**.
 
 ---
 
@@ -31,6 +31,25 @@ Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Wh
 | **Fact-checked explanation** | The written explanation is checked figure by figure against the evidence; the badge reads, for example, "16/16 figures verified". | Investigation pane, Explain why |
 | **Memory across sessions** | After an approval, the finding becomes long-term H-MEM memory. The next investigation recalls it. | Intake pane, H-MEM convergence |
 | **Health check** | Query engine, storage, live feeds, models and any active run. | `/api/health` |
+
+### Beyond one case
+
+The app's top bar has a section menu: **Case file**, **Watch**, **Real recalls**, **Your data** and **Scoreboard**. Tools that work on a finished case sit next to the evidence they use.
+
+| Feature | What it is | Where |
+| --- | --- | --- |
+| **Real-recall time machine** | Public NHTSA complaint histories replayed day by day through a standard safety-signal test (proportional reporting ratio against ten comparator vehicles). The Bolt EV battery-fire signal fires on Oct 30, 2020, 14 days before recall 20V701000; Kia Sorento 72 days early and Hyundai Santa Fe 380 days early. Kona Electric shows no signal and on the Ford Escape the recall came first, both reported as they are. Any other vehicle can be replayed live. | `/backtest` |
+| **Watch** | The warranty stream screened every day across every factor. On the reference data the screen fires on Oct 11 after 13 claims, and the case it opens on that day's data confirms the batch. With no defect it never fires. | `/watch` |
+| **Your data** | Upload a CSV, map the failure column and the suspects, and investigate it with the same tests and gate. Checks the data cannot support are marked N/A instead of passed. The 12,000-unit charger sample is solved with its night-shift confounder ruled out. | `/data` |
+| **Ask the case** | Questions answered only from the case's exhibits, with each claim citing its exhibit and every figure checked by the number guard. Citations open the exhibit. | Investigation pane, Case tools |
+| **What if** | Sliders that re-run the statistics in the browser: act on an earlier day, shrink the defect, or keep less of the data, and see whether the verdict still holds. | Investigation pane, Case tools |
+| **What would prove this wrong** | Four conditions, fixed before any fix is applied, that would overturn each cause: the baseline rate outside it, its failure signature, its weakest subgroup, and anything new in the residual. | Investigation pane |
+| **Uncertainty** | A forest plot of every suspect's relative risk with its 95% interval, intervals on the cause's rate and share, and a 90% range on the 30-day projection. | Investigation pane |
+| **Verify the fix** | Thirty simulated days after the fix, checked against the falsifiers. The planned quarantine is verified; acting on the leading confounder instead (a Sun Belt heat advisory) reopens the case. | Disposition pane, after approval |
+| **8D report and supplier claim** | Printable documents in which every claim cites its exhibit, closed by the exhibit index and the proof root. | Disposition pane, Reports and review |
+| **Reviewer mode** | A read-only case link. Reviewers open every exhibit and pin comments to it. | Disposition pane, **Share for review** |
+| **Signed timestamp** | The ledger root signed with Ed25519 and anchored in Bitcoin through OpenTimestamps. The `.ots` file verifies with the standard `ots` client. | Disposition pane, Proof ledger |
+| **Scoreboard** | Nemotron's first-ranked suspect against the tested verdict, and on generated data, who was right. | `/scoreboard` |
 
 The landing page (`/`) reads like an investigation report, with an animated proof figure, the interactive confounder experiment and the blind-test results. The app (`/app`) is a three-pane case file: **Intake**, **Investigation**, **Disposition**. The top bar shows which integrations are live, a scenario picker and **Reset demo**. On phones and tablets (900 px and below) the panes become tabs under a sticky top bar, the controls move into a left drawer, the proof graph scrolls sideways, and exhibits open as a full-screen sheet. There is no login.
 
@@ -236,7 +255,8 @@ Each step is optional. Without keys every model step uses a labelled template an
 - **Every external call has a deadline.** Federal feeds 9 s; Zetaris 30 s per page; Nemotron 20 to 75 s depending on the call, capped by `NEMOTRON_TIMEOUT_MS`; thinking requests race a fast answer so latency spikes never stall a run.
 - **Nothing is faked when it fails.** An unreachable feed is shown as unreachable; a Zetaris failure falls back to the mirror with the reason in the exhibit; a model failure falls back to a labelled template with the reason in the agent trace.
 - **Open by design for judging.** There is no login, and `/api/reset` clears memory and holds for anyone. Put the app behind authentication before any real use.
-- **Test coverage.** 31 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2) and a real production server end to end (5).
+- **Shared data is not private.** Uploaded datasets, shared cases and their comments are stored on the server as plain JSON and are readable by anyone with the link.
+- **Test coverage.** 44 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), and the features built on a finished case (13).
 
 ## What's real and what's simulated
 
@@ -248,6 +268,8 @@ Each step is optional. Without keys every model step uses a labelled template an
 | The Meterless H-MEM and Markovian engines, running locally | The ERP hold table and notices: written locally, not sent to any real ERP, distributor or regulator |
 | The Zetaris SQL API client, built from Zetaris's published OpenAPI spec | Zetaris queries run on the local mirror until a Zetaris instance is configured; tested against a spec-conformant test double |
 | The sample defect photo's analysis, when a key is set | The sample photo itself is an illustration; upload a real one to analyse it |
+| NHTSA complaints and recalls behind the backtest (snapshots in `data/nhtsa/`, or live) | The 30 days after a fix in **Verify the fix**, drawn from the scenario's own failure rates |
+| OpenTimestamps proofs from the public calendars, and the Ed25519 signature | The 12,000-unit charger sample for **Your data** (`scripts/make-sample-csv.mts`) |
 
 ## Tech stack
 
@@ -281,6 +303,7 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | `METERLESS_STORAGE_DIR` | Where H-MEM and the world model persist | `./.meterless-data` (`/tmp/meterless-data` on Vercel) |
 | `DEMO_PACING_MS` | Delay between steps so a demo is watchable | 350 |
 | `RUN_TIMEOUT_MS` | Watchdog for one investigation | 240,000 |
+| `TRACEON_SIGNING_KEY` | Ed25519 private key (PEM) that signs proof roots, so a deployment keeps one identity | Unset: a key is generated once and kept in the storage folder |
 
 The same list with comments is in [`.env.example`](.env.example).
 
@@ -291,19 +314,21 @@ npm run nemotron:check       # live check of every Nemotron call (needs NVIDIA_A
 npm run zetaris:export       # write the five tables as CSV for Zetaris
 npm run zetaris:check        # Zetaris connection and hash-parity check
 npm run zetaris:mock         # spec-conformant Zetaris test double on :4599
+npx tsx scripts/snapshot-nhtsa.mts <raw-dir>   # rebuild the NHTSA backtest snapshots in data/nhtsa/
+npx tsx scripts/make-sample-csv.mts             # rebuild the charger sample for /data
 ```
 
 ### Test status
 
-Run on 2026-10-25 at 21:20 UTC (`npm test`, which includes a production build and server):
+Run on 2026-10-25 at 22:36 UTC (`npm test`, which includes a production build and server):
 
 ```
-ℹ tests 31
-ℹ pass 31
+ℹ tests 44
+ℹ pass 44
 ℹ fail 0
 ```
 
-Blind accuracy, run on 2026-10-25 at 21:06 UTC (`npm run eval`):
+Blind accuracy (`npm run eval`): seeds 1-300 re-run on 2026-10-25 at 22:31 UTC after the as-of and uploaded-data changes to the engine; the held-out run is from 21:06 UTC the same day:
 
 ```
 seeds 1-300 + 4 named:    304/304 correct (100.0%)   wrong but safely blocked: 0 · wrong and acted: 0
@@ -322,6 +347,29 @@ held-out seeds 151-400:   250/250 random seeds correct (254/254 including the 4 
 
 The method was tuned on seeds 1-150 (three statistical flaws were found and fixed there: sparse tables, post-hoc group selection, and causes contaminating each other). Seeds 151-400 were never used for tuning.
 
+## Roadmap
+
+Status as of 2026-10-25. The pre-submission checklist is in [TODO_BEFORE_SUBMISSION.md](TODO_BEFORE_SUBMISSION.md).
+
+**Done**
+- The investigation agent, evidence gate, proof chain and remediation; 304/304 blind scenarios and 250/250 held out.
+- Live Nemotron 3.5 (Super VL and Lightning) for planning, red team, vision, explanation and Ask the case.
+- Before the case: Watch (daily screening that opens a case on alert) and Your data (CSV upload).
+- In the case: Ask the case, What if, What would prove this wrong, and intervals throughout.
+- After the verdict: Verify the fix, 8D report, supplier claim, reviewer mode, and a signed OpenTimestamps root.
+- Outside the simulation: the real-recall backtest on five NHTSA vehicle histories, and live for any vehicle.
+- Scoreboard of model guesses against tested verdicts.
+
+**Next, before submission**
+- A live Zetaris parity check against a real cluster (the adapter passes against a spec-conformant test double).
+- Deploy to one long-running Node host and record the demo.
+
+**Later**
+- Authentication and per-team storage for uploads, shared cases and comments.
+- Real follow-up on arriving claims instead of a simulation, with the reopened case triggered automatically.
+- Watch mode on a live warranty feed, and continuous factors (temperature, charge cycles) alongside categorical ones.
+- Upgrading OpenTimestamps proofs once Bitcoin confirms them, and verifying them in the app.
+
 ## Deploying
 
 1. **Host on one long-running Node server** such as Railway, Render or Fly. The mirror, the ERP holds and the run registry live in process memory, so serverless platforms that spread requests across instances would lose them. `npm run build && npm start`.
@@ -336,10 +384,16 @@ The method was tuned on seeds 1-150 (three statistical flaws were found and fixe
 ```
 src/app/page.tsx              landing page (/), report style, with the confounder experiment
 src/app/landing.css           landing styles, motion and the mobile drawer
-src/app/app/page.tsx          the case file (/app): three panes, scenario picker, stream recovery, mobile tabs
+src/app/app/page.tsx          the case file (/app): three panes, section menu, scenario picker, stream recovery, mobile tabs
+src/app/watch/                watch mode (/watch)
+src/app/backtest/             real-recall time machine (/backtest)
+src/app/data/                 bring your own data (/data)
+src/app/scoreboard/           model against statistics (/scoreboard)
+src/app/case/[id]/            reviewer mode: a shared, read-only case with comments
 src/app/globals.css           design system: paper, ink, one signal colour; responsive rules
 src/app/layout.tsx            fonts (Newsreader, IBM Plex Sans and Mono)
-src/app/api/                  investigate, signals, vision, quarantine, verify, status, reset, health
+src/app/api/                  investigate, signals, vision, quarantine, verify, status, reset, health,
+                              backtest, datasets, watch, ask, counterfactual, followup, report, cases, proof, scoreboard
 src/lib/enterpriseData.ts     the fictional company, 180,000 units and the planted scenarios
 src/lib/stats.ts              chi-square, Monte Carlo exact test, Cochran–Mantel–Haenszel, relative risk
 src/lib/investigation.ts      the agent: screen, adjudicate, robustness, residual, red team, gate, explanation
@@ -352,17 +406,29 @@ src/lib/actions.ts            remediation and proof replay
 src/lib/runRegistry.ts        one-run lock, watchdog, event log, server-side gate check
 src/lib/singleton.ts          process-wide state shared by every route
 src/lib/scenarioOptions.ts    the scenario menu
-src/components/               proof graph, panes, exhibits, landing motion, confounder table, landing nav
+src/lib/caseView.ts           a finished case rebuilt from its event log, shared by the tools below
+src/lib/realRecall.ts         NHTSA disproportionality backtest
+src/lib/datasets.ts           CSV upload, mapping and the uploaded-data mesh
+src/lib/watch.ts              daily screening replay
+src/lib/ask.ts                grounded Q&A with exhibit citations
+src/lib/counterfactual.ts     inputs for the what-if simulator
+src/lib/followup.ts           verification after the fix
+src/lib/reports.ts            8D report and supplier dispute packet
+src/lib/stamp.ts              Ed25519 signature and OpenTimestamps
+src/lib/cases.ts              shared cases and reviewer comments
+src/lib/scoreboard.ts         model guesses against tested verdicts
+src/components/               proof graph, panes, exhibits, case tools, section menu, landing motion, confounder table, landing nav
+data/nhtsa/                   NHTSA complaint and recall snapshots for five vehicles
 tests/                        stats, scenarios, proof, degrade, registry and end-to-end suites; scipy fixtures
-scripts/                      eval, nemotron-check, zetaris export, check and mock
+scripts/                      eval, nemotron-check, zetaris export, check and mock, NHTSA snapshots, sample CSV
 vendor/                       Meterless H-MEM and Markovian reference engines (Apache-2.0)
-public/samples/               the sample defect photo (SVG and PNG)
+public/samples/               the sample defect photo (SVG and PNG) and the charger CSV
 public/brand/                 the Traceon lockup (footer) and header logo
 src/app/icon.png              favicon (apple-icon.png for iOS)
 docs/                         Zetaris setup; the original hackathon plan, archived
 ARCHITECTURE.md               the full design
 DEMO_SCRIPT.md                the two-minute demo
-TODO_BEFORE_SUBMISSION.md     the pre-submission checklist
+TODO_BEFORE_SUBMISSION.md     the pre-submission checklist and roadmap
 ```
 
 ## Data and naming
