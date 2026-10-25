@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ConfounderTable } from '@/components/ConfounderTable';
 import { LandingMotion } from '@/components/LandingMotion';
+import { LandingNav } from '@/components/LandingNav';
 import './landing.css';
 
 export const metadata: Metadata = {
@@ -103,20 +104,7 @@ export default function Landing() {
   return (
     <div className="lp">
       <LandingMotion />
-      <nav className="lp-nav">
-        <div className="lp-wrap">
-          <a className="lp-logo" href="/">
-            <span className="brand-mark" />
-            TRACEON
-          </a>
-          <div className="lp-links">
-            <a href="#method">Method</a>
-            <a href="#why">Explain why</a>
-            <a href="#blind">Blind tests</a>
-            <a href="#stack">Stack</a>
-          </div>
-        </div>
-      </nav>
+      <LandingNav />
 
       <header className="lp-cover">
         <div className="lp-wrap">
