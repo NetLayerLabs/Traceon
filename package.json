@@ -15,7 +15,9 @@
     "test:unit": "tsx --test --test-concurrency=1 tests/stats.test.mts tests/scenarios.test.mts tests/proof.test.mts tests/degrade.test.mts tests/registry.test.mts",
     "test:e2e": "tsx --test tests/e2e.test.mts",
     "eval": "tsx scripts/eval.mts",
-    "nemotron:check": "tsx scripts/nemotron-check.mts"
+    "nemotron:check": "tsx scripts/nemotron-check.mts",
+    "nightshift:check": "tsx scripts/nightshift-check.mts",
+    "nightshift:standin": "tsx scripts/mock-nightshift.mts"
   },
   "dependencies": {
     "alasql": "4.21.0",
