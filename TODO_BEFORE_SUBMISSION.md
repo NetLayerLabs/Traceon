@@ -21,6 +21,18 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
   - [x] Scoreboard of model guesses against tested verdicts
 - [x] Phone and tablet layout re-checked (55/55), including the section menu in the drawer
 
+## Required by the organisers (Remus, Oct 26)
+
+- [ ] **Create the HackOS submission today**, even unfinished. Add teammates first: the roster locks on creation.
+- [x] **Meterless Nightshift as the AI provider** (code): every model call goes to Nightshift first (`meterless/vision`, `meterless/fast`, `meterless/deep`), Nemotron on NIM as the labelled fallback. Built and tested against a stand-in.
+- [ ] **Install Nightshift** (free Mac M1+ edition from meterless.ai), turn on its hotspot, put its token in `.env.local` as `NIGHTSHIFT_TOKEN` (or `NIGHTSHIFT_TOKEN_FILE=<stateDir>/proxy-token`), then `npm run nightshift:check` shows three PASS lines with **Meterless Nightshift** (not "stand-in").
+- [ ] Ask in #help desk: can Nightshift route to NVIDIA Nemotron, or only to its own local models?
+- [x] At least one Meterless engine in a working feature: done (H-MEM and Markovian).
+- [ ] **Public GitHub repo** with README (history checked: no keys or personal data).
+- [ ] **Slide deck**: problem, users, solution, architecture, sponsor tech.
+- [ ] **Demo video (1-4 min)**: main workflow, Zetaris being queried, a Meterless engine at work, and one real request through Nightshift.
+- [ ] **Sponsor tech explanation** in the submission form.
+
 ## Make it real, one at a time (in this order; finish one before starting the next)
 
 - [ ] **1. Zetaris** ← current. You: create the account and cluster (see section 2 below). Then: `npm run zetaris:export`, upload to `traceon`, set the env vars, `npm run zetaris:check` shows parity OK. Then I export firmware, two-causes and noise as extra schemas so the named scenarios run on Zetaris too.

@@ -257,7 +257,7 @@ Each step is optional. Without keys every model step uses a labelled template an
 - **Nothing is faked when it fails.** An unreachable feed is shown as unreachable; a Zetaris failure falls back to the mirror with the reason in the exhibit; a model failure falls back to a labelled template with the reason in the agent trace.
 - **Open by design for judging.** There is no login. `/api/reset` clears demo memory and holds (shared cases, uploads and the signing key are kept); set `TRACEON_DISABLE_RESET=1` to turn it off. Put the app behind authentication before any real use.
 - **Shared data is not private.** Uploaded datasets, shared cases and their comments are stored on the server as plain JSON and are readable by anyone with the link.
-- **Test coverage.** 54 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case (13), regressions for every fix from the end-to-end audit (7), and Zetaris fault handling (3).
+- **Test coverage.** 59 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case (13), regressions for every fix from the end-to-end audit (7), Zetaris fault handling (3), and Meterless Nightshift as the AI provider (5).
 
 ## What's real and what's simulated
 
@@ -291,7 +291,9 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 
 | Variable | What it does | Default or when unset |
 | --- | --- | --- |
-| `NVIDIA_API_KEY` | Live Nemotron for planning, red team, vision and the explanation | Unset: labelled templates; the statistics are unchanged |
+| `NIGHTSHIFT_TOKEN` (or `NIGHTSHIFT_TOKEN_FILE`) | Meterless Nightshift as the AI provider: every model call goes to the local runtime first | Unset: Nemotron on NVIDIA NIM answers directly |
+| `NIGHTSHIFT_URL`, `AI_PROVIDER` | Where Nightshift listens; `auto`, `nightshift` or `nim` | `http://127.0.0.1:8088/v1`; `auto` |
+| `NVIDIA_API_KEY` | Nemotron on NVIDIA NIM: the fallback when Nightshift cannot answer, or the provider when it is not configured | Unset: labelled templates; the statistics are unchanged |
 | `NVIDIA_NIM_BASE_URL` | NIM endpoint | `https://integrate.api.nvidia.com/v1` |
 | `NEMOTRON_MODEL` / `NEMOTRON_FAST_MODEL` | Vision and explanation model / planning and red-team model | `nvidia/nemotron-3.5-super-vl-120b-a12b` / `nvidia/nemotron-3.5-lightning-30b-a3b` |
 | `NEMOTRON_TIMEOUT_MS` | Cap on every model call | No cap beyond each call's own deadline |
@@ -313,6 +315,8 @@ The same list with comments is in [`.env.example`](.env.example).
 ```bash
 npm test                     # the full suite, including a production build and server
 npm run eval -- 300          # blind accuracy on random seeds 1-300 plus the four named scenarios
+npm run nightshift:check     # one real request on each Nightshift route (needs the app running and NIGHTSHIFT_TOKEN)
+npm run nightshift:standin   # development stand-in for Nightshift on :8088, labelled as such in the app
 npm run nemotron:check       # live check of every Nemotron call (needs NVIDIA_API_KEY)
 npm run zetaris:export       # write the five tables as CSV for Zetaris
 npm run zetaris:check        # Zetaris connection and hash-parity check
@@ -326,8 +330,8 @@ npx tsx scripts/make-sample-csv.mts             # rebuild the charger sample for
 Run on 2026-10-26 (`npm test`, which includes a production build and server):
 
 ```
-ℹ tests 54
-ℹ pass 54
+ℹ tests 59
+ℹ pass 59
 ℹ fail 0
 ```
 

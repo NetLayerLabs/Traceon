@@ -121,7 +121,30 @@ flowchart TB
 10. **Explanation and number guard.** Nemotron writes the explanation from a facts object; `numberGuard()` then checks every figure in the text against the facts (allowing unit shorthand such as `10k` = 10,000) and flags anything unverified.
 11. **Reveal.** Only now is the scenario's planted truth compared with what was found.
 
-## 6. Nemotron integration
+## 6. AI providers: Meterless Nightshift and NVIDIA Nemotron
+
+Every model call goes through `nemotronChat()` in `src/lib/nemotron.ts`, which tries the configured providers in order and labels each reply with the one that answered (`via`), shown in the explanation, red team, Q&A, photo and agent trace.
+
+```mermaid
+flowchart LR
+  A["Agent call<br/>plan · red team · photo · explanation · Q&A"] --> NS{"Meterless Nightshift<br/>127.0.0.1:8088/v1"}
+  NS -- "answered" --> R["Reply labelled<br/>Meterless Nightshift · meterless/route"]
+  NS -- "offline, refused or timed out" --> NIM["NVIDIA NIM<br/>Nemotron 3.5"]
+  NIM --> R2["Reply labelled<br/>NVIDIA NIM · model,<br/>with the reason in the trace"]
+  NIM -- "no answer" --> T["Labelled template"]
+```
+
+**Meterless Nightshift** is the hackathon's required AI provider: a local runtime that serves an OpenAI-compatible `/v1` on `127.0.0.1:8088`. Following Meterless's provider guide, Traceon sends `Authorization: Bearer <token>`, `meterless-app: traceon` and `meterless-scope: user`, normalises any pasted URL to `<host>/v1`, and reads status from `GET /v1/models` (401/403 is *unauthorized*, a list of `meterless/*` routes is *online*, anything else *offline*). Model ids are routing modes, so each job asks for a route:
+
+| Job | Nightshift route | NIM model (fallback) |
+| --- | --- | --- |
+| Defect photo | `meterless/vision` | Nemotron 3.5 Super VL |
+| Planning, red team, Ask the case | `meterless/fast` | Nemotron 3.5 Lightning |
+| Explanation | `meterless/deep` | Nemotron 3.5 Super VL, thinking raced |
+
+`AI_PROVIDER=auto` (default) uses Nightshift when a token is configured and NIM otherwise; `nightshift` or `nim` forces one. `npm run nightshift:check` sends one real request on each route and warms the local models before a demo. `scripts/mock-nightshift.mts` (`npm run nightshift:standin`) is a development stand-in that speaks the same protocol; it marks its replies, and the app then labels them **Nightshift stand-in** so it can never pass for the real runtime.
+
+### Nemotron on NVIDIA NIM
 
 `src/lib/nemotron.ts` calls NVIDIA NIM's OpenAI-compatible `/chat/completions` with `fetch`, so `chat_template_kwargs.enable_thinking` goes in the body as NIM expects.
 
@@ -282,6 +305,7 @@ flowchart LR
 | `tests/degrade.test.mts` | 5 | A hanging model, dead feeds and an unreachable Zetaris all degrade cleanly |
 | `tests/registry.test.mts` | 2 | The one-run lock and the watchdog |
 | `tests/e2e.test.mts` | 5 | A real production server: health, validation, 409 and attach, dropped-stream recovery, replay over HTTP, and the server-side evidence gate |
+| `tests/nightshift.test.mts` | 5 | Nightshift protocol (token, `meterless-app` header, URL normalising, status rules), the route per job, the labelled fallback to NIM, and damage boxes in any common shape |
 | `tests/zetaris.test.mts` | 3 | Transient cluster faults are retried, real refusals are not, and repeated faults open a 60 s circuit breaker |
 | `tests/hardening.test.mts` | 7 | Regressions for the Oct 25 audit: read-only SQL, replayed bundles cannot write or forge summaries, upload validation (backslashes, single suspect, duplicate serials, malformed mapping, unparseable dates, full-content ids), strict scenario ids, reset scope, server-issued photo findings |
 | `tests/features.test.mts` | 13 | Bolt EV backtest; an uploaded CSV solved with its confounder ruled out; watch alert and that day's verdict; as-of truth; falsifiers and intervals; counterfactual inputs; follow-up verified vs reopened; stamp signatures; reviewer cases and comments; cited Q&A; reports; scoreboard |
