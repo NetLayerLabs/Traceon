@@ -26,7 +26,7 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
 - [ ] **Create the HackOS submission today**, even unfinished. Add teammates first: the roster locks on creation.
 - [x] **Meterless Nightshift as the AI provider** (code): every model call goes to Nightshift first (`meterless/vision`, `meterless/fast`, `meterless/deep`), Nemotron on NIM as the labelled fallback. Built and tested against a stand-in.
 - [ ] **Install Nightshift** (free Mac M1+ edition from meterless.ai), turn on its hotspot, put its token in `.env.local` as `NIGHTSHIFT_TOKEN` (or `NIGHTSHIFT_TOKEN_FILE=<stateDir>/proxy-token`), then `npm run nightshift:check` shows three PASS lines with **Meterless Nightshift** (not "stand-in").
-- [ ] Ask in #help desk: can Nightshift route to NVIDIA Nemotron, or only to its own local models?
+- [ ] **In Nightshift, connect the NVIDIA API** (your NVIDIA key). Traceon then finds Nemotron in Nightshift's model list and uses it for every job, so it is "Nemotron via Nightshift" (the requirement and the NVIDIA prize). `npm run nightshift:check` should then show `Meterless Nightshift · nvidia/nemotron-…` on all three lines. If the names differ, set `NIGHTSHIFT_*_MODEL` to the ids it lists.
 - [x] At least one Meterless engine in a working feature: done (H-MEM and Markovian).
 - [ ] **Public GitHub repo** with README (history checked: no keys or personal data).
 - [ ] **Slide deck**: problem, users, solution, architecture, sponsor tech.

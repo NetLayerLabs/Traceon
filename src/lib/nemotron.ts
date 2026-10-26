@@ -39,6 +39,12 @@ export const NIGHTSHIFT_ROUTES = {
   fast: process.env.NIGHTSHIFT_FAST_MODEL || 'meterless/fast',
   deep: process.env.NIGHTSHIFT_DEEP_MODEL || 'meterless/deep',
 };
+type Job = keyof typeof NIGHTSHIFT_ROUTES;
+const JOB_OVERRIDE: Record<Job, string | undefined> = {
+  vision: process.env.NIGHTSHIFT_VISION_MODEL,
+  fast: process.env.NIGHTSHIFT_FAST_MODEL,
+  deep: process.env.NIGHTSHIFT_DEEP_MODEL,
+};
 const NIGHTSHIFT_APP = process.env.NIGHTSHIFT_APP || 'traceon';
 
 /** The runtime's bearer token: NIGHTSHIFT_TOKEN, or the proxy-token file it writes. */
@@ -92,8 +98,9 @@ export async function nightshiftStatus(): Promise<{ configured: boolean; state: 
 }
 
 /** Short name for the agent trace: "Nightshift" or "Nemotron". */
-export function aiName(r?: { provider?: AiProvider } | null) {
-  return r?.provider === 'nightshift' ? 'Nightshift' : r?.provider === 'nim' ? 'Nemotron' : 'The model';
+export function aiName(r?: { provider?: AiProvider; model?: string } | null) {
+  if (r?.provider === 'nightshift') return /nemotron/i.test(r.model ?? '') ? 'Nemotron via Nightshift' : 'Nightshift';
+  return r?.provider === 'nim' ? 'Nemotron' : 'The model';
 }
 /** The provider that will be tried first, for phase labels written before a call. */
 export function aiPrimaryName() {
@@ -234,18 +241,66 @@ export async function nemotronChat(opts: ChatOpts): Promise<NemotronReply> {
 }
 
 /** The route for a call: the photo goes to meterless/vision, the fast model's jobs to meterless/fast, the rest to meterless/deep. */
-export function nightshiftRoute(opts: Pick<ChatOpts, 'user' | 'model'>) {
+export function nightshiftJob(opts: Pick<ChatOpts, 'user' | 'model'>): Job {
   const hasImage = Array.isArray(opts.user) && opts.user.some((c) => c.type === 'image_url');
-  if (hasImage) return NIGHTSHIFT_ROUTES.vision;
-  return opts.model === NEMOTRON_FAST_MODEL ? NIGHTSHIFT_ROUTES.fast : NIGHTSHIFT_ROUTES.deep;
+  if (hasImage) return 'vision';
+  return opts.model === NEMOTRON_FAST_MODEL ? 'fast' : 'deep';
+}
+
+/**
+ * The model id to ask Nightshift for. An explicit NIGHTSHIFT_*_MODEL wins.
+ * Otherwise, when NVIDIA Nemotron is connected to Nightshift and appears in
+ * its model list, each job uses the matching Nemotron model (Super VL for the
+ * photo and the explanation, Lightning for the fast jobs). Failing that, the
+ * job's meterless/* route. NIGHTSHIFT_USE_NEMOTRON=off disables the lookup.
+ */
+export function pickNightshiftModel(job: Job, listed: string[]): string {
+  if (JOB_OVERRIDE[job]) return JOB_OVERRIDE[job]!;
+  if (process.env.NIGHTSHIFT_USE_NEMOTRON !== 'off') {
+    const want = job === 'fast' ? NEMOTRON_FAST_MODEL : NEMOTRON_MODEL;
+    const short = want.split('/').pop()!.toLowerCase();
+    const family = job === 'fast' ? /nemotron.*lightning/i : /nemotron.*super/i;
+    const hit = listed.find((id) => id === want) ?? listed.find((id) => id.toLowerCase().endsWith(short)) ?? listed.find((id) => family.test(id));
+    if (hit) return hit;
+  }
+  return NIGHTSHIFT_ROUTES[job];
+}
+
+// Nightshift's model list, refreshed at most once a minute.
+const modelList = { at: 0, ids: [] as string[] };
+async function nightshiftModelIds(token: string): Promise<string[]> {
+  if (Date.now() - modelList.at < 60_000) return modelList.ids;
+  try {
+    const r = await fetch(`${NIGHTSHIFT_URL}/models`, { headers: nightshiftHeaders(token), signal: AbortSignal.timeout(3_000) });
+    modelList.ids = r.ok ? (((await r.json()) as { data?: { id: string }[] }).data ?? []).map((m) => m.id) : [];
+  } catch {
+    modelList.ids = [];
+  }
+  modelList.at = Date.now();
+  return modelList.ids;
+}
+/** For tests: forget the cached model list. */
+export function resetNightshiftModelCache() {
+  modelList.at = 0;
+}
+
+/** The default route for a call, before any model list is known. */
+export function nightshiftRoute(opts: Pick<ChatOpts, 'user' | 'model'>) {
+  return NIGHTSHIFT_ROUTES[nightshiftJob(opts)];
 }
 
 async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
   const token = nightshiftToken()!;
-  const model = nightshiftRoute(opts);
+  const job = nightshiftJob(opts);
+  const model = pickNightshiftModel(job, await nightshiftModelIds(token));
   const start = Date.now();
   const messages = [...(opts.system ? [{ role: 'system', content: opts.system }] : []), { role: 'user', content: opts.user }];
-  const body = { model, messages, temperature: 0.2, max_tokens: opts.maxTokens ?? 2048 };
+  // Nemotron through Nightshift: pass its thinking switch. Off for the fast
+  // jobs (thinking can use the whole budget); off for the others too unless
+  // NIGHTSHIFT_THINKING=on, because there is no fast-answer race on this path.
+  const nemotron = /nemotron/i.test(model);
+  const thinking = job !== 'fast' && process.env.NIGHTSHIFT_THINKING === 'on' && (opts.thinking ?? true);
+  const body: Record<string, unknown> = { model, messages, temperature: 0.2, max_tokens: opts.maxTokens ?? 2048, ...(nemotron ? { chat_template_kwargs: { enable_thinking: thinking } } : {}) };
   const key = cacheKey({ nightshift: NIGHTSHIFT_URL, ...body });
   const hit = readCache(key);
   if (hit) return { live: true, model, ...hit, latencyMs: Date.now() - start, cached: true };
@@ -253,12 +308,19 @@ async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
   // the caller's budget still caps it so a run cannot stall.
   const timeoutMs = Math.min(opts.timeoutMs ?? 60_000, Number(process.env.NEMOTRON_TIMEOUT_MS) || Infinity);
   try {
-    const res = await fetch(`${NIGHTSHIFT_URL}/chat/completions`, {
-      method: 'POST',
-      headers: { ...nightshiftHeaders(token), 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    const post = (b: Record<string, unknown>) =>
+      fetch(`${NIGHTSHIFT_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { ...nightshiftHeaders(token), 'Content-Type': 'application/json' },
+        body: JSON.stringify(b),
+        signal: AbortSignal.timeout(Math.max(1_000, timeoutMs - (Date.now() - start))),
+      });
+    let res = await post(body);
+    // If Nightshift will not pass Nemotron's thinking switch through, ask without it.
+    if (res.status === 400 && 'chat_template_kwargs' in body) {
+      const { chat_template_kwargs: _drop, ...plain } = body;
+      res = await post(plain);
+    }
     if (res.status === 401 || res.status === 403) throw new Error('Nightshift rejected the token (unauthorized)');
     if (!res.ok) throw new Error(`Nightshift ${res.status}: ${(await res.text()).slice(0, 200)}`);
     const data = await res.json();

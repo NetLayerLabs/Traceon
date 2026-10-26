@@ -142,6 +142,8 @@ flowchart LR
 | Planning, red team, Ask the case | `meterless/fast` | Nemotron 3.5 Lightning |
 | Explanation | `meterless/deep` | Nemotron 3.5 Super VL, thinking raced |
 
+**Nemotron through Nightshift.** Nightshift can connect external model APIs, including NVIDIA's. When Nemotron appears in Nightshift's model list (`GET /v1/models`, read at most once a minute), each job uses the matching Nemotron model through Nightshift: Super VL for the photo and the explanation, Lightning for planning, red team and Q&A. Names are matched exactly, by suffix, or by family (`nemotron…lightning`, `nemotron…super`), so a different naming still works; `NIGHTSHIFT_*_MODEL` overrides any job and `NIGHTSHIFT_USE_NEMOTRON=off` turns the lookup off. Nemotron's thinking switch (`chat_template_kwargs`) is sent off for the fast jobs, and off for the others unless `NIGHTSHIFT_THINKING=on`, since this path has no fast-answer race; if Nightshift refuses the field, the call is repeated without it. Replies read, for example, *Meterless Nightshift · nvidia/nemotron-3.5-super-vl-120b-a12b*, and the agent trace says *Nemotron via Nightshift*.
+
 `AI_PROVIDER=auto` (default) uses Nightshift when a token is configured and NIM otherwise; `nightshift` or `nim` forces one. `npm run nightshift:check` sends one real request on each route and warms the local models before a demo. `scripts/mock-nightshift.mts` (`npm run nightshift:standin`) is a development stand-in that speaks the same protocol; it marks its replies, and the app then labels them **Nightshift stand-in** so it can never pass for the real runtime.
 
 ### Nemotron on NVIDIA NIM
@@ -305,7 +307,7 @@ flowchart LR
 | `tests/degrade.test.mts` | 5 | A hanging model, dead feeds and an unreachable Zetaris all degrade cleanly |
 | `tests/registry.test.mts` | 2 | The one-run lock and the watchdog |
 | `tests/e2e.test.mts` | 5 | A real production server: health, validation, 409 and attach, dropped-stream recovery, replay over HTTP, and the server-side evidence gate |
-| `tests/nightshift.test.mts` | 5 | Nightshift protocol (token, `meterless-app` header, URL normalising, status rules), the route per job, the labelled fallback to NIM, and damage boxes in any common shape |
+| `tests/nightshift.test.mts` | 7 | Nightshift protocol (token, `meterless-app` header, URL normalising, status rules), the route per job, Nemotron picked when connected to Nightshift, the thinking-switch retry, the labelled fallback to NIM, and damage boxes in any common shape |
 | `tests/zetaris.test.mts` | 3 | Transient cluster faults are retried, real refusals are not, and repeated faults open a 60 s circuit breaker |
 | `tests/hardening.test.mts` | 7 | Regressions for the Oct 25 audit: read-only SQL, replayed bundles cannot write or forge summaries, upload validation (backslashes, single suspect, duplicate serials, malformed mapping, unparseable dates, full-content ids), strict scenario ids, reset scope, server-issued photo findings |
 | `tests/features.test.mts` | 13 | Bolt EV backtest; an uploaded CSV solved with its confounder ruled out; watch alert and that day's verdict; as-of truth; falsifiers and intervals; counterfactual inputs; follow-up verified vs reopened; stamp signatures; reviewer cases and comments; cited Q&A; reports; scoreboard |

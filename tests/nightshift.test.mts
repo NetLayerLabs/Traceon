@@ -9,7 +9,9 @@ import { isolatedStorage } from './helpers.mts';
 isolatedStorage('nightshift');
 process.env.NEMOTRON_CACHE = 'off';
 
-type Seen = { auth?: string; app?: string; scope?: string; model?: string };
+type Seen = { auth?: string; app?: string; scope?: string; model?: string; kwargs?: unknown };
+let listed = ['meterless/auto', 'meterless/fast'];
+let rejectKwargs = false;
 const seen: Seen[] = [];
 let nightshiftUp = true;
 const ok = (res: http.ServerResponse, model: string, content: string) => {
@@ -22,11 +24,12 @@ const nightshift = http.createServer(async (req, res) => {
   if (req.url === '/v1/models') {
     if (req.headers.authorization !== 'Bearer ns-token') return res.writeHead(401).end();
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ data: [{ id: 'meterless/auto' }, { id: 'meterless/fast' }] }));
+    return res.end(JSON.stringify({ data: listed.map((id) => ({ id })) }));
   }
   if (!nightshiftUp) return res.writeHead(503).end('busy');
   const body = JSON.parse(raw);
-  seen.push({ auth: req.headers.authorization, app: req.headers['meterless-app'] as string, scope: req.headers['meterless-scope'] as string, model: body.model });
+  if (rejectKwargs && body.chat_template_kwargs) return res.writeHead(400).end('unknown field chat_template_kwargs');
+  seen.push({ kwargs: body.chat_template_kwargs, auth: req.headers.authorization, app: req.headers['meterless-app'] as string, scope: req.headers['meterless-scope'] as string, model: body.model });
   ok(res, body.model, `answer from ${body.model}`);
 });
 const nim = http.createServer(async (req, res) => {
@@ -81,6 +84,31 @@ test('status follows the documented rules; placeholder tokens are refused', asyn
   assert.deepEqual(ns.aiProviders(), ['nim']);
   delete process.env.AI_PROVIDER;
   assert.deepEqual(ns.aiProviders(), ['nightshift', 'nim']);
+});
+
+test('with NVIDIA connected to Nightshift, each job uses the matching Nemotron model', async () => {
+  listed = ['meterless/auto', 'meterless/fast', 'nvidia/nemotron-3.5-super-vl-120b-a12b', 'nvidia/nemotron-3.5-lightning-30b-a3b'];
+  ns.resetNightshiftModelCache();
+  seen.length = 0;
+  const fast = await ns.nemotronChat({ model: ns.NEMOTRON_FAST_MODEL, user: 'plan' });
+  await ns.nemotronChat({ user: 'explain' });
+  await ns.nemotronChat({ user: [{ type: 'image_url', image_url: { url: 'data:image/png;base64,AA==' } }] });
+  assert.deepEqual(seen.map((x) => x.model), ['nvidia/nemotron-3.5-lightning-30b-a3b', 'nvidia/nemotron-3.5-super-vl-120b-a12b', 'nvidia/nemotron-3.5-super-vl-120b-a12b']);
+  assert.deepEqual(seen[0].kwargs, { enable_thinking: false }, 'the fast jobs never think');
+  assert.equal(fast.via, 'Meterless Nightshift · nvidia/nemotron-3.5-lightning-30b-a3b');
+  // Names that differ from NIM's still match by family.
+  assert.equal(ns.pickNightshiftModel('fast', ['nim:Nemotron-3.5-Lightning']), 'nim:Nemotron-3.5-Lightning');
+  assert.equal(ns.pickNightshiftModel('deep', ['meterless/auto']), 'meterless/deep');
+});
+
+test('if Nightshift rejects the thinking switch, the call is repeated without it', async () => {
+  rejectKwargs = true;
+  seen.length = 0;
+  const r = await ns.nemotronChat({ user: 'explain' });
+  rejectKwargs = false;
+  assert.equal(r.provider, 'nightshift');
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].kwargs, undefined);
   nightshift.close();
   nim.close();
 });

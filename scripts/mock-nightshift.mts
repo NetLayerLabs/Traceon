@@ -17,7 +17,11 @@ for (const f of ['.env.local', '.env']) {
 }
 const PORT = Number(process.env.MOCK_NIGHTSHIFT_PORT ?? 8088);
 const TOKEN = process.env.MOCK_NIGHTSHIFT_TOKEN ?? 'standin-token';
-const ROUTES = ['auto', 'fast', 'deep', 'cheap', 'local', 'fusion', 'vision', 'text', 'vision.fast', 'text.deep'].map((r) => `meterless/${r}`);
+const MODES = ['auto', 'fast', 'deep', 'cheap', 'local', 'fusion', 'vision', 'text', 'vision.fast', 'text.deep'].map((r) => `meterless/${r}`);
+// With an NVIDIA key, the stand-in behaves like a Nightshift with the NVIDIA
+// API connected: Nemotron models appear in the list and are called directly.
+const NEMOTRON = ['nvidia/nemotron-3.5-super-vl-120b-a12b', 'nvidia/nemotron-3.5-lightning-30b-a3b'];
+const ROUTES = process.env.NVIDIA_API_KEY && process.env.MOCK_NIGHTSHIFT_NEMOTRON !== 'off' ? [...MODES, ...NEMOTRON] : MODES;
 const UPSTREAM: Record<string, { model: string; thinking: boolean }> = {
   'meterless/vision': { model: 'nvidia/nemotron-3.5-super-vl-120b-a12b', thinking: false },
   'meterless/deep': { model: 'nvidia/nemotron-3.5-super-vl-120b-a12b', thinking: false },
@@ -41,7 +45,8 @@ http
       const body = JSON.parse(raw || '{}');
       if (!ROUTES.includes(body.model)) return send(res, 404, { error: `unknown route ${body.model}` });
       if (process.env.NVIDIA_API_KEY) {
-        const up = UPSTREAM[body.model] ?? FALLBACK_UPSTREAM;
+        const direct = NEMOTRON.includes(body.model);
+        const up = direct ? { model: body.model, thinking: body.chat_template_kwargs?.enable_thinking ?? false } : (UPSTREAM[body.model] ?? FALLBACK_UPSTREAM);
         const r = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.NVIDIA_API_KEY}` },
@@ -59,6 +64,6 @@ http
   })
   .listen(PORT, '127.0.0.1', () => {
     console.log(`Nightshift STAND-IN on http://127.0.0.1:${PORT}/v1  token: ${TOKEN}`);
-    console.log(process.env.NVIDIA_API_KEY ? 'Forwarding to Nemotron on NVIDIA NIM.' : 'No NVIDIA_API_KEY: fixed replies.');
+    console.log(process.env.NVIDIA_API_KEY ? `NVIDIA connected: lists ${ROUTES.length - MODES.length} Nemotron models and forwards everything to NIM.` : 'No NVIDIA_API_KEY: fixed replies.');
     console.log(`For Traceon: NIGHTSHIFT_TOKEN=${TOKEN}`);
   });
