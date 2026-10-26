@@ -167,3 +167,11 @@ test('scoreboard summarises model guesses against tested verdicts', () => {
   assert.equal(s.modelTopCorrectPct, 50);
   assert.equal(s.statsCorrectPct, 100);
 });
+
+test('NHTSA intake keeps only battery fires with no crash', async () => {
+  const { isBatteryFire } = await import('../src/lib/signals.ts');
+  // Real complaints that the old Tesla Model 3 query labelled battery/fire.
+  assert.equal(isBatteryFire({ fire: false, crash: false, components: 'ENGINE,FORWARD COLLISION AVOIDANCE', summary: 'Tesla has told me the AP4 computer has failed... battery' }), false);
+  assert.equal(isBatteryFire({ fire: true, crash: true, components: 'ELECTRICAL SYSTEM,STRUCTURE', summary: 'the vehicle hit a tree by the roadside and caught fire' }), false);
+  assert.equal(isBatteryFire({ fire: true, crash: false, components: 'ELECTRICAL SYSTEM', summary: 'Bolt finished charging, then smoke; the battery pack caught fire' }), true);
+});

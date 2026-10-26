@@ -44,8 +44,8 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
   - Before recording: run `npm run zetaris:check` a few minutes before, to warm the cluster.
   - Answered by other teams: org ID is under **Management → Organisation**; a local install's host is `http://localhost:8888` (set `ZETARIS_API_URL` to that; the app adds `/api/v1.0`), org ID 1; warm up by running every demo query once (`npm run zetaris:warm`); judging must work without live access (done: `./sample.sh`), and live access must stay up until 6 Nov.
   - Still to ask the Zetaris team: the API host for an AWS cluster, and how to create an API token (a username and password also work).
-- [ ] **2. Intake NHTSA feed** ← next: e-bike or e-scooter battery fire complaints with a strict fire filter, instead of Tesla Model 3 (one current match is an Autopilot complaint).
-- [ ] **3. openFDA feed**: narrow to lithium-battery thermal events, or drop it.
+- [x] **2. Intake NHTSA feed**: done Oct 26. EVs with a battery-fire history (Bolt EV 2017-19, Kona Electric 2019-20), strict filter: fire reported, no crash, battery named. Live: 4 genuine Bolt EV battery fires (two are the fires the backtest flags before GM's recall). NHTSA has no e-bike data; CPSC covers e-bikes.: e-bike or e-scooter battery fire complaints with a strict fire filter, instead of Tesla Model 3 (one current match is an Autopilot complaint).
+- [ ] **3. openFDA feed** ← next: narrow to lithium-battery thermal events, or drop it.
 - [ ] **4. Sample defect photo**: you pick a real, openly licensed burnt-connector photo (e.g. Wikimedia Commons) or take one; I wire it in.
 - [ ] **5. Bright Data**: you add `BRIGHTDATA_API_TOKEN`; I point the scraper at the real-data case so real posts exist.
 - [ ] **6. Real dataset on Your data**: Backblaze hard-drive data, reduced to one row per drive (check the size first), replacing the generated charger sample.

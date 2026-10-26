@@ -56,7 +56,7 @@ The reference scenario keeps its historical random stream and plant-to-supplier 
 flowchart LR
   F1["CPSC e-bike recalls"] --> RAD["Signal radar<br/>federal: context only"]
   F2["openFDA MAUDE"] --> RAD
-  F3["NHTSA ODI"] --> RAD
+  F3["NHTSA ODI<br/>EV battery fires"] --> RAD
   W["Warranty claims"] --> ING["ingestSignals()<br/>idempotent by source id"]
   B["Reviews and forums"] --> ING
   ING --> HM[("H-MEM store<br/>per scenario")]
@@ -64,7 +64,7 @@ flowchart LR
   Q --> CL["Incident cluster<br/>131 signals in the reference"]
 ```
 
-- **Feeds** (`src/lib/signals.ts`): each federal fetch has a 9-second timeout and returns `status: 'unreachable'` with no items on failure. Nothing is ever substituted. Bright Data's Web Unlocker is called only with `BRIGHTDATA_API_TOKEN` and only for the reference scenario; otherwise the simulated chatter is labelled `simulated`.
+- **Feeds** (`src/lib/signals.ts`): CPSC e-bike recalls since 2025; openFDA device reports mentioning battery overheating; NHTSA complaints for EVs with a known battery-fire history (Bolt EV 2017-19, Kona Electric 2019-20). NHTSA covers motor vehicles only, so e-bikes come from CPSC; the NHTSA feed keeps a complaint only if it reports a fire, involves no crash, and names the battery (`isBatteryFire()`). Each federal fetch has a 9-second timeout and returns `status: 'unreachable'` with no items on failure. Nothing is ever substituted. Bright Data's Web Unlocker is called only with `BRIGHTDATA_API_TOKEN` and only for the reference scenario; otherwise the simulated chatter is labelled `simulated`.
 - **H-MEM** (`src/lib/meterless.ts`, engine in `vendor/meterless-hmem`): every product signal becomes a `factual` short-term memory with its channel as provenance. Retrieval uses the engine's hybrid score (semantic, keyword, tags, entities, layer, recency, multiplied by confidence) with threshold 0.18. Recency is scored as of the dataset date (`AS_OF`, 2026-10-24) rather than the wall clock, so the converged count is stable across days.
 - **Approved insights.** When a human approves a remediation, `commitRootCauseInsight()` writes a long-term memory with `derivedFrom` lineage to the converged signals. The next investigation's `priorInsights` recalls it.
 - **Lot world model.** `updateWorldModel()` keeps a risk state per lot. A quarantine is sticky: re-running an investigation never un-quarantines a lot.

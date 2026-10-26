@@ -95,27 +95,61 @@ export async function fetchOpenFdaBatteryEvents(): Promise<FeedResult> {
   };
 }
 
-/** NHTSA ODI: lithium traction-battery fire complaints (adjacent signal). */
+/**
+ * NHTSA ODI: lithium traction-battery fire complaints on electric vehicles.
+ * NHTSA covers motor vehicles only (e-bikes fall under CPSC, queried above),
+ * so this is the closest public signal for a lithium pack fire: EVs with a
+ * known battery-fire history, filtered strictly to complaints that report a
+ * fire, involve no crash, and name the battery in the parts or the narrative.
+ */
+export const NHTSA_EVS: [string, string, number][] = [
+  ['CHEVROLET', 'BOLT EV', 2017],
+  ['CHEVROLET', 'BOLT EV', 2018],
+  ['CHEVROLET', 'BOLT EV', 2019],
+  ['HYUNDAI', 'KONA ELECTRIC', 2019],
+  ['HYUNDAI', 'KONA ELECTRIC', 2020],
+];
+const BATTERY = /traction battery|high.?voltage battery|lithium|battery (pack|cell|module)|\bcells?\b/i;
+
+/** A complaint that reports a battery fire with no crash involved. */
+export function isBatteryFire(r: { fire?: boolean; crash?: boolean; components?: string; summary?: string }) {
+  return Boolean(r.fire) && !r.crash && BATTERY.test(`${r.components ?? ''} ${r.summary ?? ''}`);
+}
+
 export async function fetchNhtsaBatteryFires(): Promise<FeedResult> {
-  const data = (await getJson(
-    'https://api.nhtsa.gov/complaints/complaintsByVehicle?make=TESLA&model=MODEL%203&modelYear=2024'
-  )) as { results?: any[] } | null;
-  if (!data?.results) return { feed: 'NHTSA ODI', status: 'unreachable', note: 'Feed did not respond', items: [] };
-  const relevant = data.results.filter((r) => r.fire || /battery|thermal|overheat/i.test(`${r.components} ${r.summary}`));
+  const answers = await Promise.all(
+    NHTSA_EVS.map(([make, model, year]) =>
+      getJson(`https://api.nhtsa.gov/complaints/complaintsByVehicle?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${year}`).then(
+        (d) => ({ vehicle: `${model} ${year}`, results: (d as { results?: any[] } | null)?.results ?? null })
+      )
+    )
+  );
+  if (answers.every((a) => a.results === null)) return { feed: 'NHTSA ODI', status: 'unreachable', note: 'Feed did not respond', items: [] };
+  const relevant = answers
+    .flatMap((a) => (a.results ?? []).filter(isBatteryFire).map((r) => ({ ...r, vehicle: a.vehicle })))
+    .sort((a, b) => toIso(b.dateComplaintFiled).localeCompare(toIso(a.dateComplaintFiled)));
   const items = relevant.slice(0, 10).map((r) => ({
     id: `ODI-${r.odiNumber}`,
     source: 'NHTSA ODI',
-    date: (() => {
-      const [m, d, y] = String(r.dateComplaintFiled ?? '').split('/');
-      return y ? `${y}-${m}-${d}` : '';
-    })(),
-    title: `${r.components}`.slice(0, 80),
+    date: toIso(r.dateComplaintFiled),
+    title: `${titleCase(r.vehicle)} · ${String(r.components).split(',')[0].toLowerCase()}`.slice(0, 80),
     detail: String(r.summary ?? '').slice(0, 260),
-    tags: [r.fire ? 'fire' : 'battery'],
+    tags: ['fire', 'lithium-battery'],
     kind: 'federal' as const,
   }));
-  return { feed: 'NHTSA ODI', status: 'live', note: `${relevant.length} battery/fire complaints (Model 3, MY2024)`, items };
+  const reached = answers.filter((a) => a.results !== null).length;
+  return {
+    feed: 'NHTSA ODI',
+    status: 'live',
+    note: `${relevant.length} lithium-battery fire complaints, no crash (Bolt EV, Kona Electric)${reached < answers.length ? `; ${answers.length - reached} of ${answers.length} queries unanswered` : ''}`,
+    items,
+  };
 }
+const toIso = (d: string) => {
+  const [m, day, y] = String(d ?? '').split('/');
+  return y ? `${y}-${m}-${day}` : '';
+};
+const titleCase = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/\bEv\b/, 'EV');
 
 /**
  * Bright Data Web Unlocker. With BRIGHTDATA_API_TOKEN set, fetches a Reddit
