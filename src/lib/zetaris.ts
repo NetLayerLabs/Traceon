@@ -115,7 +115,22 @@ function cloudConfig(): CloudConfig | null {
   return { baseUrl, orgId, apiToken, username, password };
 }
 
-let session: { idToken: string; refreshToken: string; obtainedAt: number } | null = null; // per-bundle cache is fine: it only saves a login
+let session: { idToken: string; refreshToken: string; expiresAt: number } | null = null; // per-bundle cache is fine: it only saves a login
+
+/** When a session token stops being valid: its JWT exp claim, else 10 minutes (local installs issue 15-minute tokens). */
+function tokenExpiry(idToken: string): number {
+  try {
+    const exp = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64url').toString()).exp;
+    if (typeof exp === 'number') return exp * 1000;
+  } catch {}
+  return Date.now() + 10 * 60_000;
+}
+const newSession = (t: { idToken: string; refreshToken: string }) => (session = { idToken: t.idToken, refreshToken: t.refreshToken, expiresAt: tokenExpiry(t.idToken) });
+
+/** Forget the session so the next call signs in again (after the server rejected it). */
+function dropSession() {
+  session = null;
+}
 
 const headers = (cfg: CloudConfig, bearer?: string): Record<string, string> => ({
   'X-Request-ID': crypto.randomUUID(),
@@ -126,15 +141,12 @@ const headers = (cfg: CloudConfig, bearer?: string): Record<string, string> => (
 
 async function bearerToken(cfg: CloudConfig): Promise<string> {
   if (cfg.apiToken) return cfg.apiToken;
-  // idTokens are short-lived JWTs; refresh after 45 minutes, re-login if refresh fails.
-  if (session && Date.now() - session.obtainedAt < 45 * 60_000) return session.idToken;
+  // idTokens are short-lived JWTs (15 minutes on a local install): refresh a
+  // minute before they expire, and sign in again if the refresh fails.
+  if (session && Date.now() < session.expiresAt - 60_000) return session.idToken;
   if (session) {
     const r = await fetch(`${cfg.baseUrl}/api/v1.0/auth/refresh`, { headers: headers(cfg, session.refreshToken), signal: AbortSignal.timeout(10_000) });
-    if (r.ok) {
-      const t = await r.json();
-      session = { idToken: t.idToken, refreshToken: t.refreshToken, obtainedAt: Date.now() };
-      return session.idToken;
-    }
+    if (r.ok) return newSession(await r.json()).idToken;
   }
   const basic = Buffer.from(`${cfg.username}:${cfg.password}`).toString('base64');
   const r = await fetch(`${cfg.baseUrl}/api/v1.0/auth/login`, {
@@ -142,9 +154,7 @@ async function bearerToken(cfg: CloudConfig): Promise<string> {
     signal: AbortSignal.timeout(10_000),
   });
   if (!r.ok) throw new Error(`Zetaris login ${r.status}: ${(await r.text()).slice(0, 160)}`);
-  const t = await r.json();
-  session = { idToken: t.idToken, refreshToken: t.refreshToken, obtainedAt: Date.now() };
-  return session.idToken;
+  return newSession(await r.json()).idToken;
 }
 
 /** Map local table names to their Zetaris names (ZETARIS_SCHEMA prefix and/or ZETARIS_TABLE_MAP JSON). */
@@ -163,6 +173,11 @@ const PAGE_LIMIT = 100; // API maximum
 const MAX_PAGES = 50;
 
 const breaker = singleton('zetaris-breaker', () => ({ openUntil: 0, reason: '' }));
+
+/** For tests: close the circuit breaker. */
+export function resetZetarisBreaker() {
+  breaker.openUntil = 0;
+}
 
 /** A fault in the cluster, not a refusal of the query: worth one more try. */
 class TransientZetarisError extends Error {}
@@ -206,6 +221,12 @@ async function runCloudQueryOnce(sql: string): Promise<Record<string, unknown>[]
   if (!start.ok) {
     const text = (await start.text()).slice(0, 200);
     const msg = `Zetaris start ${start.status}: ${text}`;
+    // A rejected session (401/403, or a bare "Bad Request" with no query error in it)
+    // is fixed by signing in again, so it counts as transient.
+    if (!cfg.apiToken && (start.status === 401 || start.status === 403 || (start.status === 400 && /^\{"msg":"Bad Request"\}$/.test(text.trim())))) {
+      dropSession();
+      throw new TransientZetarisError(`${msg} (session rejected; signing in again)`);
+    }
     if (start.status >= 500 || start.status === 429 || (start.status === 400 && TRANSIENT_400.test(text))) throw new TransientZetarisError(msg);
     throw new Error(msg);
   }

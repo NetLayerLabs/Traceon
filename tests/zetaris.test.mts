@@ -10,8 +10,15 @@ import { isolatedStorage } from './helpers.mts';
 isolatedStorage('zetaris');
 let plan: { status: number; body: string }[] = [];
 let calls = 0;
+let logins = 0;
+const jwt = (expSeconds: number) => `x.${Buffer.from(JSON.stringify({ iat: 0, exp: expSeconds })).toString('base64url')}.y`;
 const server = http.createServer((req, res) => {
   if (req.method === 'DELETE') return res.end('{}');
+  if (req.url?.startsWith('/api/v1.0/auth/login')) {
+    logins++;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ idToken: jwt(Math.floor(Date.now() / 1000) + 900), refreshToken: 'r' }));
+  }
   calls++;
   const next = plan.shift() ?? { status: 200, body: JSON.stringify({ queryToken: 't', records: [{ N: '7' }], totalPages: 1, pageNumber: 1 }) };
   res.writeHead(next.status, { 'Content-Type': 'application/json' });
@@ -47,5 +54,21 @@ test('after repeated faults the cloud is skipped for a minute, with the reason i
   assert.equal(second.executedVia, 'LOCAL_FEDERATED_MIRROR');
   assert.equal(calls, 3, 'no further calls while the breaker is open');
   assert.match(second.fallbackReason ?? '', /skipped for \d+ s after repeated faults/);
+});
+
+test('a session the server rejects is replaced by a fresh sign-in', async () => {
+  const { resetZetarisBreaker } = await import('../src/lib/zetaris.ts');
+  resetZetarisBreaker();
+  process.env.ZETARIS_API_TOKEN = '';
+  process.env.ZETARIS_USERNAME = 'admin@zetaris.com';
+  process.env.ZETARIS_PASSWORD = 'pw';
+  reset([{ status: 400, body: '{"msg":"Bad Request"}' }]);
+  logins = 0;
+  const rows = await runCloudQuery('SELECT COUNT(*) AS n FROM unit_fact');
+  assert.deepEqual(rows, [{ n: 7 }]);
+  assert.equal(logins, 2, 'signed in, was rejected, signed in again');
+  // A query error that happens to be a 400 is still a refusal, not a session problem.
+  reset([{ status: 400, body: '{"msg":"[TABLE_OR_VIEW_NOT_FOUND] unit_factz"}' }]);
+  await assert.rejects(runCloudQuery('SELECT COUNT(*) AS n FROM unit_factz'), /TABLE_OR_VIEW_NOT_FOUND/);
   server.close();
 });
