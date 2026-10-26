@@ -4,7 +4,7 @@
 
 It pulls scattered warning signs (warranty claims, reviews, federal safety reports) into one case, tests seven suspects against 180,000 units of factory data with federated SQL, separates real causes from look-alikes with stratified statistics, and hashes every query into a replayable proof. Everything is judged by one test: **does it name exactly the hidden cause, and act only when there is one?** On 250 held-out hidden scenarios it did, 250 times. Replayed on real public complaint data, the same kind of test flags the Chevrolet Bolt EV battery-fire signal 14 days before GM's recall.
 
-Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: `<LIVE_URL>` · Demo: `<VIDEO_URL>` · Code: [github.com/NetLayerLabs/Traceon](https://github.com/NetLayerLabs/Traceon) (private, access on request) · Team: NetLayer Labs
+Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: [traceon.netlayerlabs.com](https://traceon.netlayerlabs.com) · Demo: `<VIDEO_URL>` · Code: [github.com/NetLayerLabs/Traceon](https://github.com/NetLayerLabs/Traceon) (private, access on request) · Team: NetLayer Labs
 
 **Judges, start here:** open `/app?autorun=1` for a full investigation in about 30 seconds with no login, then `/app?scenario=random&autorun=1` to watch it solve a cause it has never seen, and `/backtest` for real recalls. The design is in **[ARCHITECTURE.md](ARCHITECTURE.md)** and the two-minute walkthrough in **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)**.
 
@@ -399,9 +399,9 @@ Status as of 2026-10-25. The pre-submission checklist is in [TODO_BEFORE_SUBMISS
 
 ## Live access
 
-The live deployment is at `<LIVE_URL>` and stays running until the results are announced on **6 November 2026**. It is configured as follows:
-- **AI:** Meterless Nightshift, routing to NVIDIA Nemotron 3.5; Nemotron on NVIDIA NIM is the labelled fallback.
-- **Data:** the reference scenario is queried on Zetaris; other scenarios and uploads run on the local engine, labelled in each exhibit.
+The live deployment is at **https://traceon.netlayerlabs.com** and stays running until the results are announced on **6 November 2026**. It is configured as follows:
+- **Data:** the Zetaris platform (the hackathon's Docker distribution) runs on the same server, and the reference scenario's queries go to it over the Zetaris REST API. The top bar shows the hash-parity check; other scenarios and uploads run on the local engine, labelled in each exhibit. A full reference investigation takes about 15 seconds, with all 46 queries on Zetaris.
+- **AI:** Nemotron 3.5 on NVIDIA NIM. Meterless Nightshift is a desktop runtime (Mac, Windows, DGX), so it cannot run on this Linux server; the demo video shows the same app with Nightshift as the AI provider, routing to Nemotron.
 - **Feeds:** CPSC, openFDA and NHTSA, fetched live.
 
 If any live service is unavailable, the app says so in each exhibit and in the top bar, and falls back without changing a verdict. The sample mode above needs none of it.
@@ -413,7 +413,7 @@ If any live service is unavailable, the app says so in each exhibit and in the t
 3. **Set the environment** from the table above. Point the host's health check at `/api/health`, which returns 200 when the core works and 503 when it does not.
 4. **Zetaris (optional).** Create a cluster, run `npm run zetaris:export`, upload the CSVs to a database named `traceon`, set the Zetaris variables, and confirm `npm run zetaris:check` prints `parity OK`. Step by step: [docs/ZETARIS_SETUP.md](docs/ZETARIS_SETUP.md).
 5. **Warm the cache before recording.** Run each scenario once with `NEMOTRON_THINKING_DEADLINE_MS=60000` so the cache holds answers with thinking traces.
-6. **Live URL:** `<LIVE_URL>`, not deployed yet.
+6. **Live URL:** https://traceon.netlayerlabs.com (one Ubuntu server: Traceon under pm2 behind nginx with a Let's Encrypt certificate, Zetaris in Docker on localhost-only ports with memory caps).
 
 ## Repository map
 

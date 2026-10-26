@@ -33,17 +33,18 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
 - [ ] **Demo video (1-4 min)**: main workflow, Zetaris being queried, a Meterless engine at work, and one real request through Nightshift.
 - [ ] **Sponsor tech explanation** in the submission form.
 - [x] **Judgeable without live access** (organisers, General Chat 11:12): `./sample.sh` runs the whole engine offline from a clean clone in one command (tested in a fresh clone; `--serve` starts the app offline).
-- [ ] **Live access kept running until results on 6 Nov**: the deployment, Nightshift endpoint, Zetaris cluster and NVIDIA credits must all last until then. Fill in `<LIVE_URL>` in the README's Live access section.
+- [x] **Live deployment**: https://traceon.netlayerlabs.com on 38.49.213.208 (pm2 `traceon` on 127.0.0.1:3720, nginx + Let's Encrypt; Zetaris in /opt/zetaris-platform, ports localhost-only, memory-capped; 8 GB swap added). Live Zetaris parity OK; full case in ~15 s.
+- [ ] **Keep it running until results on 6 Nov**: the server, Zetaris and NVIDIA credits. If the server ever needs the memory back: `cd /opt/zetaris-platform && docker compose stop` (Traceon falls back to its own engine, labelled).
 - [ ] Before recording: `npm run zetaris:warm` (every demo query once) and `npm run nightshift:check` (warms the models); keep a recorded fallback take.
 
 ## Make it real, one at a time (in this order; finish one before starting the next)
 
-- [ ] **1. Zetaris** ← current. You: create the account and cluster (see section 2 below). Then: `npm run zetaris:export`, upload to `traceon`, set the env vars, `npm run zetaris:check` shows parity OK. Then I export firmware, two-causes and noise as extra schemas so the named scenarios run on Zetaris too.
+- [x] **1. Zetaris**: done Oct 26. Real Zetaris (hackathon Docker distribution) on the live server and on the Mac; tables TRACEON_PQ (Parquet), parity OK, 46/46 queries on Zetaris. Remaining nice-to-have: firmware/two-causes/noise as extra schemas. You: create the account and cluster (see section 2 below). Then: `npm run zetaris:export`, upload to `traceon`, set the env vars, `npm run zetaris:check` shows parity OK. Then I export firmware, two-causes and noise as extra schemas so the named scenarios run on Zetaris too.
   - Done ahead: the client retries the 400 faults other teams hit on these clusters (`Could not create ResultSet: null`, `TTransportException`), waits up to 55 s for a cold start, and skips the cloud for 60 s if it keeps failing.
   - Before recording: run `npm run zetaris:check` a few minutes before, to warm the cluster.
   - Answered by other teams: org ID is under **Management → Organisation**; a local install's host is `http://localhost:8888` (set `ZETARIS_API_URL` to that; the app adds `/api/v1.0`), org ID 1; warm up by running every demo query once (`npm run zetaris:warm`); judging must work without live access (done: `./sample.sh`), and live access must stay up until 6 Nov.
   - Still to ask the Zetaris team: the API host for an AWS cluster, and how to create an API token (a username and password also work).
-- [ ] **2. Intake NHTSA feed**: e-bike or e-scooter battery fire complaints with a strict fire filter, instead of Tesla Model 3 (one current match is an Autopilot complaint).
+- [ ] **2. Intake NHTSA feed** ← next: e-bike or e-scooter battery fire complaints with a strict fire filter, instead of Tesla Model 3 (one current match is an Autopilot complaint).
 - [ ] **3. openFDA feed**: narrow to lithium-battery thermal events, or drop it.
 - [ ] **4. Sample defect photo**: you pick a real, openly licensed burnt-connector photo (e.g. Wikimedia Commons) or take one; I wire it in.
 - [ ] **5. Bright Data**: you add `BRIGHTDATA_API_TOKEN`; I point the scraper at the real-data case so real posts exist.
@@ -79,7 +80,7 @@ A parity check passing against a real Zetaris instance is worth more than any fe
 - [ ] Set `TRACEON_SIGNING_KEY` on the host so the public key stays the same across deploys
 - [ ] Test the live URL from a phone and a second laptop, including `/backtest`, `/watch` and a shared case link
 - [ ] Record the 2-minute video ([DEMO_SCRIPT.md](DEMO_SCRIPT.md)), plus a backup take in offline mode
-- [ ] Replace `<LIVE_URL>` and `<VIDEO_URL>` in the README
+- [ ] Replace `<VIDEO_URL>` in the README (the live URL is filled in)
 - [ ] Submit before Oct 27, 23:45 UTC
 
 ## Later (after the hackathon)
