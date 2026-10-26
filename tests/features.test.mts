@@ -175,3 +175,10 @@ test('NHTSA intake keeps only battery fires with no crash', async () => {
   assert.equal(isBatteryFire({ fire: true, crash: true, components: 'ELECTRICAL SYSTEM,STRUCTURE', summary: 'the vehicle hit a tree by the roadside and caught fire' }), false);
   assert.equal(isBatteryFire({ fire: true, crash: false, components: 'ELECTRICAL SYSTEM', summary: 'Bolt finished charging, then smoke; the battery pack caught fire' }), true);
 });
+
+test('openFDA intake keeps only lithium-battery thermal events', async () => {
+  const { isLithiumThermalEvent } = await import('../src/lib/signals.ts');
+  assert.equal(isLithiumThermalEvent('BD VACUTAINER LITHIUM HEPARIN tube; the lab reported smoke from the analyzer'), false);
+  assert.equal(isLithiumThermalEvent('Battery overheat warning displayed; no lithium battery involved'), false);
+  assert.equal(isLithiumThermalEvent('A latent internal battery cell defect in the lithium-ion battery caused an internal short circuit and thermal runaway'), true);
+});

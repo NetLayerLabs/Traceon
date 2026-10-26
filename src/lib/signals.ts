@@ -70,27 +70,47 @@ export async function fetchCpscEbikeRecalls(): Promise<FeedResult> {
   };
 }
 
-/** openFDA MAUDE: battery overheat device reports (adjacent lithium-cell failure modes). */
+/**
+ * openFDA MAUDE: lithium-battery thermal events in medical devices (a fire,
+ * smoke, melting or thermal runaway from a lithium battery), the same failure
+ * physics as a pack fire. Full-text search is loose ("lithium" also matches
+ * lithium heparin), so each report's own narrative must name a lithium battery
+ * and a thermal event (`isLithiumThermalEvent()`).
+ */
+const LITHIUM_BATTERY = /lithium[- ]?(ion|polymer)?\s*(battery|batteries|cell|pack)|\bli-?ion\b/i;
+const THERMAL_EVENT = /caught fire|on fire|flames?\b|smok(e|ed|ing)\b|thermal runaway|melt(ed|ing)|burn(t|ed|ing)\b|explod/i;
+const NOT_A_BATTERY = /heparin|lithium (carbonate|level|toxicity|dose)/i;
+
+export function isLithiumThermalEvent(narrative: string) {
+  return LITHIUM_BATTERY.test(narrative) && THERMAL_EVENT.test(narrative) && !NOT_A_BATTERY.test(narrative);
+}
+
 export async function fetchOpenFdaBatteryEvents(): Promise<FeedResult> {
   const key = process.env.OPENFDA_API_KEY ? `&api_key=${process.env.OPENFDA_API_KEY}` : '';
   const data = (await getJson(
-    `https://api.fda.gov/device/event.json?search=mdr_text.text:%22battery%22+AND+mdr_text.text:%22overheat%22&sort=date_received:desc&limit=12${key}`
+    `https://api.fda.gov/device/event.json?search=mdr_text.text:%22lithium%22+AND+(mdr_text.text:%22fire%22+mdr_text.text:%22smoke%22+mdr_text.text:%22thermal+runaway%22+mdr_text.text:%22melted%22)&sort=date_received:desc&limit=100${key}`
   )) as { meta?: any; results?: any[] } | null;
   if (!data?.results) return { feed: 'openFDA MAUDE', status: 'unreachable', note: 'Feed did not respond', items: [] };
-  const items = data.results.map((r) => ({
-    id: `MDR-${r.report_number ?? r.mdr_report_key}`,
-    source: 'openFDA MAUDE',
-    date: ymd(String(r.date_received ?? '')),
-    title: `${r.device?.[0]?.brand_name ?? 'Device'} (${r.device?.[0]?.manufacturer_d_name ?? 'unknown mfr'})`,
-    detail: String(r.mdr_text?.[0]?.text ?? '').slice(0, 260),
-    url: `https://api.fda.gov/device/event.json?search=report_number:%22${encodeURIComponent(r.report_number ?? '')}%22`,
-    tags: ['battery', 'overheat', String(r.event_type ?? '').toLowerCase()],
-    kind: 'federal' as const,
-  }));
+  const narrative = (r: any) => (r.mdr_text ?? []).map((m: any) => String(m.text ?? '')).join(' ');
+  const kept = data.results.filter((r) => isLithiumThermalEvent(narrative(r)));
+  const items = kept.slice(0, 12).map((r) => {
+    const text = narrative(r);
+    const at = Math.max(0, text.search(THERMAL_EVENT) - 110);
+    return {
+      id: `MDR-${r.report_number ?? r.mdr_report_key}`,
+      source: 'openFDA MAUDE',
+      date: ymd(String(r.date_received ?? '')),
+      title: `${r.device?.[0]?.generic_name ?? r.device?.[0]?.brand_name ?? 'Device'}`.slice(0, 80),
+      detail: `${at ? '…' : ''}${text.slice(at, at + 260).replace(/\s+/g, ' ').trim()}`,
+      url: `https://api.fda.gov/device/event.json?search=report_number:%22${encodeURIComponent(r.report_number ?? '')}%22`,
+      tags: ['lithium-battery', 'thermal-event'],
+      kind: 'federal' as const,
+    };
+  });
   return {
     feed: 'openFDA MAUDE',
     status: 'live',
-    note: `${data.meta?.results?.total ?? items.length} battery-overheat device reports on file`,
+    note: `${kept.length} of the latest ${data.results.length} reports describe a lithium-battery fire, smoke or thermal runaway (medical devices)`,
     items,
   };
 }
