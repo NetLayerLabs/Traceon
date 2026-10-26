@@ -98,7 +98,7 @@ expect(upCauses.length === 1 && upCauses[0].group === 'R-2207' && shift?.status 
 
 // 5. Real data: every drive in Backblaze's fleet for Q2 2026 (public Drive Stats).
 say('');
-say('## 5. Real uploaded data: Backblaze hard drives, Q2 2026 (355,690 drives)');
+say('## 5. Real uploaded data: Backblaze hard drives, Q2 2026 (355,689 drives)');
 const bbTable = parseCsv(fs.readFileSync('public/samples/backblaze-drives-q2-2026.csv', 'utf-8'));
 const bb = saveDataset('Backblaze Q2 2026', bbTable[0], bbTable.slice(1), { outcome: 'failed', failValues: ['yes'], factors: ['model', 'datacenter', 'age_band'], serial: 'serial', date: 'failure_date', daysInField: 'days_in_field' });
 const bbEv = await run(bb.id);

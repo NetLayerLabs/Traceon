@@ -1,6 +1,6 @@
 # Traceon sample run
 
-Run 2026-10-26T21:46:21.190Z: offline, no keys, no network. Model steps use labelled templates; every statistic, verdict and proof is computed exactly as in live mode.
+Run 2026-10-26T21:53:03.678Z: offline, no keys, no network. Model steps use labelled templates; every statistic, verdict and proof is computed exactly as in live mode.
 
 ## 1. Reference case: 125 thermal claims, seven suspects
 - Verdict: **cell_batch = CB-B-0917**, relative risk 1668x, explains 92.8% of incidents
@@ -27,7 +27,7 @@ Run 2026-10-26T21:46:21.190Z: offline, no keys, no network. Model steps use labe
 ## 4. Uploaded CSV, generated (12,000 chargers, public/samples/charger-returns.csv)
 - Verdict: resin_lot=R-2207; night shift: ruled out as a confounder; gate PASSED
 
-## 5. Real uploaded data: Backblaze hard drives, Q2 2026 (355,690 drives)
+## 5. Real uploaded data: Backblaze hard drives, Q2 2026 (355,689 drives)
 - Worst model: HGST HUH721212ALN604 (p = 2.9e-205); gate BLOCKED
 - model: Not material on its own. With sac2 excluded, HGST HUH721212ALN604 fails at 42/10k vs 34/10k for the rest (RR 1.2, below the 2x bar): its excess is concentrated where sac2 is.
 - datacenter: Not material on its own. With HGST HUH721212ALN604 excluded, sac2 fails at 56/10k vs 34/10k for the rest (RR 1.6, below the 2x bar): its excess is concentrated where HGST HUH721212ALN604 is.

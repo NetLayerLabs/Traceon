@@ -1237,7 +1237,7 @@
     ],
     "rowCount": 3,
     "proofHash": "531c204c5d062ba57983cee6c739b70b801f54b15b1e256bcd34c6f9d249733c",
-    "latencyMs": 12,
+    "latencyMs": 14,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "531c204c5d062ba57983cee6c739b70b801f54b15b1e256bcd34c6f9d249733c",
@@ -1306,7 +1306,7 @@
     ],
     "rowCount": 2,
     "proofHash": "d2732372fde574551d25ee496b667c03fd3deb4dd1431600f60a9e4e5a430353",
-    "latencyMs": 4,
+    "latencyMs": 5,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "d2732372fde574551d25ee496b667c03fd3deb4dd1431600f60a9e4e5a430353",
@@ -3375,7 +3375,7 @@
     ],
     "rowCount": 4,
     "proofHash": "3963eb1dce10ab194520c04c2c1da920bde597f1125262d380a76c3af9445fad",
-    "latencyMs": 9,
+    "latencyMs": 8,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "3963eb1dce10ab194520c04c2c1da920bde597f1125262d380a76c3af9445fad",
@@ -4074,7 +4074,7 @@
     ],
     "rowCount": 3,
     "proofHash": "75ebc3df1a16780be0c4e9baa2add72c311ca6ca3da6c5d3c238e706d93d3fb1",
-    "latencyMs": 8,
+    "latencyMs": 9,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "75ebc3df1a16780be0c4e9baa2add72c311ca6ca3da6c5d3c238e706d93d3fb1",
@@ -4139,7 +4139,7 @@
     ],
     "rowCount": 6,
     "proofHash": "9b58572cf594023c0d5d272b80304f066c55a8f08694c060398963909b2166d7",
-    "latencyMs": 8,
+    "latencyMs": 9,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "9b58572cf594023c0d5d272b80304f066c55a8f08694c060398963909b2166d7",
@@ -13046,7 +13046,7 @@
     ],
     "rowCount": 116,
     "proofHash": "c5201db273ef6878110aaa4b638b0840adfed4edcd40ef5cc325f0592e8773df",
-    "latencyMs": 42,
+    "latencyMs": 44,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "c5201db273ef6878110aaa4b638b0840adfed4edcd40ef5cc325f0592e8773df",
@@ -13075,7 +13075,7 @@
     ],
     "rowCount": 2,
     "proofHash": "97aa72ce3b5ca42897da0137ce7334a741f0880ed0a21a42b2273dd6ebe751fe",
-    "latencyMs": 12,
+    "latencyMs": 14,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "97aa72ce3b5ca42897da0137ce7334a741f0880ed0a21a42b2273dd6ebe751fe",
