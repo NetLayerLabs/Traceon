@@ -9,7 +9,7 @@ import type { CaseView } from './caseView';
 import { getEnterpriseMesh } from './enterpriseData';
 import { DIMENSIONS, REMEDY, REMEDY_FOR } from './investigation';
 import type { RemedyKind } from './investigation';
-import { chiSquareIndependence, formatP } from './stats';
+import { chiSquareIndependence, formatP, hottestGroup } from './stats';
 
 export const FOLLOWUP_DAYS = 30;
 
@@ -135,7 +135,7 @@ export function simulateFollowUp(view: CaseView, mode: 'planned' | 'wrong-fix'):
     const groups = [...g.entries()].map(([group, v]) => ({ group, ...v }));
     if (groups.length < 2 || !newFailures) continue;
     const t = chiSquareIndependence(groups);
-    const hot = [...t.groups].sort((a, b) => b.ratePer10k - a.ratePer10k)[0];
+    const hot = hottestGroup(t.groups);
     if (!worst || t.p < worst.p) worst = { title: d.title, group: hot.group, p: t.p, label: formatP(t.p, t.negLog10P) };
   }
   checks.push({

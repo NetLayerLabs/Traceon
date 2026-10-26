@@ -188,3 +188,14 @@ test('Bright Data news: RSS items parse, outlet suffix stripped, entities decode
   const xml = `<rss><channel><item><title>E-bike battery fires in Yosemite &amp; Grand Canyon trigger warning - SFGATE</title><link>https://news.google.com/x</link><pubDate>Thu, 22 Oct 2026 07:00:00 GMT</pubDate><source url="https://www.sfgate.com">SFGATE</source></item><item><title>No date</title></item></channel></rss>`;
   assert.deepEqual(parseNewsRss(xml), [{ title: 'E-bike battery fires in Yosemite & Grand Canyon trigger warning', link: 'https://news.google.com/x', source: 'SFGATE', date: '2026-10-22' }]);
 });
+
+test('the hottest group is chosen by evidence, not by a tiny group\'s raw rate', async () => {
+  const { chiSquareIndependence, hottestGroup } = await import('../src/lib/stats.ts');
+  // Real Backblaze Q2 2026 counts: one failure in 16 drives is 625/10k; 180 in 9,694 is the real outlier.
+  const t = chiSquareIndependence([
+    { group: 'ST16000NM000G', units: 16, failures: 1 },
+    { group: 'HGST HUH721212ALN604', units: 9694, failures: 180 },
+    { group: 'everything else', units: 345980, failures: 1335 },
+  ]);
+  assert.equal(hottestGroup(t.groups).group, 'HGST HUH721212ALN604');
+});

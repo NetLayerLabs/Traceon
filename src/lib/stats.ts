@@ -275,3 +275,26 @@ export function poissonInterval(k: number, level = 0.95) {
     hi: chiSquareQuantile(1 - a / 2, 2 * k + 2) / 2,
   };
 }
+
+/**
+ * The group that most stands out: the largest excess failure rate against all
+ * other units, measured as a two-proportion z-score so that sample size
+ * counts. Only groups with at least `minFailures` failures compete (all
+ * groups if none has that many). Picking by raw rate alone lets a tiny group
+ * win on one failure (1 of 16 is 625/10k), which real data is full of.
+ */
+export function hottestGroup<G extends GroupCount & { ratePer10k: number }>(groups: G[], minFailures = 3): G {
+  const totalN = groups.reduce((a, g) => a + g.units, 0);
+  const totalF = groups.reduce((a, g) => a + g.failures, 0);
+  const z = (g: G) => {
+    const nRest = totalN - g.units;
+    if (g.units === 0 || nRest === 0) return -Infinity;
+    const pRest = (totalF - g.failures) / nRest;
+    const pool = totalF / totalN;
+    const se = Math.sqrt(pool * (1 - pool) * (1 / g.units + 1 / nRest));
+    return se > 0 ? (g.failures / g.units - pRest) / se : 0;
+  };
+  const eligible = groups.filter((g) => g.failures >= minFailures);
+  const pool = eligible.length ? eligible : groups;
+  return [...pool].sort((a, b) => z(b) - z(a) || b.ratePer10k - a.ratePer10k || a.group.localeCompare(b.group))[0];
+}

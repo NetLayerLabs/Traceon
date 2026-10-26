@@ -5,7 +5,7 @@
 // whether there is a cause or only a confounder.
 import { DIMENSIONS } from './investigation';
 import { getEnterpriseMesh, resolveScenario } from './enterpriseData';
-import { chiSquareIndependence } from './stats';
+import { chiSquareIndependence, hottestGroup } from './stats';
 
 export const WATCH_ALPHA = 0.01;
 export const WATCH_MIN_FAILURES = 5;
@@ -87,7 +87,7 @@ export function watchReplay(scenarioId: string): WatchReplay {
         const groups = names[k].map((g, j) => ({ group: g, units: units[k][j], failures: fails[k][j] })).filter((g) => g.units > 0);
         if (groups.length < 2) continue;
         const test = chiSquareIndependence(groups);
-        const hot = [...test.groups].sort((a, b) => b.ratePer10k - a.ratePer10k)[0];
+        const hot = hottestGroup(test.groups);
         if (!top || test.negLog10P > top.negLog10P) top = { id: dims[k].id, title: dims[k].title, group: hot.group, negLog10P: test.negLog10P, failures: hot.failures };
       }
     }

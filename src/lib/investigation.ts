@@ -15,7 +15,7 @@ import { aiName, aiPrimaryName, extractJson, nemotronChat, NEMOTRON_FAST_MODEL, 
 import { recordScore } from './scoreboard';
 import { fetchAllFeeds } from './signals';
 import type { FeedResult } from './signals';
-import { chiSquareIndependence, cochranMantelHaenszel, formatP, poissonInterval, relativeRisk, wilson } from './stats';
+import { chiSquareIndependence, cochranMantelHaenszel, formatP, hottestGroup, poissonInterval, relativeRisk, wilson } from './stats';
 import type { CmhResult, IndependenceTest, Stratum } from './stats';
 import { runFederatedQuery, SILO_CATALOG } from './zetaris';
 import type { FederatedQueryResult } from './zetaris';
@@ -261,7 +261,7 @@ const groupSql = (column: string, where = '') =>
 const toGroups = (rows: Record<string, unknown>[]) => rows.map((r) => ({ group: String(r.grp), units: Number(r.units), failures: Number(r.failures) }));
 
 function hottest(test: IndependenceTest) {
-  return [...test.groups].sort((a, b) => b.ratePer10k - a.ratePer10k || a.group.localeCompare(b.group))[0];
+  return hottestGroup(test.groups);
 }
 
 const fmtRate = (r: number) => `${r.toFixed(r < 10 ? 1 : 0)}/10k`;
@@ -492,7 +492,15 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
             ? `Ruled out as redundant. ${s.hot} covers exactly the same units as ${by!.hot}, which is the more specific explanation.`
             : by && adj
               ? `Ruled out as a confounder. ${s.hot} only looks guilty because it shares units with ${by.hot}; holding ${by.dim.column} fixed, the effect disappears (${adj.pLabel}).`
-              : 'Ruled out: effect too small to act on after adjustment.';
+              : (() => {
+                  // Not material on its own: say what was excluded and what was left.
+                  const st = strength(s);
+                  const others = survivors.filter((o) => o !== s).map((o) => o.hot);
+                  const rate = (f: number, n: number) => fmtRate(n ? (f / n) * 1e4 : 0);
+                  return others.length
+                    ? `Not material on its own. With ${others.join(' and ')} excluded, ${s.hot} fails at ${rate(st.hot.failures, st.hot.units)} vs ${rate(st.restFail, st.restUnits)} for the rest (RR ${st.rr.rr.toFixed(1)}, below the 2x bar): its excess is concentrated where ${others.join(' and ')} is.`
+                    : `Not material: ${s.hot} fails at ${rate(st.hot.failures, st.hot.units)} vs ${rate(st.restFail, st.restUnits)} (RR ${st.rr.rr.toFixed(1)}, below the 2x bar).`;
+                })();
           update(s.node);
           log(`${s.node.id} unmasked as ${redundant.has(s) ? 'redundant' : 'confounder'}`, 'good');
           await sleep(pacing);

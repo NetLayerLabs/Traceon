@@ -31,7 +31,7 @@ export interface StoredDataset {
   mapping: DatasetMapping;
 }
 
-export const LIMITS = { maxRows: 250_000, maxFactors: 12, maxGroups: 500, maxBytes: 25_000_000, maxDatasets: 50, inMemory: 4 } as const;
+export const LIMITS = { maxRows: 400_000, maxFactors: 12, maxGroups: 500, maxBytes: 25_000_000, maxDatasets: 50, inMemory: 4 } as const;
 
 const dir = () => path.join(process.env.METERLESS_STORAGE_DIR || (process.env.VERCEL ? '/tmp/meterless-data' : path.join(process.cwd(), '.meterless-data')), 'datasets');
 const store = singleton('datasets', () => new Map<string, StoredDataset>());
