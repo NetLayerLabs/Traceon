@@ -294,13 +294,22 @@ async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
   const job = nightshiftJob(opts);
   const model = pickNightshiftModel(job, await nightshiftModelIds(token));
   const start = Date.now();
-  const messages = [...(opts.system ? [{ role: 'system', content: opts.system }] : []), { role: 'user', content: opts.user }];
-  // Nemotron through Nightshift: pass its thinking switch. Off for the fast
-  // jobs (thinking can use the whole budget); off for the others too unless
+  // Nemotron through Nightshift: thinking is off for the fast jobs (it can use
+  // the whole budget and return nothing), and off for the others too unless
   // NIGHTSHIFT_THINKING=on, because there is no fast-answer race on this path.
+  // The switch goes two ways, since Nightshift may not pass chat_template_kwargs
+  // through: the kwarg, and Nemotron's own "/no_think" system message. Other
+  // teams found small budgets came back empty this way, so Nemotron gets at
+  // least 2,000 tokens.
   const nemotron = /nemotron/i.test(model);
   const thinking = job !== 'fast' && process.env.NIGHTSHIFT_THINKING === 'on' && (opts.thinking ?? true);
-  const body: Record<string, unknown> = { model, messages, temperature: 0.2, max_tokens: opts.maxTokens ?? 2048, ...(nemotron ? { chat_template_kwargs: { enable_thinking: thinking } } : {}) };
+  const messages = [
+    ...(nemotron && !thinking ? [{ role: 'system', content: '/no_think' }] : []),
+    ...(opts.system ? [{ role: 'system', content: opts.system }] : []),
+    { role: 'user', content: opts.user },
+  ];
+  const maxTokens = nemotron ? Math.max(2_000, opts.maxTokens ?? 2_048) : (opts.maxTokens ?? 2_048);
+  const body: Record<string, unknown> = { model, messages, temperature: 0.2, max_tokens: maxTokens, ...(nemotron ? { chat_template_kwargs: { enable_thinking: thinking } } : {}) };
   const key = cacheKey({ nightshift: NIGHTSHIFT_URL, ...body });
   const hit = readCache(key);
   if (hit) return { live: true, model, ...hit, latencyMs: Date.now() - start, cached: true };
@@ -315,7 +324,15 @@ async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
         body: JSON.stringify(b),
         signal: AbortSignal.timeout(Math.max(1_000, timeoutMs - (Date.now() - start))),
       });
-    let res = await post(body);
+    let res = await post(body).catch((e: Error) => e);
+    // One retry after a short pause for a cold or busy runtime, inside the same budget.
+    if ((res instanceof Error && res.name !== 'TimeoutError') || (!(res instanceof Error) && (res.status >= 500 || res.status === 429))) {
+      if (timeoutMs - (Date.now() - start) > 4_000) {
+        await new Promise((r) => setTimeout(r, 1_500));
+        res = await post(body).catch((e: Error) => e);
+      }
+    }
+    if (res instanceof Error) throw res;
     // If Nightshift will not pass Nemotron's thinking switch through, ask without it.
     if (res.status === 400 && 'chat_template_kwargs' in body) {
       const { chat_template_kwargs: _drop, ...plain } = body;

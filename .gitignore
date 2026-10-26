@@ -12,3 +12,5 @@ exports
 .DS_Store
 *.log
 .next-audit
+sample-output
+.next-sample

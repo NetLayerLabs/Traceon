@@ -12,6 +12,7 @@ process.env.NEMOTRON_CACHE = 'off';
 type Seen = { auth?: string; app?: string; scope?: string; model?: string; kwargs?: unknown };
 let listed = ['meterless/auto', 'meterless/fast'];
 let rejectKwargs = false;
+let lastBody: any = null;
 const seen: Seen[] = [];
 let nightshiftUp = true;
 const ok = (res: http.ServerResponse, model: string, content: string) => {
@@ -28,6 +29,7 @@ const nightshift = http.createServer(async (req, res) => {
   }
   if (!nightshiftUp) return res.writeHead(503).end('busy');
   const body = JSON.parse(raw);
+  lastBody = body;
   if (rejectKwargs && body.chat_template_kwargs) return res.writeHead(400).end('unknown field chat_template_kwargs');
   seen.push({ kwargs: body.chat_template_kwargs, auth: req.headers.authorization, app: req.headers['meterless-app'] as string, scope: req.headers['meterless-scope'] as string, model: body.model });
   ok(res, body.model, `answer from ${body.model}`);
@@ -95,6 +97,10 @@ test('with NVIDIA connected to Nightshift, each job uses the matching Nemotron m
   await ns.nemotronChat({ user: [{ type: 'image_url', image_url: { url: 'data:image/png;base64,AA==' } }] });
   assert.deepEqual(seen.map((x) => x.model), ['nvidia/nemotron-3.5-lightning-30b-a3b', 'nvidia/nemotron-3.5-super-vl-120b-a12b', 'nvidia/nemotron-3.5-super-vl-120b-a12b']);
   assert.deepEqual(seen[0].kwargs, { enable_thinking: false }, 'the fast jobs never think');
+  // Thinking off is also said in Nemotron's own way, and small budgets are raised.
+  await ns.nemotronChat({ model: ns.NEMOTRON_FAST_MODEL, system: 'You plan.', user: 'ready?', maxTokens: 20 });
+  assert.deepEqual(lastBody.messages.slice(0, 2), [{ role: 'system', content: '/no_think' }, { role: 'system', content: 'You plan.' }]);
+  assert.equal(lastBody.max_tokens, 2000);
   assert.equal(fast.via, 'Meterless Nightshift · nvidia/nemotron-3.5-lightning-30b-a3b');
   // Names that differ from NIM's still match by family.
   assert.equal(ns.pickNightshiftModel('fast', ['nim:Nemotron-3.5-Lightning']), 'nim:Nemotron-3.5-Lightning');

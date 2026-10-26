@@ -17,7 +17,8 @@
     "eval": "tsx scripts/eval.mts",
     "nemotron:check": "tsx scripts/nemotron-check.mts",
     "nightshift:check": "tsx scripts/nightshift-check.mts",
-    "nightshift:standin": "tsx scripts/mock-nightshift.mts"
+    "nightshift:standin": "tsx scripts/mock-nightshift.mts",
+    "sample": "tsx scripts/sample.mts"
   },
   "dependencies": {
     "alasql": "4.21.0",
