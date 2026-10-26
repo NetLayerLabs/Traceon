@@ -24,7 +24,7 @@ if (!nemotronLive()) {
 }
 console.log(`models: ${NEMOTRON_MODEL} (vision + explanation), ${NEMOTRON_FAST_MODEL} (planning + red team)\n`);
 
-const photo = process.argv[2] ?? 'public/samples/connector-scorch.png';
+const photo = process.argv[2] ?? 'public/samples/ntsb-787-li-ion-battery.jpg';
 const ext = path.extname(photo).slice(1).replace('jpg', 'jpeg');
 const dataUrl = `data:image/${ext};base64,${fs.readFileSync(photo).toString('base64')}`;
 let t = Date.now();

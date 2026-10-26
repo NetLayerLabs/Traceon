@@ -15,7 +15,8 @@ import type { InvestigationEvent } from '@/lib/investigation';
 import { SCENARIO_OPTIONS } from '@/lib/scenarioOptions';
 import type { FeedResult } from '@/lib/signals';
 
-const SAMPLE_PHOTO = '/samples/connector-scorch.svg';
+// A real forensic photo (NTSB, public domain) standing in for a customer's photo.
+const SAMPLE_PHOTO = '/samples/ntsb-787-li-ion-battery.jpg';
 const STEPS = [
   { id: 'ingest', label: 'Ingest' },
   { id: 'converge', label: 'Converge' },

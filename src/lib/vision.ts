@@ -23,13 +23,14 @@ export function getVisionFinding(id: unknown): VisionFinding | null {
 const REFERENCE: VisionFinding = {
   live: false,
   model: 'reference analysis (offline)',
-  physicalFailureMode: 'Localized thermal scorching consistent with high-resistance joint heating',
-  suspectedComponent: 'Discharge connector pin 4 / cell anode tab weld',
-  severityScore: 86,
+  // Describes the bundled sample photo (NTSB, JAL Boeing 787 APU battery, 2013).
+  physicalFailureMode: 'Thermal runaway: cells charred and vented, interconnects melted, case scorched from the inside',
+  suspectedComponent: 'Lithium-ion cell module / terminal connector',
+  severityScore: 92,
   isManufacturingDefectLikely: true,
   visualEvidenceSummary:
-    'Carbonized discoloration concentrated on one connector pin while adjacent pins are clean; heat pattern radiates from the pin, not from the cell body, pointing to a joint defect rather than ambient heat.',
-  bbox: { x: 0.48, y: 0.36, w: 0.2, h: 0.34 },
+    'Every cell is carbonised and the internal bus bars have melted, while the outer case is intact and burned from within: the fire started inside the pack, consistent with a cell-level fault propagating to its neighbours rather than external heat. The terminal connector block is charred.',
+  bbox: { x: 0.28, y: 0.11, w: 0.47, h: 0.47 },
 };
 
 /**

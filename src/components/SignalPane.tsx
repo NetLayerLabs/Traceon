@@ -146,7 +146,7 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
       </h3>
       <div className="vision-frame">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={props.photo} alt="Customer-submitted defect photo" />
+        <img src={props.photo} alt={props.photo.includes('ntsb-787') ? 'NTSB photo: burned lithium-ion battery from a Boeing 787 (2013)' : 'Customer-submitted defect photo'} />
         {vision?.bbox && (
           <div
             className="bbox"
@@ -156,6 +156,11 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
           </div>
         )}
       </div>
+      {props.photo.includes('ntsb-787') && (
+        <div className="faint" style={{ fontSize: 10.5, marginTop: 4 }}>
+          Sample: a real NTSB evidence photo of a lithium-ion battery after thermal runaway (JAL Boeing 787, Boston, 7 Jan 2013; public domain), standing in for a customer&apos;s photo. Not a VoltRide pack. Upload your own to analyse it.
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
         <label className="btn small" style={{ flex: 1, textAlign: 'center' }}>
           Upload photo

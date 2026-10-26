@@ -230,7 +230,7 @@ export default function Landing() {
                 ['Plan the suspects', 'Nemotron 3.5', 'Ranks seven testable hypotheses from the evidence and logs the ones the data cannot test.'],
                 ['Test every suspect', 'Zetaris SQL', 'A federated query and a significance test for each, across ERP, supplier, telemetry and warehouse data.'],
                 ['Unmask confounders', 'Mantel–Haenszel', 'Stratified tests show which suspects stop mattering once the real cause is held fixed.'],
-                ['Inspect the photograph', 'Nemotron VL', 'Locates the damage on a customer photo: thermal damage at connector pin 4.'],
+                ['Inspect the photograph', 'Nemotron VL', 'Reads a real forensic photo of a lithium-ion pack after thermal runaway and locates the damage.'],
                 ['Attack the verdict', 'Nemotron red team', 'Raises objections. Each is answered by a deterministic test, or logged as an open question.'],
                 ['Pass the evidence gate', 'Seven criteria', 'The quarantine control does not appear until every criterion holds.'],
                 ['Act with a named approver', 'Human in the loop', 'Places an ERP hold on 1,380 serials, drafts the notices, and remembers the finding.'],

@@ -25,11 +25,11 @@ if (st.state !== 'online') {
   console.log(st.state === 'unauthorized' ? 'The token was rejected: copy it again from the runtime.' : 'Nightshift is not answering: is the app running with its hotspot on?');
   process.exit(1);
 }
-const png = fs.readFileSync('public/samples/connector-scorch.png').toString('base64');
+const photo = fs.readFileSync('public/samples/ntsb-787-li-ion-battery.jpg').toString('base64');
 const calls = [
   { name: 'fast (planning, red team, Q&A)', opts: { model: NEMOTRON_FAST_MODEL, user: 'Reply with the single word: ready', maxTokens: 20, timeoutMs: 180_000 } },
   { name: 'deep (explanation)', opts: { model: NEMOTRON_MODEL, user: 'In one sentence, what is a confounder?', maxTokens: 120, timeoutMs: 180_000 } },
-  { name: 'vision (defect photo)', opts: { model: NEMOTRON_MODEL, user: [{ type: 'text' as const, text: 'In one sentence, describe any visible damage.' }, { type: 'image_url' as const, image_url: { url: `data:image/png;base64,${png}` } }], maxTokens: 120, timeoutMs: 180_000 } },
+  { name: 'vision (defect photo)', opts: { model: NEMOTRON_MODEL, user: [{ type: 'text' as const, text: 'In one sentence, describe any visible damage.' }, { type: 'image_url' as const, image_url: { url: `data:image/jpeg;base64,${photo}` } }], maxTokens: 120, timeoutMs: 180_000 } },
 ];
 let ok = true;
 for (const c of calls) {

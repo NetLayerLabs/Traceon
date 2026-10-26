@@ -8,7 +8,7 @@
 > "125 thermal claims on an e-bike battery. Customers blame the heat, the firmware, the shipping. A blanket recall costs $4.5 million. Which is it?"
 
 **0:15–0:30 · Signals** (click **Run investigation**, point at the left pane)
-> "Traceon pulls warranty claims, web reviews and live CPSC, FDA and NHTSA feeds. Meterless H-MEM converges 131 weak signals from six cities into one cluster. The photo is inspected by Nemotron Super VL, which flags scorching at connector pin 4."
+> "Traceon pulls warranty claims, web reviews and live CPSC, FDA and NHTSA feeds. Meterless H-MEM converges 131 weak signals from six cities into one cluster. Nemotron Super VL reads a real NTSB photo of a lithium-ion pack after thermal runaway and finds the fire started inside the cells."
 
 **0:30–1:00 · Explain why** (watch the graph; this is the core of Track 02)
 > "Nemotron ranks seven suspects, and each one is tested with SQL across the Zetaris federated silos. Firmware and carrier are ruled out: flat failure rates. Now watch: heat, the plant, the BMS board and the supplier all look guilty on raw data."
