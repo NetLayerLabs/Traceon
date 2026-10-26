@@ -21,6 +21,18 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
   - [x] Scoreboard of model guesses against tested verdicts
 - [x] Phone and tablet layout re-checked (55/55), including the section menu in the drawer
 
+## Make it real, one at a time (in this order; finish one before starting the next)
+
+- [ ] **1. Zetaris** ← current. You: create the account and cluster (see section 2 below). Then: `npm run zetaris:export`, upload to `traceon`, set the env vars, `npm run zetaris:check` shows parity OK. Then I export firmware, two-causes and noise as extra schemas so the named scenarios run on Zetaris too.
+- [ ] **2. Intake NHTSA feed**: e-bike or e-scooter battery fire complaints with a strict fire filter, instead of Tesla Model 3 (one current match is an Autopilot complaint).
+- [ ] **3. openFDA feed**: narrow to lithium-battery thermal events, or drop it.
+- [ ] **4. Sample defect photo**: you pick a real, openly licensed burnt-connector photo (e.g. Wikimedia Commons) or take one; I wire it in.
+- [ ] **5. Bright Data**: you add `BRIGHTDATA_API_TOKEN`; I point the scraper at the real-data case so real posts exist.
+- [ ] **6. Real dataset on Your data**: Backblaze hard-drive data, reduced to one row per drive (check the size first), replacing the generated charger sample.
+- [ ] **7. Real follow-up**: on the NHTSA cases, real complaints after the recall date; the simulated follow-up stays for the demo scenarios, labelled.
+
+Simulated by design, and presented that way: VoltRide as the blind-test bench, ERP holds and notices as drafts, Watch replaying history.
+
 ## 1. Nemotron, before recording
 
 - [x] Key added to `.env.local` (works on free credits)
