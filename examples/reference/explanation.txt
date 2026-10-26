@@ -1,0 +1,7 @@
+Traceon traced 116 thermal incidents on the VR-48 pack to Defective cell batch: Supplier B CB-B-0917 (116 incidents, 1668x the baseline rate; L-409 (plant P2, built 2026-10-02 to 2026-10-04, serials SN-88400 to SN-89779)). Together they account for 92.8% of all thermal claims.
+
+Firmware overcharge bug, Carrier transit shock showed no association at all. Sun Belt heat exposure, Plant assembly defect, BMS board supplier, Cell supplier quality looked guilty on raw numbers only because they share units with the real cause; holding the cause fixed, the effect vanishes.
+
+Each confirmed cause survives adjustment for every other factor, holds across firmware, carrier, climate and warehouse subgroups, and has a consistent failure signature.
+
+Recommended action: surgical quarantine for 1,380 units, instead of recalling 180,000, saving $4,465,500. Without action, a constant-hazard projection gives about 200 more incidents in 30 days. This was detectable on 2026-10-10, after 3 claims.

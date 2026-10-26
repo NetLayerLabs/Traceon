@@ -482,3 +482,8 @@ main.pane { background: var(--sheet); }
   .topbar .chips { gap: 7px; }
   .topbar .scenario-pick select { max-width: 190px; }
 }
+
+.samples { margin-top: 14px; border-top: 1px solid var(--rule); }
+.sample-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dotted var(--rule-2); }
+.sample-row .btn { text-decoration: none; }
+@media (max-width: 600px) { .sample-row { flex-direction: column; align-items: flex-start; } }

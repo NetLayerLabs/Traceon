@@ -20,12 +20,33 @@ Requires Node.js 18.18 or newer. `./sample.sh` installs dependencies on first ru
 - the reference case, with its proof replayed;
 - verify-the-fix (the planned fix and the wrong fix);
 - five blind scenarios scored against their hidden truth;
-- the uploaded 12,000-unit CSV;
+- two uploaded CSVs: 355,690 real Backblaze drives, and a generated 12,000-unit set;
 - the five real NHTSA backtests.
 
 It writes `sample-output/`: a summary, the event log, the proof bundle, the replay result, the explanation, an 8D report and a supplier claim. It exits non-zero if any result is wrong. `./sample.sh --serve` then starts the full app in the same offline mode on http://localhost:3000.
 
 In sample mode the model steps use labelled templates and queries run on the local SQL engine. Every statistic, verdict and proof is computed exactly as in live mode. **Live mode** (Meterless Nightshift with Nemotron, Zetaris, live feeds) is shown in the demo video; see [Live access](#live-access).
+
+## Examples: inputs and outputs
+
+Each example below is reproduced by `./sample.sh`. Its full output for this run is committed in [`examples/`](examples/), with the summary in [`examples/SUMMARY.md`](examples/SUMMARY.md).
+
+**1. The reference case: a hidden bad batch** (generated data, planted cause)
+- **Input.** 125 thermal warranty claims across 180,000 battery packs. Seven suspects: firmware, carrier, Sun Belt heat, plant, BMS board, cell supplier and cell batch.
+- **Output.** The cause is cell batch **CB-B-0917**: relative risk 1,668x, explaining 92.8% of incidents. Heat, plant, BMS board and supplier are all ruled out as confounders. The evidence gate passes 7/7. The action holds **1,380 units instead of recalling 180,000, saving $4,465,500**. 56 exhibits are hashed, and a replay of all 46 SQL queries matches the root.
+- **Files.** [explanation](examples/reference/explanation.txt), [8D report](examples/reference/8d-report.html), [supplier claim](examples/reference/supplier-claim.html), [proof bundle](examples/reference/proof-bundle.json), [replay result](examples/reference/verify.json).
+
+**2. A blind test with no defect** (generated data, nothing planted)
+- **Input.** About 100 claims scattered across the same 180,000 units, with no real cause.
+- **Output.** No suspect survives multiple testing, and the evidence gate **blocks any recall**, avoiding a $4.5M recall that would fix nothing. Five blind scenarios run in sample mode, and 304/304 in the full benchmark.
+
+**3. Real data: every drive in Backblaze's fleet, Q2 2026**
+- **Input.** [Backblaze Drive Stats](https://www.backblaze.com/cloud-storage/resources/hard-drive-test-data) reduced to one row per drive: 355,690 real drives and 1,516 failures, with model, data centre and age as suspects. Bundled as [`public/samples/backblaze-drives-q2-2026.csv`](public/samples/backblaze-drives-q2-2026.csv).
+- **Output.** The worst model is **HGST HUH721212ALN604**: 180 failures in 9,694 drives, about 4x the fleet. The agent shows that its excess is **confined to data centre sac2**: outside sac2 the model fails at 42/10k against 34/10k for other drives, and sac2's own excess disappears without it. Age is ruled out as a confounder. The gate **blocks a fleet-wide action**: the failures sit in one cohort (that model in sac2), which is where to look next.
+
+**4. Real data: the Chevy Bolt EV battery fires**
+- **Input.** 229 public NHTSA complaints against 15,774 complaints for ten comparator vehicles.
+- **Output.** The fire signal fires on **30 October 2020**, 14 days before GM's recall 20V701000 on 13 November 2020. Across the five bundled vehicles it comes first on three (Bolt EV 14 days, Kia Sorento 72, Hyundai Santa Fe 380), shows no signal on the Kona Electric, and comes after the recall on the Ford Escape.
 
 ## Five things to try, no login or key needed
 
@@ -57,7 +78,7 @@ The app's top bar has a section menu: **Case file**, **Watch**, **Real recalls**
 | --- | --- | --- |
 | **Real-recall time machine** | Public NHTSA complaint histories replayed day by day through a standard safety-signal test (proportional reporting ratio against ten comparator vehicles). The Bolt EV battery-fire signal fires on Oct 30, 2020, 14 days before recall 20V701000; Kia Sorento 72 days early and Hyundai Santa Fe 380 days early. Kona Electric shows no signal and on the Ford Escape the recall came first, both reported as they are. Any other vehicle can be replayed live. | `/backtest` |
 | **Watch** | The warranty stream screened every day across every factor. On the reference data the screen fires on Oct 11 after 13 claims, and the case it opens on that day's data confirms the batch. With no defect it never fires. | `/watch` |
-| **Your data** | Upload a CSV, map the failure column and the suspects, and investigate it with the same tests and gate. Checks the data cannot support are marked N/A instead of passed. The 12,000-unit charger sample is solved with its night-shift confounder ruled out. | `/data` |
+| **Your data** | Upload a CSV, map the failure column and the suspects, and investigate it with the same tests and gate. Checks the data cannot support are marked N/A instead of passed. Two bundled samples: 355,690 real Backblaze drives from Q2 2026, and a generated 12,000-charger set whose planted resin lot is found with its night-shift confounder ruled out. | `/data` |
 | **Ask the case** | Questions answered only from the case's exhibits, with each claim citing its exhibit and every figure checked by the number guard. Citations open the exhibit. | Investigation pane, Case tools |
 | **What if** | Sliders that re-run the statistics in the browser: act on an earlier day, shrink the defect, or keep less of the data, and see whether the verdict still holds. | Investigation pane, Case tools |
 | **What would prove this wrong** | Four conditions, fixed before any fix is applied, that would overturn each cause: the baseline rate outside it, its failure signature, its weakest subgroup, and anything new in the residual. | Investigation pane |
@@ -286,7 +307,7 @@ Each step is optional. Without keys every model step uses a labelled template an
 | Every statistic, verdict, gate decision and proof hash | The planted causes in each scenario (the agent is never told them) |
 | The Meterless H-MEM and Markovian engines, running locally | The ERP hold table, stop-sale notice, OTA order and CPSC draft: written locally, never sent to any ERP, distributor or regulator |
 | The Zetaris SQL API client, built from Zetaris's published OpenAPI spec, with a hash-parity check | Until a Zetaris instance is configured, queries run on the local alasql mirror; with Zetaris, only the reference scenario runs there and every other scenario and upload runs locally, labelled in each exhibit |
-| Your own CSV on **Your data**: real data, analysed with the same tests | The 12,000-unit charger sample offered there (`scripts/make-sample-csv.mts`) |
+| Your own CSV on **Your data**, and the bundled Backblaze sample: 355,690 real drives from Q2 2026 (public Drive Stats) | The second sample there, 12,000 chargers (`scripts/make-sample-csv.mts`), generated with a planted cause |
 | NHTSA complaints and recalls behind the backtest (snapshots in `data/nhtsa/`, or live) | The 30 days after a fix in **Verify the fix**, drawn from the scenario's own failure rates |
 | OpenTimestamps proofs from the public calendars, and the Ed25519 signature | Without a model, the photo's analysis is a labelled offline reference, which never counts as evidence in the gate |
 | The sample defect photo: a real NTSB evidence photo of the lithium-ion battery from the JAL Boeing 787 that went into thermal runaway at Boston on 7 January 2013 (public domain), analysed live by Nemotron | It stands in for a customer's photo: it is not a VoltRide pack, and the app says so under the photo |

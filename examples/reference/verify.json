@@ -1,0 +1,400 @@
+{
+ "root": "8f694a74fa37d4c0abd1c8d95cdae004598bea941cfbdd2fc161dc29ab78b60f",
+ "replayedQueries": 46,
+ "mismatches": [],
+ "ok": true,
+ "results": [
+  {
+   "id": "E-01",
+   "label": "Feed: Warranty claims (Salesforce silo)",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-02",
+   "label": "Feed: Web reviews & forums (VoltRide)",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-03",
+   "label": "Feed: CPSC SaferProducts",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-04",
+   "label": "Feed: openFDA MAUDE",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-05",
+   "label": "Feed: NHTSA ODI",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-06",
+   "label": "H-MEM convergence",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-07",
+   "label": "Hypothesis plan",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-08",
+   "label": "H-FW screen",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-09",
+   "label": "H-CARRIER screen",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-10",
+   "label": "H-HEAT screen",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-11",
+   "label": "H-PLANT screen",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-12",
+   "label": "H-BMS screen",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-13",
+   "label": "H-SUPPLIER screen",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-14",
+   "label": "H-BATCH screen",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-15",
+   "label": "H-HEAT | H-PLANT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-16",
+   "label": "H-HEAT | H-BMS",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-17",
+   "label": "H-HEAT | H-SUPPLIER",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-18",
+   "label": "H-HEAT | H-BATCH",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-19",
+   "label": "H-PLANT | H-HEAT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-20",
+   "label": "H-PLANT | H-BMS",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-21",
+   "label": "H-PLANT | H-SUPPLIER",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-22",
+   "label": "H-PLANT | H-BATCH",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-23",
+   "label": "H-BMS | H-HEAT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-24",
+   "label": "H-BMS | H-PLANT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-25",
+   "label": "H-BMS | H-SUPPLIER",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-26",
+   "label": "H-BMS | H-BATCH",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-27",
+   "label": "H-SUPPLIER | H-HEAT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-28",
+   "label": "H-SUPPLIER | H-PLANT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-29",
+   "label": "H-SUPPLIER | H-BMS",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-30",
+   "label": "H-SUPPLIER | H-BATCH",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-31",
+   "label": "H-BATCH | H-HEAT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-32",
+   "label": "H-BATCH | H-PLANT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-33",
+   "label": "H-BATCH | H-BMS",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-34",
+   "label": "H-BATCH | H-SUPPLIER",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-35",
+   "label": "Robustness CB-B-0917 by firmware",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-36",
+   "label": "Robustness CB-B-0917 by carrier",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-37",
+   "label": "Robustness CB-B-0917 by climate_zone",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-38",
+   "label": "Robustness CB-B-0917 by bms_supplier",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-39",
+   "label": "Robustness CB-B-0917 by warehouse_id",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-40",
+   "label": "BOM lineage join CB-B-0917",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-41",
+   "label": "Supplier granularity CB-B-0917",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-42",
+   "label": "Symptom concordance CB-B-0917",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-43",
+   "label": "Exposure-time CB-B-0917",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-44",
+   "label": "Blast radius CB-B-0917",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-45",
+   "label": "Residual H-FW",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-46",
+   "label": "Residual H-CARRIER",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-47",
+   "label": "Residual H-HEAT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-48",
+   "label": "Residual H-PLANT",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-49",
+   "label": "Residual H-BMS",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-50",
+   "label": "Residual H-SUPPLIER",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-51",
+   "label": "Residual H-BATCH",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-52",
+   "label": "Red-team review",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-53",
+   "label": "Early-warning replay",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-54",
+   "label": "Combined coverage",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-55",
+   "label": "Falsification baseline",
+   "replayed": true,
+   "match": true,
+   "chainOk": true
+  },
+  {
+   "id": "E-56",
+   "label": "Explanation",
+   "replayed": false,
+   "match": true,
+   "chainOk": true
+  }
+ ]
+}

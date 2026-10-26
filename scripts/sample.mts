@@ -87,7 +87,7 @@ for (const id of ['firmware', 'two-causes', 'noise', 'random-77', 'random-4242']
 
 // 4. Your data: an uploaded CSV through the same agent.
 say('');
-say('## 4. Uploaded CSV (12,000 chargers, public/samples/charger-returns.csv)');
+say('## 4. Uploaded CSV, generated (12,000 chargers, public/samples/charger-returns.csv)');
 const table = parseCsv(fs.readFileSync('public/samples/charger-returns.csv', 'utf-8'));
 const ds = saveDataset('Charger returns (sample)', table[0], table.slice(1), { outcome: 'returned', failValues: ['yes'], factors: ['resin_lot', 'mold_cavity', 'shift', 'line', 'region'], serial: 'serial', date: 'failure_date', symptom: 'symptom', daysInField: 'days_in_field' });
 const up = await run(ds.id);
@@ -96,9 +96,23 @@ const shift = up.filter((e) => e.type === 'hypothesis').map((e) => e.node).filte
 say(`- Verdict: ${fmt(upCauses)}; night shift: ${shift?.status === 'CONFOUNDED' ? 'ruled out as a confounder' : shift?.status}; gate ${one(up, 'gate').pass ? 'PASSED' : 'BLOCKED'}`);
 expect(upCauses.length === 1 && upCauses[0].group === 'R-2207' && shift?.status === 'CONFOUNDED', 'uploaded CSV');
 
-// 5. Real data: public NHTSA complaints (snapshot in data/nhtsa/).
+// 5. Real data: every drive in Backblaze's fleet for Q2 2026 (public Drive Stats).
 say('');
-say('## 5. Real recalls: public NHTSA complaint histories');
+say('## 5. Real uploaded data: Backblaze hard drives, Q2 2026 (355,690 drives)');
+const bbTable = parseCsv(fs.readFileSync('public/samples/backblaze-drives-q2-2026.csv', 'utf-8'));
+const bb = saveDataset('Backblaze Q2 2026', bbTable[0], bbTable.slice(1), { outcome: 'failed', failValues: ['yes'], factors: ['model', 'datacenter', 'age_band'], serial: 'serial', date: 'failure_date', daysInField: 'days_in_field' });
+const bbEv = await run(bb.id);
+const bbNodes = new Map<string, any>();
+for (const e of bbEv.filter((x) => x.type === 'hypothesis')) bbNodes.set(e.node.id, e.node);
+const model = bbNodes.get('H-MODEL');
+say(`- Worst model: ${model?.hotGroup} (${model?.rawTest?.pLabel}); gate ${one(bbEv, 'gate').pass ? 'PASSED' : 'BLOCKED'}`);
+for (const n of bbNodes.values()) say(`- ${n.title}: ${n.verdict}`);
+say('- Reading: the failures sit where that model and data centre sac2 overlap, a cohort, so no fleet-wide action on either is justified.');
+expect(model?.hotGroup === 'HGST HUH721212ALN604' && !one(bbEv, 'gate').pass, 'Backblaze real data');
+
+// 6. Real data: public NHTSA complaints (snapshot in data/nhtsa/).
+say('');
+say('## 6. Real recalls: public NHTSA complaint histories');
 say('| Vehicle | Signal fired | Fire recall | Result |');
 say('| --- | --- | --- | --- |');
 for (const id of ['bolt-ev', 'kia-sorento', 'hyundai-santa-fe', 'hyundai-kona-electric', 'ford-escape']) {

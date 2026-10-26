@@ -19,7 +19,23 @@ interface Listed {
   factors: string[];
 }
 
-const SAMPLE = '/samples/charger-returns.csv';
+/** Bundled datasets, each with the mapping that fits it. The first is real. */
+const SAMPLES = [
+  {
+    id: 'backblaze',
+    file: '/samples/backblaze-drives-q2-2026.csv',
+    label: 'Real data: Backblaze hard drives, Q2 2026',
+    note: 'Every drive in Backblaze’s fleet for one quarter (public Drive Stats data): which models failed, against maker, capacity, data centre and age.',
+    mapping: { outcome: 'failed', failValues: ['yes'], factors: ['model', 'manufacturer', 'capacity_tb', 'datacenter', 'age_band'], serial: 'serial', date: 'failure_date', symptom: '', daysInField: 'days_in_field' },
+  },
+  {
+    id: 'charger',
+    file: '/samples/charger-returns.csv',
+    label: 'Generated: 12,000 USB-C chargers',
+    note: 'A generated dataset with a planted bad resin lot and a night-shift confounder.',
+    mapping: { outcome: 'returned', failValues: ['yes'], factors: ['resin_lot', 'mold_cavity', 'shift', 'line', 'region'], serial: 'serial', date: 'failure_date', symptom: 'symptom', daysInField: 'days_in_field' },
+  },
+] as const;
 const FAILISH = /^(1|y|yes|true|fail|failed|returned|defect|defective|claim)$/i;
 
 export default function DataPage() {
@@ -43,7 +59,7 @@ export default function DataPage() {
       .catch(() => {});
   }, []);
 
-  const load = async (text: string, fileName: string) => {
+  const load = async (text: string, fileName: string, preset?: (typeof SAMPLES)[number]['mapping']) => {
     setErr(null);
     setBusy(true);
     setCsv(text);
@@ -53,7 +69,12 @@ export default function DataPage() {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       setProf(d);
-      guess(d);
+      if (preset) {
+        setOutcome(preset.outcome);
+        setFailValues([...preset.failValues]);
+        setFactors([...preset.factors]);
+        setOpt({ serial: preset.serial, date: preset.date, symptom: preset.symptom, daysInField: preset.daysInField });
+      } else guess(d);
     } catch (e) {
       setErr((e as Error).message);
       setProf(null);
@@ -123,15 +144,25 @@ export default function DataPage() {
             >
               <input type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
               <div style={{ font: '500 20px/1.3 var(--serif)' }}>{busy ? 'Reading…' : 'Drop a CSV here, or click to choose one'}</div>
-              <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>Up to 250,000 rows and 25 MB. The file stays on this server; nothing is sent to the model except the statistics.</div>
+              <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>Up to 400,000 rows and 25 MB. The file stays on this server; nothing is sent to the model except the statistics.</div>
             </label>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button className="btn" onClick={() => fetch(SAMPLE).then((r) => r.text()).then((t) => load(t, 'charger-returns.csv'))} disabled={busy}>
-                Use the sample: 12,000 USB-C chargers
-              </button>
-              <a className="btn ghost small" href={SAMPLE} download>
-                Download the sample
-              </a>
+            <div className="samples">
+              {SAMPLES.map((smp) => (
+                <div key={smp.id} className="sample-row">
+                  <div>
+                    <b>{smp.label}</b>
+                    <div className="faint" style={{ fontSize: 12 }}>{smp.note}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flex: 'none' }}>
+                    <button className="btn small" onClick={() => (setBusy(true), fetch(smp.file).then((r) => r.text()).then((t) => load(t, smp.file.split('/').pop()!, smp.mapping)))} disabled={busy}>
+                      Use it
+                    </button>
+                    <a className="btn ghost small" href={smp.file} download>
+                      Download
+                    </a>
+                  </div>
+                </div>
+              ))}
             </div>
           </>
         ) : (
