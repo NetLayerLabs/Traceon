@@ -55,7 +55,7 @@ a { color: var(--link); text-underline-offset: 2px; }
 .brand-logo { display: block; height: 26px; width: auto; flex: none; }
 .brand small { padding-left: 12px; border-left: 1px solid var(--rule-2); white-space: nowrap; }
 .topbar .btn { white-space: nowrap; }
-@media (max-width: 1560px) { .brand small { display: none; } }
+@media (max-width: 2199px) { .brand small { display: none; } }
 .brand h1 { font: 600 15px/1 var(--mono); letter-spacing: 0.18em; margin: 0; }
 .brand small { color: var(--muted); font: 12px/1.2 var(--sans); }
 .chips { display: flex; gap: 14px; flex-wrap: wrap; margin-left: auto; }
@@ -369,7 +369,8 @@ main.pane { background: var(--sheet); }
 .section-nav a:hover { color: var(--ink); background: var(--paper); }
 .section-nav a.on { color: var(--ink); border-bottom-color: var(--signal); }
 .topbar-action { margin-left: auto; display: flex; gap: 8px; align-items: center; }
-@media (min-width: 901px) and (max-width: 1440px) {
+/* Desktop: chips in compact form (dot + short name; details on hover), so the bar always fits. */
+@media (min-width: 901px) {
   .topbar .chips { gap: 10px; }
   .topbar .chip { font-size: 0; gap: 0; }
   .topbar .chip .dot { width: 8px; height: 8px; }
@@ -471,4 +472,12 @@ main.pane { background: var(--sheet); }
 @media (max-width: 900px) {
   .review-panes[data-tab='disposition'] > .pane.right { display: block; }
   .review-banner { padding: 8px 14px; font-size: 10px; }
+}
+/* The top bar never wraps. */
+.topbar .chips { flex-wrap: nowrap; }
+/* Laptop widths: the integration chips become coloured dots (hover for details). */
+@media (min-width: 1181px) and (max-width: 1439px) {
+  .topbar .chip::after { content: none; }
+  .topbar .chips { gap: 7px; }
+  .topbar .scenario-pick select { max-width: 190px; }
 }

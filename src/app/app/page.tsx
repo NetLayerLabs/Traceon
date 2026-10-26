@@ -289,7 +289,7 @@ export default function Home() {
             </span>
             <span
               className={`chip ${status?.zetaris.mode === 'ZETARIS_CLOUD' && status.zetaris.parity?.ok ? 'live' : 'sim'}`}
-              data-short="Zetaris"
+              data-short={status?.zetaris.mode === 'ZETARIS_CLOUD' ? `Zetaris · ${status.zetaris.parity?.ok ? 'parity ok' : 'parity failed'}` : 'Zetaris local'}
               title={status?.zetaris.parity ? status.zetaris.parity.probes.map((p) => `${p.ok ? 'PASS' : 'FAIL'} ${p.sql}${p.error ? ` (${p.error})` : ''}`).join('\n') : 'Queries run on the local federated mirror'}
             >
               <span className="dot" />
