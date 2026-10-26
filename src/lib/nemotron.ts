@@ -188,13 +188,18 @@ async function request(body: Record<string, unknown>, timeoutMs: number, abort?:
   const msg = choice.message ?? {};
   let text: string = msg.content ?? '';
   let reasoning: string = msg.reasoning_content ?? msg.reasoning ?? '';
-  // Some templates inline the trace as <think>...</think>.
-  const think = text.match(/<think>([\s\S]*?)<\/think>/);
-  if (think) {
-    reasoning = reasoning || think[1].trim();
-    text = text.replace(think[0], '').trim();
-  }
+  ({ text, reasoning } = splitThink(text, reasoning));
   return { text: dedupeRepeat(text), reasoning, finishReason: String(choice.finish_reason ?? '') };
+}
+/**
+ * Some templates inline the trace as <think>...</think>; Nemotron Ultra via
+ * Nightshift sends only the closing tag. Either way the trace is split off.
+ */
+function splitThink(text: string, reasoning: string): { text: string; reasoning: string } {
+  const end = text.indexOf('</think>');
+  if (end < 0) return { text, reasoning };
+  const trace = text.slice(0, end).replace('<think>', '').trim();
+  return { text: text.slice(end + '</think>'.length).trim(), reasoning: reasoning || trace };
 }
 
 /** Models occasionally emit their whole answer twice; keep one copy. */
@@ -251,8 +256,10 @@ export function nightshiftJob(opts: Pick<ChatOpts, 'user' | 'model'>): Job {
  * The model id to ask Nightshift for. An explicit NIGHTSHIFT_*_MODEL wins.
  * Otherwise, when NVIDIA Nemotron is connected to Nightshift and appears in
  * its model list, each job uses the matching Nemotron model (Super VL for the
- * photo and the explanation, Lightning for the fast jobs). Failing that, the
- * job's meterless/* route. NIGHTSHIFT_USE_NEMOTRON=off disables the lookup.
+ * photo and the explanation, Lightning for the fast jobs). Nightshift holds
+ * Super VL back while NVIDIA serves it unreliably; the explanation then uses
+ * Nemotron Ultra. Failing that, the job's meterless/* route.
+ * NIGHTSHIFT_USE_NEMOTRON=off disables the lookup.
  */
 export function pickNightshiftModel(job: Job, listed: string[]): string {
   if (JOB_OVERRIDE[job]) return JOB_OVERRIDE[job]!;
@@ -260,7 +267,11 @@ export function pickNightshiftModel(job: Job, listed: string[]): string {
     const want = job === 'fast' ? NEMOTRON_FAST_MODEL : NEMOTRON_MODEL;
     const short = want.split('/').pop()!.toLowerCase();
     const family = job === 'fast' ? /nemotron.*lightning/i : /nemotron.*super/i;
-    const hit = listed.find((id) => id === want) ?? listed.find((id) => id.toLowerCase().endsWith(short)) ?? listed.find((id) => family.test(id));
+    const hit =
+      listed.find((id) => id === want) ??
+      listed.find((id) => id.toLowerCase().endsWith(short)) ??
+      listed.find((id) => family.test(id)) ??
+      (job === 'deep' ? listed.find((id) => /nemotron.*ultra/i.test(id)) : undefined);
     if (hit) return hit;
   }
   return NIGHTSHIFT_ROUTES[job];
@@ -344,11 +355,7 @@ async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
     const msg = data.choices?.[0]?.message ?? {};
     let text: string = typeof msg.content === 'string' ? msg.content : '';
     let reasoning: string = msg.reasoning_content ?? msg.reasoning ?? '';
-    const think = text.match(/<think>([\s\S]*?)<\/think>/);
-    if (think) {
-      reasoning = reasoning || think[1].trim();
-      text = text.replace(think[0], '').trim();
-    }
+    ({ text, reasoning } = splitThink(text, reasoning));
     text = dedupeRepeat(text);
     if (text.trim() && data.system_fingerprint !== 'nightshift-standin') writeCache(key, { text, reasoning });
     const standIn = data.system_fingerprint === 'nightshift-standin';

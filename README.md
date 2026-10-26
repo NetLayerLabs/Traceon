@@ -296,18 +296,19 @@ Each step is optional. Without keys every model step uses a labelled template an
 - **Nothing is faked when it fails.** An unreachable feed is shown as unreachable; a Zetaris failure falls back to the mirror with the reason in the exhibit; a model failure falls back to a labelled template with the reason in the agent trace.
 - **Open by design for judging.** There is no login. `/api/reset` clears demo memory and holds (shared cases, uploads and the signing key are kept); set `TRACEON_DISABLE_RESET=1` to turn it off. Put the app behind authentication before any real use.
 - **Shared data is not private.** Uploaded datasets, shared cases and their comments are stored on the server as plain JSON and are readable by anyone with the link.
-- **Test coverage.** 61 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case (13), regressions for every fix from the end-to-end audit (7), Zetaris fault handling (3), and Meterless Nightshift as the AI provider (7).
+- **Test coverage.** 67 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case and the real-data feeds (18), regressions for every fix from the end-to-end audit (7), Zetaris fault handling and session refresh (4), and Meterless Nightshift as the AI provider (7).
 
 ## What's real and what's simulated
 
 | Real | Simulated or local |
 | --- | --- |
 | CPSC, openFDA and NHTSA data, fetched live on each run | The company (VoltRide), its 180,000 units, lots, suppliers, warehouses and warranty claims |
-| Nemotron 3.5 Super VL and Lightning calls through NVIDIA NIM, with reasoning traces when thinking wins the race | Reviews and forum posts about the VR-48: the product is fictional, so they are simulated and labelled *simulated* |
+| Meterless Nightshift as the AI provider, running on the Mac: planning, red team and Q&A go through it to Nemotron 3.5 Lightning, the explanation to Nemotron 3 Ultra. Each reply is labelled with the route that answered | Reviews and forum posts about the VR-48: the product is fictional, so they are simulated and labelled *simulated* |
+| Nemotron on NVIDIA NIM directly: the photo (Super VL, which Nightshift does not serve yet), the fallback when Nightshift cannot answer, and the hosted site, with reasoning traces when thinking wins the race | n/a |
 | Bright Data Web Unlocker fetching current news on e-bike battery fires (Google News), shown as live context in the intake | n/a |
 | Every statistic, verdict, gate decision and proof hash | The planted causes in each scenario (the agent is never told them) |
 | The Meterless H-MEM and Markovian engines, running locally | The ERP hold table, stop-sale notice, OTA order and CPSC draft: written locally, never sent to any ERP, distributor or regulator |
-| The Zetaris SQL API client, built from Zetaris's published OpenAPI spec, with a hash-parity check | Until a Zetaris instance is configured, queries run on the local alasql mirror; with Zetaris, only the reference scenario runs there and every other scenario and upload runs locally, labelled in each exhibit |
+| The Zetaris platform (the hackathon's Docker distribution) answering the reference case's 46 queries over its REST API, with a hash-parity check | Other scenarios and uploads run on the local alasql mirror, labelled in each exhibit; without Zetaris configured, everything does |
 | Your own CSV on **Your data**, and the bundled Backblaze sample: 355,689 real drives from Q2 2026 (public Drive Stats) | The second sample there, 12,000 chargers (`scripts/make-sample-csv.mts`), generated with a planted cause |
 | NHTSA complaints and recalls behind the backtest (snapshots in `data/nhtsa/`, or live), including the check after each recall of whether the fix held | The 30 days after a fix in the case file's **Verify the fix**, drawn from the scenario's own failure rates (the real-data version is under Real recalls) |
 | OpenTimestamps proofs from the public calendars, and the Ed25519 signature | Without a model, the photo's analysis is a labelled offline reference, which never counts as evidence in the gate |
@@ -316,7 +317,7 @@ Each step is optional. Without keys every model step uses a labelled template an
 
 ## Tech stack
 
-Next.js 15.5 (App Router), React 19.3, TypeScript 5.9, alasql 4.21 (in-process SQL for the federated mirror), NVIDIA NIM with `nvidia/nemotron-3.5-super-vl-120b-a12b` and `nvidia/nemotron-3.5-lightning-30b-a3b`, the Zetaris SaaS SQL API, the Meterless H-MEM and Markovian reference engines, Bright Data Web Unlocker, the CPSC SaferProducts, openFDA and NHTSA APIs, `next/font` with Newsreader and IBM Plex, and Node's built-in test runner through tsx.
+Next.js 15.5 (App Router), React 19.3, TypeScript 5.9, alasql 4.21 (in-process SQL for the federated mirror), Meterless Nightshift (local OpenAI-compatible runtime), NVIDIA Nemotron (`nvidia/nemotron-3.5-lightning-30b-a3b`, `nvidia/nemotron-3-ultra-550b-a55b`, `nvidia/nemotron-3.5-super-vl-120b-a12b`) through Nightshift and NVIDIA NIM, the Zetaris platform REST API, the Meterless H-MEM and Markovian reference engines, Bright Data Web Unlocker, the CPSC SaferProducts, openFDA and NHTSA APIs, `next/font` with Newsreader and IBM Plex, and Node's built-in test runner through tsx.
 
 ## Run it locally
 
@@ -334,7 +335,7 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | --- | --- | --- |
 | `NIGHTSHIFT_TOKEN` (or `NIGHTSHIFT_TOKEN_FILE`) | Meterless Nightshift as the AI provider: every model call goes to the local runtime first | Unset: Nemotron on NVIDIA NIM answers directly |
 | `NIGHTSHIFT_URL`, `AI_PROVIDER` | Where Nightshift listens; `auto`, `nightshift` or `nim` | `http://127.0.0.1:8088/v1`; `auto` |
-| `NIGHTSHIFT_VISION_MODEL`, `_FAST_MODEL`, `_DEEP_MODEL` | The model id Nightshift is asked for, per job | Nemotron if it is connected to Nightshift, else `meterless/vision`, `meterless/fast`, `meterless/deep` |
+| `NIGHTSHIFT_VISION_MODEL`, `_FAST_MODEL`, `_DEEP_MODEL` | The model id Nightshift is asked for, per job | Nemotron if it is connected to Nightshift (Lightning for fast; Super VL, or Ultra while Nightshift holds Super VL back, for deep), else `meterless/vision`, `meterless/fast`, `meterless/deep` |
 | `NVIDIA_API_KEY` | Nemotron on NVIDIA NIM: the fallback when Nightshift cannot answer, or the provider when it is not configured | Unset: labelled templates; the statistics are unchanged |
 | `NVIDIA_NIM_BASE_URL` | NIM endpoint | `https://integrate.api.nvidia.com/v1` |
 | `NEMOTRON_MODEL` / `NEMOTRON_FAST_MODEL` | Vision and explanation model / planning and red-team model | `nvidia/nemotron-3.5-super-vl-120b-a12b` / `nvidia/nemotron-3.5-lightning-30b-a3b` |
@@ -358,7 +359,7 @@ The same list with comments is in [`.env.example`](.env.example).
 ./sample.sh                  # sample mode: the whole engine offline, outputs in sample-output/
 npm test                     # the full suite, including a production build and server
 npm run eval -- 300          # blind accuracy on random seeds 1-300 plus the four named scenarios
-npm run nightshift:check     # one real request on each Nightshift route (needs the app running and NIGHTSHIFT_TOKEN)
+npm run nightshift:check     # one real request on each Nightshift job (needs the Nightshift app running and its token)
 npm run nightshift:standin   # development stand-in for Nightshift on :8088, labelled as such in the app
 npm run nemotron:check       # live check of every Nemotron call (needs NVIDIA_API_KEY)
 npm run zetaris:export       # write the five tables as CSV for Zetaris
@@ -400,11 +401,13 @@ The method was tuned on seeds 1-150 (three statistical flaws were found and fixe
 
 ## Roadmap
 
-Status as of 2026-10-25. The pre-submission checklist is in [TODO_BEFORE_SUBMISSION.md](TODO_BEFORE_SUBMISSION.md).
+Status as of 2026-10-26. The pre-submission checklist is in [TODO_BEFORE_SUBMISSION.md](TODO_BEFORE_SUBMISSION.md).
 
 **Done**
 - The investigation agent, evidence gate, proof chain and remediation; 304/304 blind scenarios and 250/250 held out.
-- Live Nemotron 3.5 (Super VL and Lightning) for planning, red team, vision, explanation and Ask the case.
+- Meterless Nightshift as the AI provider, routing to Nemotron (Lightning, Ultra), with Nemotron on NVIDIA NIM for the photo and as the labelled fallback.
+- Zetaris live: the reference case's 46 queries on the Zetaris platform with hash parity, deployed at traceon.netlayerlabs.com.
+- Real data: 355,689 Backblaze drives, NHTSA backtests with a check of whether each recall's fix held, live CPSC, openFDA and NHTSA feeds, Bright Data news, and a real NTSB photo.
 - Before the case: Watch (daily screening that opens a case on alert) and Your data (CSV upload).
 - In the case: Ask the case, What if, What would prove this wrong, and intervals throughout.
 - After the verdict: Verify the fix, 8D report, supplier claim, reviewer mode, and a signed OpenTimestamps root.
@@ -412,12 +415,12 @@ Status as of 2026-10-25. The pre-submission checklist is in [TODO_BEFORE_SUBMISS
 - Scoreboard of model guesses against tested verdicts.
 
 **Next, before submission**
-- A live Zetaris parity check against a real cluster (the adapter passes against a spec-conformant test double).
-- Deploy to one long-running Node host and record the demo.
+- Record the demo video and submit on HackOS.
 
 **Later**
 - Authentication and per-team storage for uploads, shared cases and comments.
-- Real follow-up on arriving claims instead of a simulation, with the reopened case triggered automatically.
+- Real follow-up on arriving claims for uploaded data, with the reopened case triggered automatically (the NHTSA recalls already have it).
+- The photo through Nightshift once it serves a Nemotron vision model.
 - Watch mode on a live warranty feed, and continuous factors (temperature, charge cycles) alongside categorical ones.
 - Upgrading OpenTimestamps proofs once Bitcoin confirms them, and verifying them in the app.
 
@@ -425,8 +428,8 @@ Status as of 2026-10-25. The pre-submission checklist is in [TODO_BEFORE_SUBMISS
 
 The live deployment is at **https://traceon.netlayerlabs.com** and stays running until the results are announced on **6 November 2026**. It is configured as follows:
 - **Data:** the Zetaris platform (the hackathon's Docker distribution) runs on the same server, and the reference scenario's queries go to it over the Zetaris REST API. The top bar shows the hash-parity check; other scenarios and uploads run on the local engine, labelled in each exhibit. A full reference investigation takes about 15 seconds, with all 46 queries on Zetaris.
-- **AI:** Nemotron 3.5 on NVIDIA NIM. Meterless Nightshift is a desktop runtime (Mac, Windows, DGX), so it cannot run on this Linux server; the demo video shows the same app with Nightshift as the AI provider, routing to Nemotron.
-- **Feeds:** CPSC, openFDA and NHTSA, fetched live.
+- **AI:** Nemotron on NVIDIA NIM. Meterless Nightshift is a desktop runtime (Mac, Windows, DGX), so it cannot run on this Linux server. The demo video shows the same app on a Mac with Nightshift as the AI provider: planning, red team and Q&A go through it to Nemotron Lightning, the explanation to Nemotron Ultra, and a full case takes about 18 seconds. To try that path yourself, install Nightshift (free Mac M1+ edition from meterless.ai), add an NVIDIA key under Setup → Cloud provider keys, set `NIGHTSHIFT_TOKEN_FILE` to its `runtime-token` file and run `npm run nightshift:check`.
+- **Feeds:** CPSC, openFDA and NHTSA, fetched live, and Bright Data news through the Web Unlocker.
 
 If any live service is unavailable, the app says so in each exhibit and in the top bar, and falls back without changing a verdict. The sample mode above needs none of it.
 

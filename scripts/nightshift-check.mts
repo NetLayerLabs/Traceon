@@ -34,6 +34,10 @@ const calls = [
 let ok = true;
 for (const c of calls) {
   const r = await nemotronChat(c.opts);
+  if (!r.live && /cannot serve vision/.test(r.error ?? '')) {
+    console.log(`NOTE  ${c.name}  Nightshift has no vision lane: the app sends the photo to Nemotron Super VL on NVIDIA NIM, labelled as the fallback`);
+    continue;
+  }
   ok &&= r.live && Boolean(r.text.trim());
   console.log(`${r.live && r.text.trim() ? 'PASS' : 'FAIL'}  ${c.name}  ${r.via ?? ''}  ${r.latencyMs} ms\n      ${(r.text || r.error || '').replace(/\s+/g, ' ').slice(0, 160)}`);
 }

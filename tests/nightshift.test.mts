@@ -105,6 +105,10 @@ test('with NVIDIA connected to Nightshift, each job uses the matching Nemotron m
   // Names that differ from NIM's still match by family.
   assert.equal(ns.pickNightshiftModel('fast', ['nim:Nemotron-3.5-Lightning']), 'nim:Nemotron-3.5-Lightning');
   assert.equal(ns.pickNightshiftModel('deep', ['meterless/auto']), 'meterless/deep');
+  // Nightshift holds Super VL back: the explanation takes Ultra, the photo has no Nemotron to take.
+  const held = ['meterless/deep', 'nvidia/nemotron-3.5-lightning-30b-a3b', 'nvidia/nemotron-3-ultra-550b-a55b'];
+  assert.equal(ns.pickNightshiftModel('deep', held), 'nvidia/nemotron-3-ultra-550b-a55b');
+  assert.equal(ns.pickNightshiftModel('vision', held), 'meterless/vision');
 });
 
 test('if Nightshift rejects the thinking switch, the call is repeated without it', async () => {

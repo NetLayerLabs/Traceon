@@ -475,29 +475,39 @@ export default function Landing() {
               </thead>
               <tbody data-reveal data-stagger>
                 <tr>
-                  <td>NVIDIA Nemotron 3.5</td>
-                  <td>Super VL inspects the photo and writes the explanation with thinking on; Lightning plans and red-teams.</td>
+                  <td>Meterless Nightshift</td>
+                  <td>The AI provider. Every model call goes to the local runtime first, which routes it to Nemotron; each reply says which route answered.</td>
+                  <td className="mono">live on a Mac · NIM on this site</td>
+                </tr>
+                <tr>
+                  <td>NVIDIA Nemotron</td>
+                  <td>Lightning plans, red-teams and answers questions; Ultra writes the explanation; Super VL inspects the photo.</td>
                   <td className="mono">live</td>
                 </tr>
                 <tr>
                   <td>Zetaris</td>
                   <td>Federated SQL across ERP, supplier, telemetry, warehouse and warranty silos, with a hash-parity check.</td>
-                  <td className="mono">SQL API · mirror fallback</td>
+                  <td className="mono">live · mirror fallback</td>
                 </tr>
                 <tr>
-                  <td>Meterless H-MEM, Markovian</td>
+                  <td>Meterless H-MEM, Markovian engines</td>
                   <td>Durable signal memory with a trust ledger; a bounded investigation chain.</td>
                   <td className="mono">live, local-first</td>
                 </tr>
                 <tr>
                   <td>Bright Data</td>
-                  <td>Reviews and forum posts, where early complaints surface first.</td>
-                  <td className="mono">live with token</td>
+                  <td>Current news on e-bike battery fires through the Web Unlocker, shown as live context.</td>
+                  <td className="mono">live</td>
                 </tr>
                 <tr>
                   <td>CPSC, openFDA, NHTSA</td>
                   <td>Base rates for e-bike recalls and lithium-battery incidents.</td>
                   <td className="mono">live</td>
+                </tr>
+                <tr>
+                  <td>Backblaze, NHTSA</td>
+                  <td>355,689 real hard drives, and complaint histories behind real recalls, including whether each fix held.</td>
+                  <td className="mono">real</td>
                 </tr>
                 <tr>
                   <td>Factory and warranty data</td>
