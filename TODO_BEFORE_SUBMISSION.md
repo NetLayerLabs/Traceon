@@ -32,13 +32,17 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
 - [ ] **Slide deck**: problem, users, solution, architecture, sponsor tech.
 - [ ] **Demo video (1-4 min)**: main workflow, Zetaris being queried, a Meterless engine at work, and one real request through Nightshift.
 - [ ] **Sponsor tech explanation** in the submission form.
+- [x] **Judgeable without live access** (organisers, General Chat 11:12): `./sample.sh` runs the whole engine offline from a clean clone in one command (tested in a fresh clone; `--serve` starts the app offline).
+- [ ] **Live access kept running until results on 6 Nov**: the deployment, Nightshift endpoint, Zetaris cluster and NVIDIA credits must all last until then. Fill in `<LIVE_URL>` in the README's Live access section.
+- [ ] Before recording: `npm run zetaris:warm` (every demo query once) and `npm run nightshift:check` (warms the models); keep a recorded fallback take.
 
 ## Make it real, one at a time (in this order; finish one before starting the next)
 
 - [ ] **1. Zetaris** ← current. You: create the account and cluster (see section 2 below). Then: `npm run zetaris:export`, upload to `traceon`, set the env vars, `npm run zetaris:check` shows parity OK. Then I export firmware, two-causes and noise as extra schemas so the named scenarios run on Zetaris too.
   - Done ahead: the client retries the 400 faults other teams hit on these clusters (`Could not create ResultSet: null`, `TTransportException`), waits up to 55 s for a cold start, and skips the cloud for 60 s if it keeps failing.
   - Before recording: run `npm run zetaris:check` a few minutes before, to warm the cluster.
-  - Ask the mentor: API host, org ID and token; whether idle clusters scale down (and how to keep it warm for judging); **whether judges will run against our live cluster after the deadline, and until when it stays up**.
+  - Answered by other teams: org ID is under **Management → Organisation**; a local install's host is `http://localhost:8888` (set `ZETARIS_API_URL` to that; the app adds `/api/v1.0`), org ID 1; warm up by running every demo query once (`npm run zetaris:warm`); judging must work without live access (done: `./sample.sh`), and live access must stay up until 6 Nov.
+  - Still to ask the Zetaris team: the API host for an AWS cluster, and how to create an API token (a username and password also work).
 - [ ] **2. Intake NHTSA feed**: e-bike or e-scooter battery fire complaints with a strict fire filter, instead of Tesla Model 3 (one current match is an Autopilot complaint).
 - [ ] **3. openFDA feed**: narrow to lithium-battery thermal events, or drop it.
 - [ ] **4. Sample defect photo**: you pick a real, openly licensed burnt-connector photo (e.g. Wikimedia Commons) or take one; I wire it in.

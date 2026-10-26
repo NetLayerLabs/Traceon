@@ -18,7 +18,8 @@
     "nemotron:check": "tsx scripts/nemotron-check.mts",
     "nightshift:check": "tsx scripts/nightshift-check.mts",
     "nightshift:standin": "tsx scripts/mock-nightshift.mts",
-    "sample": "tsx scripts/sample.mts"
+    "sample": "tsx scripts/sample.mts",
+    "zetaris:warm": "tsx scripts/zetaris-warm.mts"
   },
   "dependencies": {
     "alasql": "4.21.0",

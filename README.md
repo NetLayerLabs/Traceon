@@ -10,6 +10,23 @@ Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Wh
 
 ---
 
+## Judge it in one command (no keys, no accounts, no network)
+
+```bash
+git clone https://github.com/NetLayerLabs/Traceon.git && cd Traceon && ./sample.sh
+```
+
+Requires Node.js 18.18 or newer. `./sample.sh` installs dependencies on first run, ignores any keys, and runs the real engine end to end in about ten seconds:
+- the reference case, with its proof replayed;
+- verify-the-fix (the planned fix and the wrong fix);
+- five blind scenarios scored against their hidden truth;
+- the uploaded 12,000-unit CSV;
+- the five real NHTSA backtests.
+
+It writes `sample-output/`: a summary, the event log, the proof bundle, the replay result, the explanation, an 8D report and a supplier claim. It exits non-zero if any result is wrong. `./sample.sh --serve` then starts the full app in the same offline mode on http://localhost:3000.
+
+In sample mode the model steps use labelled templates and queries run on the local SQL engine. Every statistic, verdict and proof is computed exactly as in live mode. **Live mode** (Meterless Nightshift with Nemotron, Zetaris, live feeds) is shown in the demo video; see [Live access](#live-access).
+
 ## Five things to try, no login or key needed
 
 | Feature | What it is | Try it |
@@ -314,6 +331,7 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 The same list with comments is in [`.env.example`](.env.example).
 
 ```bash
+./sample.sh                  # sample mode: the whole engine offline, outputs in sample-output/
 npm test                     # the full suite, including a production build and server
 npm run eval -- 300          # blind accuracy on random seeds 1-300 plus the four named scenarios
 npm run nightshift:check     # one real request on each Nightshift route (needs the app running and NIGHTSHIFT_TOKEN)
@@ -321,6 +339,7 @@ npm run nightshift:standin   # development stand-in for Nightshift on :8088, lab
 npm run nemotron:check       # live check of every Nemotron call (needs NVIDIA_API_KEY)
 npm run zetaris:export       # write the five tables as CSV for Zetaris
 npm run zetaris:check        # Zetaris connection and hash-parity check
+npm run zetaris:warm         # run every reference-case query on Zetaris once (warm the cluster before a demo)
 npm run zetaris:mock         # spec-conformant Zetaris test double on :4599
 npx tsx scripts/snapshot-nhtsa.mts <raw-dir>   # rebuild the NHTSA backtest snapshots in data/nhtsa/
 npx tsx scripts/make-sample-csv.mts             # rebuild the charger sample for /data
@@ -377,6 +396,15 @@ Status as of 2026-10-25. The pre-submission checklist is in [TODO_BEFORE_SUBMISS
 - Real follow-up on arriving claims instead of a simulation, with the reopened case triggered automatically.
 - Watch mode on a live warranty feed, and continuous factors (temperature, charge cycles) alongside categorical ones.
 - Upgrading OpenTimestamps proofs once Bitcoin confirms them, and verifying them in the app.
+
+## Live access
+
+The live deployment is at `<LIVE_URL>` and stays running until the results are announced on **6 November 2026**. It is configured as follows:
+- **AI:** Meterless Nightshift, routing to NVIDIA Nemotron 3.5; Nemotron on NVIDIA NIM is the labelled fallback.
+- **Data:** the reference scenario is queried on Zetaris; other scenarios and uploads run on the local engine, labelled in each exhibit.
+- **Feeds:** CPSC, openFDA and NHTSA, fetched live.
+
+If any live service is unavailable, the app says so in each exhibit and in the top bar, and falls back without changing a verdict. The sample mode above needs none of it.
 
 ## Deploying
 

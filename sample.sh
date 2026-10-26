@@ -3,7 +3,7 @@
 # or network. Installs dependencies if needed, runs the real engine end to end
 # and writes every output to sample-output/.
 #   ./sample.sh           run the sample and print a summary
-#   ./sample.sh --serve   then start the full app offline on http://localhost:3000
+#   ./sample.sh --serve   then start the full app offline on http://localhost:3000 (PORT=… to change)
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -29,6 +29,7 @@ if [ "${1:-}" = "--serve" ]; then
   export METERLESS_STORAGE_DIR="${TMPDIR:-/tmp}/traceon-sample-app" NEXT_DIST_DIR=.next-sample NEXT_TELEMETRY_DISABLED=1
   echo "Building the app (about a minute)..."
   npx next build >/dev/null
-  echo "Traceon (offline sample mode) on http://localhost:3000  -  Ctrl+C to stop"
-  npx next start -p 3000
+  port="${PORT:-3000}"
+  echo "Traceon (offline sample mode) on http://localhost:$port  -  Ctrl+C to stop"
+  npx next start -p "$port"
 fi
