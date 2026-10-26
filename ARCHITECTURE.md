@@ -157,6 +157,8 @@ Every request carries `X-Request-ID` (a fresh UUID) and `X-Org-ID`. Local table 
 
 **Hashes that survive a change of engine.** Spark may return rows in any order and numbers as strings. `canonicalRows()` lowercases keys, normalises numbers and booleans and sorts rows before hashing, so the cloud and the mirror produce the same proof hash for the same data. `zetarisParityCheck()` runs four probe queries on both and compares hashes; `npm run zetaris:check` and the app's status chip report it.
 
+**Transient faults.** Hackathon clusters answer some internal faults with a 400 (`Could not create ResultSet: null`, `TTransportException`), and a cold cluster can be slow on the first query. `runCloudQuery()` retries those, plus 429/5xx and timeouts, twice (after 1 s and 3 s); a real refusal such as bad SQL or an unknown table is not retried. A query that still fails opens a circuit breaker: the cloud is skipped for 60 s, so a dead cluster costs one query's retries rather than every query's. The start call waits up to 55 s, just under the 60 s REST limit. Queries run one at a time. Run `npm run zetaris:check` shortly before a demo to warm the cluster.
+
 **Fallback.** If the cloud is not configured, or a call fails, the same SQL runs on the scenario's alasql mirror and the result carries `executedVia: 'LOCAL_FEDERATED_MIRROR'` and a `fallbackReason`. Only the reference scenario's data is loaded into Zetaris, so other scenarios always run on the mirror, labelled as such.
 
 ## 8. Proof chain and replay
@@ -280,6 +282,7 @@ flowchart LR
 | `tests/degrade.test.mts` | 5 | A hanging model, dead feeds and an unreachable Zetaris all degrade cleanly |
 | `tests/registry.test.mts` | 2 | The one-run lock and the watchdog |
 | `tests/e2e.test.mts` | 5 | A real production server: health, validation, 409 and attach, dropped-stream recovery, replay over HTTP, and the server-side evidence gate |
+| `tests/zetaris.test.mts` | 3 | Transient cluster faults are retried, real refusals are not, and repeated faults open a 60 s circuit breaker |
 | `tests/hardening.test.mts` | 7 | Regressions for the Oct 25 audit: read-only SQL, replayed bundles cannot write or forge summaries, upload validation (backslashes, single suspect, duplicate serials, malformed mapping, unparseable dates, full-content ids), strict scenario ids, reset scope, server-issued photo findings |
 | `tests/features.test.mts` | 13 | Bolt EV backtest; an uploaded CSV solved with its confounder ruled out; watch alert and that day's verdict; as-of truth; falsifiers and intervals; counterfactual inputs; follow-up verified vs reopened; stamp signatures; reviewer cases and comments; cited Q&A; reports; scoreboard |
 

@@ -162,7 +162,37 @@ export function toCloudSql(sql: string): string {
 const PAGE_LIMIT = 100; // API maximum
 const MAX_PAGES = 50;
 
+const breaker = singleton('zetaris-breaker', () => ({ openUntil: 0, reason: '' }));
+
+/** A fault in the cluster, not a refusal of the query: worth one more try. */
+class TransientZetarisError extends Error {}
+
+// Faults seen on hackathon clusters (cold start, a dropped Thrift connection
+// behind the REST layer) come back as 400s with these messages; a real
+// refusal (bad SQL, unknown table, no permission) does not match and is not retried.
+const TRANSIENT_400 = /Could not create ResultSet|TTransportException|Connection (reset|refused)|Broken pipe|timed? ?out/i;
+
 export async function runCloudQuery(sql: string): Promise<Record<string, unknown>[]> {
+  const delays = [1_000, 3_000];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await runCloudQueryOnce(sql);
+    } catch (err) {
+      const transient = err instanceof TransientZetarisError || (err as Error).name === 'TimeoutError' || /fetch failed/i.test((err as Error).message);
+      if (!transient) throw err;
+      if (attempt >= delays.length) {
+        // Still failing after retries: stop trying for a minute instead of
+        // making every remaining query of the run wait on a dead cluster.
+        breaker.openUntil = Date.now() + 60_000;
+        breaker.reason = (err as Error).message;
+        throw err;
+      }
+      await new Promise((r) => setTimeout(r, delays[attempt]));
+    }
+  }
+}
+
+async function runCloudQueryOnce(sql: string): Promise<Record<string, unknown>[]> {
   const cfg = cloudConfig();
   if (!cfg) throw new Error('Zetaris cloud not configured');
   const token = await bearerToken(cfg);
@@ -170,9 +200,15 @@ export async function runCloudQuery(sql: string): Promise<Record<string, unknown
     method: 'POST',
     headers: { ...headers(cfg, token), 'Content-Type': 'application/json' },
     body: JSON.stringify({ select: sql, pageLimit: PAGE_LIMIT }),
-    signal: AbortSignal.timeout(30_000),
+    // Just under the 60 s REST limit, so a cold cluster has time to answer.
+    signal: AbortSignal.timeout(55_000),
   });
-  if (!start.ok) throw new Error(`Zetaris start ${start.status}: ${(await start.text()).slice(0, 200)}`);
+  if (!start.ok) {
+    const text = (await start.text()).slice(0, 200);
+    const msg = `Zetaris start ${start.status}: ${text}`;
+    if (start.status >= 500 || start.status === 429 || (start.status === 400 && TRANSIENT_400.test(text))) throw new TransientZetarisError(msg);
+    throw new Error(msg);
+  }
   const first = await start.json();
   const queryToken: string = first.queryToken;
   const rows: Record<string, unknown>[] = [...(first.records ?? [])];
@@ -231,7 +267,9 @@ export async function runFederatedQuery(sql: string, sourceSilos: string[], scen
     fallbackReason = scenarioId.startsWith('custom-')
       ? 'uploaded data is queried on the local engine; Zetaris holds the reference scenario'
       : `scenario "${scenarioId}" is generated locally; Zetaris holds the reference scenario`;
-  if (cloudSql) {
+  if (cloudSql && Date.now() < breaker.openUntil) {
+    fallbackReason = `Zetaris skipped for ${Math.ceil((breaker.openUntil - Date.now()) / 1000)} s after repeated faults (${breaker.reason.slice(0, 120)})`;
+  } else if (cloudSql) {
     try {
       rows = await runCloudQuery(cloudSql);
     } catch (err) {

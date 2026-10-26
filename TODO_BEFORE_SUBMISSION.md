@@ -24,6 +24,9 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
 ## Make it real, one at a time (in this order; finish one before starting the next)
 
 - [ ] **1. Zetaris** ← current. You: create the account and cluster (see section 2 below). Then: `npm run zetaris:export`, upload to `traceon`, set the env vars, `npm run zetaris:check` shows parity OK. Then I export firmware, two-causes and noise as extra schemas so the named scenarios run on Zetaris too.
+  - Done ahead: the client retries the 400 faults other teams hit on these clusters (`Could not create ResultSet: null`, `TTransportException`), waits up to 55 s for a cold start, and skips the cloud for 60 s if it keeps failing.
+  - Before recording: run `npm run zetaris:check` a few minutes before, to warm the cluster.
+  - Ask the mentor: API host, org ID and token; whether idle clusters scale down (and how to keep it warm for judging); **whether judges will run against our live cluster after the deadline, and until when it stays up**.
 - [ ] **2. Intake NHTSA feed**: e-bike or e-scooter battery fire complaints with a strict fire filter, instead of Tesla Model 3 (one current match is an Autopilot complaint).
 - [ ] **3. openFDA feed**: narrow to lithium-battery thermal events, or drop it.
 - [ ] **4. Sample defect photo**: you pick a real, openly licensed burnt-connector photo (e.g. Wikimedia Commons) or take one; I wire it in.

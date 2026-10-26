@@ -253,11 +253,11 @@ Each step is optional. Without keys every model step uses a labelled template an
 - **Input protection.** Every query passes a read-only check before it runs (a single `SELECT`, no `INTO`, no file functions), so even a replayed proof bundle cannot write files or change data. Only confirmed cause columns are actionable and values are SQL-escaped; uploaded values with backslashes or control characters are refused. Request bodies are validated (bad input gets a 4xx, never a crash). Vision accepts only `data:image/` URLs under about 6 MB, and an investigation uses a photo finding only by the id the server issued for it.
 - **Proof covers what people read.** Each chain step hashes the exhibit's content, label and summary, and **Replay & verify** replays what the server recorded and compares the rebuilt root with the one it published.
 - **One investigation at a time.** A second start gets 409 and can attach. A watchdog ends a run after 240 seconds (`RUN_TIMEOUT_MS`); the lock is released once the timed-out run has actually stopped.
-- **Every external call has a deadline.** Federal feeds 9 s; Zetaris 30 s per page; Nemotron 20 to 75 s depending on the call, capped by `NEMOTRON_TIMEOUT_MS`; thinking requests race a fast answer so latency spikes never stall a run.
+- **Every external call has a deadline.** Federal feeds 9 s; Zetaris 55 s to start a query and 30 s per page, with two retries for known transient cluster faults and a 60 s circuit breaker after repeated failures; Nemotron 20 to 75 s depending on the call, capped by `NEMOTRON_TIMEOUT_MS`; thinking requests race a fast answer so latency spikes never stall a run.
 - **Nothing is faked when it fails.** An unreachable feed is shown as unreachable; a Zetaris failure falls back to the mirror with the reason in the exhibit; a model failure falls back to a labelled template with the reason in the agent trace.
 - **Open by design for judging.** There is no login. `/api/reset` clears demo memory and holds (shared cases, uploads and the signing key are kept); set `TRACEON_DISABLE_RESET=1` to turn it off. Put the app behind authentication before any real use.
 - **Shared data is not private.** Uploaded datasets, shared cases and their comments are stored on the server as plain JSON and are readable by anyone with the link.
-- **Test coverage.** 51 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case (13), and regressions for every fix from the end-to-end audit (7).
+- **Test coverage.** 54 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case (13), regressions for every fix from the end-to-end audit (7), and Zetaris fault handling (3).
 
 ## What's real and what's simulated
 
@@ -323,11 +323,11 @@ npx tsx scripts/make-sample-csv.mts             # rebuild the charger sample for
 
 ### Test status
 
-Run on 2026-10-25 at 22:36 UTC (`npm test`, which includes a production build and server):
+Run on 2026-10-26 (`npm test`, which includes a production build and server):
 
 ```
-ℹ tests 44
-ℹ pass 44
+ℹ tests 54
+ℹ pass 54
 ℹ fail 0
 ```
 
