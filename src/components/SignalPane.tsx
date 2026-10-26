@@ -142,7 +142,7 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
     <div className="card">
       <h3>
         Visual evidence
-        <span className={`tag ${vision?.live ? 'nv' : ''}`}>{vision ? (vision.live ? 'Nemotron VL' : 'offline reference') : 'not analyzed'}</span>
+        <span className={`tag ${vision?.live ? 'nv' : ''}`}>{vision ? (vision.live ? (vision.model.includes('·') ? vision.model : 'Nemotron VL') : 'offline reference') : 'not analyzed'}</span>
       </h3>
       <div className="vision-frame">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -177,7 +177,7 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
           <div className="faint" style={{ marginTop: 4 }}>{vision.visualEvidenceSummary}</div>
           {vision.live && vision.reasoning && (
             <details className="thinking">
-              <summary>Nemotron reasoning trace</summary>
+              <summary>Model reasoning trace</summary>
               <pre>{vision.reasoning}</pre>
             </details>
           )}

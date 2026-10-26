@@ -31,6 +31,7 @@ const STEPS = [
 
 interface Status {
   nemotron: { live: boolean; model: string; fastModel: string };
+  ai?: { providers: string[]; nightshift: { configured: boolean; state: string; url: string; standIn?: boolean } };
   zetaris: { mode: string; host: string | null; parity: { ok: boolean; probes: { sql: string; ok: boolean; error?: string }[] } | null };
   meterless: { memories: number; quarantinedLots: string[] };
   brightdata: { live: boolean };
@@ -275,9 +276,15 @@ export default function Home() {
           </div>
           <div className="chips">
             <span className="drawer-label">Integrations</span>
-            <span className={`chip ${status?.nemotron.live ? 'live' : 'sim'}`} title={status?.nemotron.model} data-short="Nemotron">
+            {status?.ai?.nightshift.configured && (
+              <span className={`chip ${status.ai.nightshift.state === 'online' ? 'live' : 'sim'}`} title={`Meterless Nightshift at ${status.ai.nightshift.url}`} data-short="Nightshift">
+                <span className="dot" />
+                Nightshift {status.ai.nightshift.standIn ? 'stand-in' : status.ai.nightshift.state}
+              </span>
+            )}
+            <span className={`chip ${status?.ai?.providers.includes('nim') ?? status?.nemotron.live ? 'live' : 'sim'}`} title={status?.nemotron.model} data-short="Nemotron">
               <span className="dot" />
-              Nemotron {status?.nemotron.live ? 'live' : 'offline'}
+              Nemotron {(status?.ai?.providers.includes('nim') ?? status?.nemotron.live) ? 'live' : 'offline'}
             </span>
             <span
               className={`chip ${status?.zetaris.mode === 'ZETARIS_CLOUD' && status.zetaris.parity?.ok ? 'live' : 'sim'}`}

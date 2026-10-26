@@ -1,7 +1,14 @@
-// NVIDIA NIM client for Nemotron. Uses fetch directly (OpenAI-compatible
-// /chat/completions) so the NIM-specific `chat_template_kwargs` field goes in
-// the request body as-is. With no NVIDIA_API_KEY, callers get live=false and
-// fall back to deterministic templates; the UI labels those outputs.
+// The agent's AI gateway. Two OpenAI-compatible providers:
+//   - Meterless Nightshift (the hackathon's required AI provider): a local
+//     runtime on 127.0.0.1:8088 whose model ids are routing modes, e.g.
+//     meterless/vision for the photo, meterless/fast for planning and red
+//     team, meterless/deep for the explanation.
+//   - NVIDIA NIM with Nemotron 3.5, called directly with the NIM-specific
+//     `chat_template_kwargs` (thinking on or off).
+// AI_PROVIDER=auto (the default) uses Nightshift when it is configured and
+// falls back to NIM, labelled, if Nightshift cannot answer. With neither,
+// callers get live=false and fall back to deterministic templates; the UI
+// labels those outputs.
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -11,14 +18,106 @@ const BASE_URL = process.env.NVIDIA_NIM_BASE_URL || 'https://integrate.api.nvidi
 export const NEMOTRON_MODEL = process.env.NEMOTRON_MODEL || 'nvidia/nemotron-3.5-super-vl-120b-a12b';
 export const NEMOTRON_FAST_MODEL = process.env.NEMOTRON_FAST_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b';
 
-export function nemotronLive(): boolean {
+function nimConfigured(): boolean {
   return Boolean(process.env.NVIDIA_API_KEY && !process.env.NVIDIA_API_KEY.startsWith('nvapi-your'));
+}
+
+// ---------- Meterless Nightshift ----------
+export type AiProvider = 'nightshift' | 'nim';
+export const NO_PROVIDER = 'No AI provider configured';
+
+/** Any pasted form (host, /v1, /v1/chat/completions, /healthz) becomes <host>/v1. */
+export function normalizeNightshiftUrl(u: string) {
+  let url = u.trim().replace(/\/+$/, '');
+  if (!/^https?:\/\//.test(url)) url = `http://${url}`;
+  url = url.replace(/\/(v1\/chat\/completions|v1\/models|healthz|v1)$/, '');
+  return `${url}/v1`;
+}
+export const NIGHTSHIFT_URL = normalizeNightshiftUrl(process.env.NIGHTSHIFT_URL || 'http://127.0.0.1:8088/v1');
+export const NIGHTSHIFT_ROUTES = {
+  vision: process.env.NIGHTSHIFT_VISION_MODEL || 'meterless/vision',
+  fast: process.env.NIGHTSHIFT_FAST_MODEL || 'meterless/fast',
+  deep: process.env.NIGHTSHIFT_DEEP_MODEL || 'meterless/deep',
+};
+const NIGHTSHIFT_APP = process.env.NIGHTSHIFT_APP || 'traceon';
+
+/** The runtime's bearer token: NIGHTSHIFT_TOKEN, or the proxy-token file it writes. */
+function nightshiftToken(): string | null {
+  const direct = process.env.NIGHTSHIFT_TOKEN?.trim();
+  if (direct && direct !== 'rt-local') return direct;
+  const file = process.env.NIGHTSHIFT_TOKEN_FILE;
+  if (file) {
+    try {
+      const t = fs.readFileSync(file, 'utf-8').trim();
+      if (t && t !== 'rt-local') return t;
+    } catch {}
+  }
+  return null;
+}
+
+/** Providers to try, in order. */
+export function aiProviders(): AiProvider[] {
+  const mode = (process.env.AI_PROVIDER || 'auto').toLowerCase();
+  const ns = nightshiftToken() ? (['nightshift'] as const) : [];
+  const nim = nimConfigured() ? (['nim'] as const) : [];
+  if (mode === 'nim') return [...nim];
+  if (mode === 'nightshift') return [...ns, ...nim];
+  return [...ns, ...nim];
+}
+
+export function aiLive(): boolean {
+  return aiProviders().length > 0;
+}
+/** Kept for existing callers: true when any AI provider is configured. */
+export const nemotronLive = aiLive;
+
+export function nightshiftHeaders(token: string) {
+  return { Authorization: `Bearer ${token}`, 'meterless-app': NIGHTSHIFT_APP, 'meterless-scope': 'user' };
+}
+
+/** Online, unauthorized (wrong token) or offline, from GET /v1/models as Meterless documents. */
+export async function nightshiftStatus(): Promise<{ configured: boolean; state: 'online' | 'unauthorized' | 'offline' | 'not configured'; url: string; routes: string[]; standIn?: boolean }> {
+  const token = nightshiftToken();
+  if (!token) return { configured: false, state: 'not configured', url: NIGHTSHIFT_URL, routes: [] };
+  try {
+    const r = await fetch(`${NIGHTSHIFT_URL}/models`, { headers: nightshiftHeaders(token), signal: AbortSignal.timeout(3_000) });
+    if (r.status === 401 || r.status === 403) return { configured: true, state: 'unauthorized', url: NIGHTSHIFT_URL, routes: [] };
+    if (!r.ok) return { configured: true, state: 'offline', url: NIGHTSHIFT_URL, routes: [] };
+    const list = (await r.json()) as { data?: { id: string }[]; standIn?: boolean };
+    const ids = (list.data ?? []).map((m) => m.id);
+    return { configured: true, state: ids.some((i) => i.startsWith('meterless/')) ? 'online' : 'offline', url: NIGHTSHIFT_URL, routes: ids, ...(list.standIn ? { standIn: true } : {}) };
+  } catch {
+    return { configured: true, state: 'offline', url: NIGHTSHIFT_URL, routes: [] };
+  }
+}
+
+/** Short name for the agent trace: "Nightshift" or "Nemotron". */
+export function aiName(r?: { provider?: AiProvider } | null) {
+  return r?.provider === 'nightshift' ? 'Nightshift' : r?.provider === 'nim' ? 'Nemotron' : 'The model';
+}
+/** The provider that will be tried first, for phase labels written before a call. */
+export function aiPrimaryName() {
+  return aiName({ provider: aiProviders()[0] });
+}
+
+/** Short label for the UI: which provider and route answered. */
+export function aiVia(r: { provider?: AiProvider; model: string; standIn?: boolean }) {
+  if (r.provider === 'nightshift') return `${r.standIn ? 'Nightshift stand-in' : 'Meterless Nightshift'} · ${r.model}`;
+  return `NVIDIA NIM · ${r.model.replace(/^nvidia\//, '')}`;
 }
 
 type Content = string | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[];
 
 export interface NemotronReply {
   live: boolean;
+  /** Who answered; absent when no provider answered. */
+  provider?: AiProvider;
+  /** "Meterless Nightshift · meterless/deep" or "NVIDIA NIM · nemotron-…". */
+  via?: string;
+  /** Set when Nightshift could not answer and NIM did instead. */
+  fallbackFrom?: string;
+  /** Answered by the development stand-in (scripts/mock-nightshift.mts), not the real runtime. */
+  standIn?: boolean;
   model: string;
   text: string;
   reasoning: string;
@@ -107,7 +206,80 @@ export function dedupeRepeat(text: string): string {
   return t;
 }
 
-export async function nemotronChat(opts: {
+type ChatOpts = {
+  system?: string;
+  user: Content;
+  model?: string;
+  thinking?: boolean;
+  maxTokens?: number;
+  timeoutMs?: number;
+  thinkingDeadlineMs?: number;
+};
+
+/**
+ * One model call through the configured providers: Nightshift first (when
+ * configured), then NVIDIA NIM. Each reply says which one answered.
+ */
+export async function nemotronChat(opts: ChatOpts): Promise<NemotronReply> {
+  const providers = aiProviders();
+  if (!providers.length) return { live: false, model: opts.model ?? NEMOTRON_MODEL, text: '', reasoning: '', latencyMs: 0, error: NO_PROVIDER };
+  let last: NemotronReply | null = null;
+  for (const p of providers) {
+    const r = p === 'nightshift' ? await nightshiftChat(opts) : await nimChat(opts);
+    const out = { ...r, provider: p, via: aiVia({ provider: p, model: r.model, standIn: r.standIn }) };
+    if (out.live && out.text.trim()) return last ? { ...out, fallbackFrom: `Meterless Nightshift: ${last.error ?? 'empty reply'}` } : out;
+    last = out;
+  }
+  return last!;
+}
+
+/** The route for a call: the photo goes to meterless/vision, the fast model's jobs to meterless/fast, the rest to meterless/deep. */
+export function nightshiftRoute(opts: Pick<ChatOpts, 'user' | 'model'>) {
+  const hasImage = Array.isArray(opts.user) && opts.user.some((c) => c.type === 'image_url');
+  if (hasImage) return NIGHTSHIFT_ROUTES.vision;
+  return opts.model === NEMOTRON_FAST_MODEL ? NIGHTSHIFT_ROUTES.fast : NIGHTSHIFT_ROUTES.deep;
+}
+
+async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
+  const token = nightshiftToken()!;
+  const model = nightshiftRoute(opts);
+  const start = Date.now();
+  const messages = [...(opts.system ? [{ role: 'system', content: opts.system }] : []), { role: 'user', content: opts.user }];
+  const body = { model, messages, temperature: 0.2, max_tokens: opts.maxTokens ?? 2048 };
+  const key = cacheKey({ nightshift: NIGHTSHIFT_URL, ...body });
+  const hit = readCache(key);
+  if (hit) return { live: true, model, ...hit, latencyMs: Date.now() - start, cached: true };
+  // Meterless suggests long timeouts because a local model may be loading;
+  // the caller's budget still caps it so a run cannot stall.
+  const timeoutMs = Math.min(opts.timeoutMs ?? 60_000, Number(process.env.NEMOTRON_TIMEOUT_MS) || Infinity);
+  try {
+    const res = await fetch(`${NIGHTSHIFT_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { ...nightshiftHeaders(token), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.status === 401 || res.status === 403) throw new Error('Nightshift rejected the token (unauthorized)');
+    if (!res.ok) throw new Error(`Nightshift ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    const data = await res.json();
+    const msg = data.choices?.[0]?.message ?? {};
+    let text: string = typeof msg.content === 'string' ? msg.content : '';
+    let reasoning: string = msg.reasoning_content ?? msg.reasoning ?? '';
+    const think = text.match(/<think>([\s\S]*?)<\/think>/);
+    if (think) {
+      reasoning = reasoning || think[1].trim();
+      text = text.replace(think[0], '').trim();
+    }
+    text = dedupeRepeat(text);
+    if (text.trim() && data.system_fingerprint !== 'nightshift-standin') writeCache(key, { text, reasoning });
+    const standIn = data.system_fingerprint === 'nightshift-standin';
+    return { live: true, model: String(data.model ?? model), text, reasoning, latencyMs: Date.now() - start, ...(standIn ? { standIn } : {}) };
+  } catch (err) {
+    return { live: false, model, text: '', reasoning: '', latencyMs: Date.now() - start, error: (err as Error).message };
+  }
+}
+
+async function nimChat(opts: {
   system?: string;
   user: Content;
   model?: string;
@@ -124,7 +296,7 @@ export async function nemotronChat(opts: {
 }): Promise<NemotronReply> {
   const model = opts.model ?? NEMOTRON_MODEL;
   const start = Date.now();
-  if (!nemotronLive()) {
+  if (!nimConfigured()) {
     return { live: false, model, text: '', reasoning: '', latencyMs: 0, error: 'NVIDIA_API_KEY not set' };
   }
   const messages = [

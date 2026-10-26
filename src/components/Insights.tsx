@@ -9,7 +9,7 @@ export function Narrative({ state }: { state: InvState }) {
         Explain why
         {n && (
           <span className={`tag ${n.source === 'nemotron' ? 'nv' : ''}`}>
-            {n.source === 'nemotron' ? `Nemotron${n.reasoning ? ' · thinking' : ''}${n.cached ? ' · cached' : ''}` : 'template (model unavailable)'}
+            {n.source === 'nemotron' ? `${n.via ?? 'Nemotron'}${n.reasoning ? ' · thinking' : ''}${n.cached ? ' · cached' : ''}` : 'template (model unavailable)'}
           </span>
         )}
         {n && (
@@ -28,7 +28,7 @@ export function Narrative({ state }: { state: InvState }) {
           {n.guard.unverified.length > 0 && <div className="bad" style={{ fontSize: 12 }}>Unverified figures flagged: {n.guard.unverified.join(', ')}</div>}
           {n.reasoning && (
             <details className="thinking">
-              <summary>Nemotron reasoning trace</summary>
+              <summary>Model reasoning trace</summary>
               <pre>{n.reasoning}</pre>
             </details>
           )}
@@ -44,7 +44,7 @@ export function RedTeam({ state }: { state: InvState }) {
     <div className="card">
       <h3>
         Red team
-        {r && <span className={`tag ${r.source === 'nemotron' ? 'nv' : ''}`}>{r.source === 'nemotron' ? 'Nemotron devil’s advocate' : 'built-in objections'}</span>}
+        {r && <span className={`tag ${r.source === 'nemotron' ? 'nv' : ''}`}>{r.source === 'nemotron' ? `${r.via ?? 'Nemotron'} · devil’s advocate` : 'built-in objections'}</span>}
       </h3>
       {!r ? (
         <div className="empty">A second pass attacks the verdict. Each objection is answered by a deterministic test, not by argument.</div>
@@ -238,7 +238,7 @@ export function AgentLog({ state }: { state: InvState }) {
       </div>
       {state.plan && (
         <div style={{ marginTop: 8, fontSize: 11.5 }} className="muted">
-          <b>Plan</b> ({state.plan.source === 'nemotron' ? 'Nemotron' : 'exhaustive catalog'}): {state.plan.reasoning}
+          <b>Plan</b> ({state.plan.source === 'nemotron' ? state.plan.via ?? 'Nemotron' : 'exhaustive catalog'}): {state.plan.reasoning}
           {state.plan.untestable.length > 0 && (
             <div className="faint" style={{ marginTop: 4 }}>
               Not testable with this data (logged as open questions): {state.plan.untestable.join('; ')}

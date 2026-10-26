@@ -96,7 +96,7 @@ export function reducer(s: InvState, a: Action): InvState {
     case 'convergence':
       return { ...s, convergence: e.data };
     case 'plan':
-      return { ...s, plan: { source: e.source, reasoning: e.reasoning, untestable: e.untestable }, hypotheses: e.hypotheses };
+      return { ...s, plan: { source: e.source, via: e.via, by: e.by, reasoning: e.reasoning, untestable: e.untestable }, hypotheses: e.hypotheses };
     case 'hypothesis':
       return { ...s, hypotheses: s.hypotheses.map((h) => (h.id === e.node.id ? e.node : h)) };
     case 'evidence':
@@ -110,13 +110,13 @@ export function reducer(s: InvState, a: Action): InvState {
     case 'vision':
       return { ...s, vision: e.data };
     case 'redteam':
-      return { ...s, redteam: { source: e.source, objections: e.objections, reasoning: e.reasoning } };
+      return { ...s, redteam: { source: e.source, via: e.via, objections: e.objections, reasoning: e.reasoning } };
     case 'timeline':
       return { ...s, timeline: e.data };
     case 'gate':
       return { ...s, gate: { pass: e.pass, criteria: e.criteria, blanket: e.blanket } };
     case 'narrative':
-      return { ...s, narrative: { source: e.source, text: e.text, reasoning: e.reasoning, guard: e.guard } };
+      return { ...s, narrative: { source: e.source, via: e.via, fallbackFrom: e.fallbackFrom, text: e.text, reasoning: e.reasoning, guard: e.guard } };
     case 'action':
       return { ...s, action: e.plan };
     case 'markovian':

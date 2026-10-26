@@ -14,6 +14,8 @@ export interface CaseFact {
 
 export interface AskAnswer {
   source: 'nemotron' | 'case-file';
+  /** Which provider and route answered, when a model did. */
+  via?: string;
   answer: string;
   citations: string[];
   /** The model cited nothing; these are the record lines holding the figures it quoted. */
@@ -89,6 +91,7 @@ export async function askCase(view: CaseView, question: string): Promise<AskAnsw
     }
     return {
       source: 'nemotron',
+      via: reply.via,
       answer: text,
       citations: valid.length ? valid : inferred,
       ...(inferred.length ? { citationsInferred: true } : {}),

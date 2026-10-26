@@ -11,7 +11,7 @@ import crypto from 'node:crypto';
 import { AS_OF, getEnterpriseMesh, PRODUCT_NAME, scenarioTruth, SKU, UNIT_COST_USD } from './enterpriseData';
 import { convergeSignals, ingestSignals, readWorldModel, runBoundedChain, updateWorldModel } from './meterless';
 import type { Convergence, IncomingSignal } from './meterless';
-import { extractJson, nemotronChat, NEMOTRON_FAST_MODEL } from './nemotron';
+import { aiName, aiPrimaryName, extractJson, nemotronChat, NEMOTRON_FAST_MODEL, NO_PROVIDER } from './nemotron';
 import { recordScore } from './scoreboard';
 import { fetchAllFeeds } from './signals';
 import type { FeedResult } from './signals';
@@ -205,16 +205,16 @@ export type InvestigationEvent =
   | { type: 'log'; text: string; tone?: 'info' | 'good' | 'warn' | 'bad' | 'model' }
   | { type: 'feeds'; feeds: { feed: string; status: string; note: string; count: number }[] }
   | { type: 'convergence'; data: Convergence & { totalSignals: number } }
-  | { type: 'plan'; source: 'nemotron' | 'catalog'; reasoning: string; untestable: string[]; hypotheses: HypothesisNode[] }
+  | { type: 'plan'; source: 'nemotron' | 'catalog'; via?: string; by?: string; reasoning: string; untestable: string[]; hypotheses: HypothesisNode[] }
   | { type: 'hypothesis'; node: HypothesisNode }
   | { type: 'evidence'; item: EvidenceItem }
   | { type: 'robustness'; data: RobustnessRow[] }
   | { type: 'granularity'; data: { cause: string; pLabel: string; p: number; groups: { group: string; ratePer10k: number }[]; implicated: boolean } }
   | { type: 'vision'; data: VisionFinding & { concordance: { claimsMentioningConnector: number; claimsInBatch: number } } }
-  | { type: 'redteam'; source: 'nemotron' | 'built-in'; objections: { objection: string; check: string; result: string; survived: boolean }[]; reasoning: string }
+  | { type: 'redteam'; source: 'nemotron' | 'built-in'; via?: string; objections: { objection: string; check: string; result: string; survived: boolean }[]; reasoning: string }
   | { type: 'timeline'; data: { cause: string; days: { date: string; claims: number; negLog10P: number }[]; threshold: number; alertDate: string | null; firstClaimDate: string; claimsAtAlert: number; claimsAfterAlert: number } }
   | { type: 'gate'; pass: boolean; criteria: GateCriterion[]; blanket?: { units: number; costUsd: number } }
-  | { type: 'narrative'; source: 'nemotron' | 'template'; text: string; reasoning: string; cached?: boolean; guard: { checked: number; verified: number; unverified: string[] } }
+  | { type: 'narrative'; source: 'nemotron' | 'template'; via?: string; fallbackFrom?: string; text: string; reasoning: string; cached?: boolean; guard: { checked: number; verified: number; unverified: string[] } }
   | { type: 'action'; plan: ActionPlan }
   | { type: 'markovian'; data: Awaited<ReturnType<typeof runBoundedChain>> }
   | { type: 'ledger'; root: string; count: number }
@@ -352,10 +352,10 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
   await sleep(pacing);
 
   // ---- 3. Plan ----
-  emit({ type: 'phase', phase: 'plan', label: 'Nemotron planning hypotheses' });
+  emit({ type: 'phase', phase: 'plan', label: `${aiPrimaryName()} planning hypotheses` });
   const plan = await planHypotheses(conv, opts.vision ?? null, scenarioId, log, dims);
   emit({ type: 'plan', ...plan });
-  if (plan.source === 'nemotron') log(`Nemotron ranked ${plan.hypotheses.length} hypotheses`, 'model');
+  if (plan.source === 'nemotron') log(`${plan.by} ranked ${plan.hypotheses.length} hypotheses (${plan.via})`, 'model');
   record({ kind: 'model', label: 'Hypothesis plan', summary: plan.hypotheses.map((h) => h.id).join(' > '), payload: plan });
   const nodes = new Map(plan.hypotheses.map((h) => [h.id, h]));
   const update = (node: HypothesisNode) => emit({ type: 'hypothesis', node: { ...node } });
@@ -529,7 +529,7 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
         if (!confirmed.length) log(screened.length ? 'No suspect survives adjustment' : 'No suspect beats the multiple-testing bar', 'warn');
         const top = plan.hypotheses[0];
         if (plan.source === 'nemotron' && top && !confirmed.some((c) => c.node.id === top.id)) {
-          log(`Nemotron's top suspect was ${top.id} (${top.title}); the evidence overruled it: ${nodes.get(top.id)?.status === 'CONFOUNDED' ? 'a confounder' : 'no association'}`, 'model');
+          log(`${plan.by ?? 'The model'}'s top suspect was ${top.id} (${top.title}); the evidence overruled it: ${nodes.get(top.id)?.status === 'CONFOUNDED' ? 'a confounder' : 'no association'}`, 'model');
         }
         return { text: `${confirmed.length} cause(s) confirmed`, carryover: carry() };
       },
@@ -696,7 +696,7 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
     {
       run: async () => {
         if (!confirmed.length) return { text: 'skipped', carryover: carry() };
-        emit({ type: 'phase', phase: 'redteam', label: 'Nemotron red-teaming the verdict' });
+        emit({ type: 'phase', phase: 'redteam', label: `${aiPrimaryName()} red-teaming the verdict` });
         redteam = await redTeam(confirmed, { alpha, granularity, exposure, geoCmh, geoBy, robustnessOut, screenedCount: k, batches: mesh.bom.length }, log);
         emit(redteam);
         record({ kind: 'model', label: 'Red-team review', summary: `${redteam.objections.filter((o) => o.survived).length}/${redteam.objections.length} objections answered by evidence`, payload: redteam });
@@ -1088,8 +1088,9 @@ Rank ALL ids, most likely first.`,
     maxTokens: 2000,
     timeoutMs: 20_000,
   });
+  if (reply.fallbackFrom) log(`${reply.fallbackFrom}; ${reply.via} planned instead`, 'warn');
   const parsed = reply.live ? extractJson<{ ranking: { id: string; rationale: string }[]; untestable?: string[]; reasoning?: string }>(reply.text) : null;
-  if (!parsed && reply.error !== 'NVIDIA_API_KEY not set') log(`Nemotron planning unavailable (${reply.error ?? 'reply was not valid JSON'}); testing every factor in catalog order`, 'warn');
+  if (!parsed && reply.error !== NO_PROVIDER) log(`Model planning unavailable (${reply.via ?? 'no provider answered'}: ${reply.error ?? 'reply was not valid JSON'}); testing every factor in catalog order`, 'warn');
   const ranked = (parsed?.ranking ?? []).filter((r) => dims.some((d) => d.id === r.id));
   const order = [...new Set([...ranked.map((r) => r.id), ...dims.map((d) => d.id)])];
   const hypotheses: HypothesisNode[] = order.map((id, i) => {
@@ -1098,6 +1099,7 @@ Rank ALL ids, most likely first.`,
   });
   return {
     source: parsed ? ('nemotron' as const) : ('catalog' as const),
+    ...(parsed ? { via: reply.via, by: aiName(reply) } : {}),
     reasoning: parsed?.reasoning ?? (reply.reasoning ? reply.reasoning.slice(0, 600) : 'Exhaustive screen of every testable factor in the federated mesh.'),
     // The model sometimes lists hypothesis ids here; only keep genuinely untestable ideas.
     untestable: (parsed?.untestable?.filter((u) => typeof u === 'string' && !/^H-[A-Z]+$/.test(u.trim())).slice(0, 4) ?? []).concat(
@@ -1182,7 +1184,8 @@ Return ONLY JSON: {"objections":[{"objection":"strongest specific challenge","ch
     timeoutMs: 20_000,
   });
   const parsed = reply.live ? extractJson<{ objections: { objection: string; check: string }[]; reasoning?: string }>(reply.text) : null;
-  if (!parsed?.objections?.length && reply.error !== 'NVIDIA_API_KEY not set') log(`Nemotron red team unavailable (${reply.error ?? 'reply was not valid JSON'}); using built-in objections`, 'warn');
+  if (reply.fallbackFrom) log(`${reply.fallbackFrom}; ${reply.via} red-teamed instead`, 'warn');
+  if (!parsed?.objections?.length && reply.error !== NO_PROVIDER) log(`Model red team unavailable (${reply.via ?? 'no provider answered'}: ${reply.error ?? 'reply was not valid JSON'}); using built-in objections`, 'warn');
   const list = parsed?.objections?.length ? parsed.objections.slice(0, 6) : defaults;
   const objections = list
     .map((o) => {
@@ -1191,7 +1194,7 @@ Return ONLY JSON: {"objections":[{"objection":"strongest specific challenge","ch
       return r ? { objection: o.objection, check: o.check, ...r } : null;
     })
     .filter((x): x is { objection: string; check: string; result: string; survived: boolean } => Boolean(x));
-  return { type: 'redteam', source: parsed ? 'nemotron' : 'built-in', objections, reasoning: parsed?.reasoning ?? reply.reasoning.slice(0, 500) };
+  return { type: 'redteam', source: parsed ? 'nemotron' : 'built-in', ...(parsed ? { via: reply.via } : {}), objections, reasoning: parsed?.reasoning ?? reply.reasoning.slice(0, 500) };
 }
 
 type CauseFacts = {
@@ -1249,14 +1252,15 @@ async function explain(facts: Record<string, unknown>, template: string, log: (t
   });
   // NIM latency on the large model spikes under load; the small model is a
   // better fallback than the template, and the same number guard applies.
-  if (!(reply.live && reply.text.trim().length > 40) && reply.error !== 'NVIDIA_API_KEY not set') {
-    log(`Nemotron Super explanation unavailable (${reply.error ?? 'empty reply'}); asking Nemotron Lightning`, 'warn');
+  if (!(reply.live && reply.text.trim().length > 40) && reply.error !== NO_PROVIDER) {
+    log(`Explanation model unavailable (${reply.error ?? 'empty reply'}); trying the fast route`, 'warn');
     reply = await nemotronChat({ ...prompt, model: NEMOTRON_FAST_MODEL, thinking: false, maxTokens: 900, timeoutMs: 25_000 });
   }
   const live = reply.live && reply.text.trim().length > 40;
-  if (!live && reply.error !== 'NVIDIA_API_KEY not set') log(`Nemotron explanation unavailable (${reply.error ?? 'empty reply'}); using the template`, 'warn');
+  if (!live && reply.error !== NO_PROVIDER) log(`Model explanation unavailable (${reply.error ?? 'empty reply'}); using the template`, 'warn');
   const text = live ? reply.text.trim() : template;
-  return { source: live ? ('nemotron' as const) : ('template' as const), text, reasoning: reply.reasoning.slice(0, 4000), cached: reply.cached, guard: numberGuard(text, facts) };
+  if (live && reply.fallbackFrom) log(`${reply.fallbackFrom}; ${reply.via} answered instead`, 'warn');
+  return { source: live ? ('nemotron' as const) : ('template' as const), ...(live ? { via: reply.via, fallbackFrom: reply.fallbackFrom } : {}), text, reasoning: reply.reasoning.slice(0, 4000), cached: reply.cached, guard: numberGuard(text, facts) };
 }
 
 /** Hallucination guard: every figure in the explanation must exist in the evidence. */

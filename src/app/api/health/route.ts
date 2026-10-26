@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { STORAGE_DIR } from '@/lib/meterless';
-import { nemotronLive } from '@/lib/nemotron';
+import { aiProviders, nemotronLive } from '@/lib/nemotron';
 import { activeRun } from '@/lib/runRegistry';
 import { fetchCpscEbikeRecalls, fetchNhtsaBatteryFires, fetchOpenFdaBatteryEvents } from '@/lib/signals';
 import { runFederatedQuery, zetarisMode } from '@/lib/zetaris';
@@ -49,6 +49,7 @@ export async function GET() {
     checks,
     feeds: feedCache.value,
     nemotron: nemotronLive() ? 'live' : 'offline (templates)',
+    aiProviders: aiProviders(),
     zetaris: zetarisMode(),
     activeRun: run ? { runId: run.id, scenarioId: run.scenarioId, runningForMs: Date.now() - run.startedAt } : null,
     time: new Date().toISOString(),

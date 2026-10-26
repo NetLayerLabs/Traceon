@@ -3,7 +3,7 @@ import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { resolveScenario } from '@/lib/enterpriseData';
 import { readWorldModel, scenarioDir } from '@/lib/meterless';
-import { NEMOTRON_FAST_MODEL, NEMOTRON_MODEL, nemotronLive } from '@/lib/nemotron';
+import { aiProviders, NEMOTRON_FAST_MODEL, NEMOTRON_MODEL, nemotronLive, NIGHTSHIFT_ROUTES, nightshiftStatus } from '@/lib/nemotron';
 import { zetarisMode, zetarisParityCheck } from '@/lib/zetaris';
 
 let parityCache: { at: number; value: Awaited<ReturnType<typeof zetarisParityCheck>> } | null = null;
@@ -27,6 +27,7 @@ export async function GET(req: Request) {
   }
   return NextResponse.json({
     nemotron: { live: nemotronLive(), model: NEMOTRON_MODEL, fastModel: NEMOTRON_FAST_MODEL },
+    ai: { providers: aiProviders(), nightshift: { ...(await nightshiftStatus()), routes: NIGHTSHIFT_ROUTES } },
     zetaris: { mode: zetarisMode(), host: process.env.ZETARIS_API_URL ? new URL(process.env.ZETARIS_API_URL).host : null, parity: parityCache?.value ?? null },
     meterless: { memories, quarantinedLots: Object.values(world).filter((l) => l.status === 'QUARANTINED').map((l) => l.lotId) },
     brightdata: { live: Boolean(process.env.BRIGHTDATA_API_TOKEN) },

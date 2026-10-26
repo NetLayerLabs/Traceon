@@ -212,7 +212,7 @@ export function AskCase({ id, state, onOpenExhibit }: { id: string | null; state
                     ))}
                   </div>
                   <div className="qa-meta">
-                    <span className={`tag ${t.a.source === 'nemotron' ? 'nv' : ''}`}>{t.a.source === 'nemotron' ? 'Nemotron' : 'case file (model unavailable)'}</span>
+                    <span className={`tag ${t.a.source === 'nemotron' ? 'nv' : ''}`}>{t.a.source === 'nemotron' ? t.a.via ?? 'Nemotron' : 'case file (model unavailable)'}</span>
                     <span className={`tag ${t.a.guard.unverified.length ? 'bad' : 'good'}`}>
                       {t.a.guard.verified}/{t.a.guard.checked} figures verified
                     </span>
