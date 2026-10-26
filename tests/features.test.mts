@@ -199,3 +199,13 @@ test('the hottest group is chosen by evidence, not by a tiny group\'s raw rate',
   ]);
   assert.equal(hottestGroup(t.groups).group, 'HGST HUH721212ALN604');
 });
+
+test('after the recall: the Bolt EV software fix did not hold, the battery replacement did', async () => {
+  const { analyze, loadSnapshot, recallFollowUp } = await import('../src/lib/realRecall.ts');
+  const snap = loadSnapshot('bolt-ev')!;
+  const f = recallFollowUp(snap, analyze(snap));
+  assert.deepEqual(f.map((x) => [x.campaign, x.verdict]), [['20V701000', 'did-not-hold'], ['21V560000', 'held']]);
+  assert.equal(f[1].rollout.fires, 3, 'three fires were filed before the replacement could reach owners');
+  assert.equal(f[1].after.fires, 0);
+  assert.ok(f[1].after.complaints > 0, 'owners kept reporting other problems');
+});

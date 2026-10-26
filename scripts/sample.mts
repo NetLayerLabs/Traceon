@@ -19,7 +19,7 @@ const { buildCaseView } = await import('../src/lib/caseView.ts');
 const { verifyLedger } = await import('../src/lib/actions.ts');
 const { eightD, supplierPacket } = await import('../src/lib/reports.ts');
 const { simulateFollowUp } = await import('../src/lib/followup.ts');
-const { analyze, loadSnapshot } = await import('../src/lib/realRecall.ts');
+const { analyze, loadSnapshot, recallFollowUp } = await import('../src/lib/realRecall.ts');
 const { parseCsv, saveDataset } = await import('../src/lib/datasets.ts');
 
 const OUT = path.join(process.cwd(), 'sample-output');
@@ -120,6 +120,14 @@ for (const id of ['bolt-ev', 'kia-sorento', 'hyundai-santa-fe', 'hyundai-kona-el
   const h = bt.headline;
   say(`| ${bt.vehicle} | ${h?.alert ? `${h.alert.date} (${h.component})` : 'never'} | ${h?.recall ? `${h.recall.date} ${h.recall.campaign}` : 'none'} | ${h?.verdict === 'early' ? `${h.leadDays} days early` : h?.verdict ?? 'no signal'} |`);
   if (id === 'bolt-ev') expect(h?.verdict === 'early' && h.leadDays === 14, 'Bolt EV backtest');
+}
+say('');
+say('After the recall (real complaints; year before vs the year from 90 days after):');
+{
+  const snap = loadSnapshot('bolt-ev')!;
+  const fu = recallFollowUp(snap, analyze(snap));
+  for (const f of fu) say(`- Bolt EV ${f.campaign} (${f.date}): ${f.verdict === 'held' ? 'fix held' : f.verdict === 'did-not-hold' ? 'did not hold' : 'too few to tell'}. ${f.reason}`);
+  expect(fu.map((f) => f.verdict).join() === 'did-not-hold,held', 'Bolt EV follow-up');
 }
 
 say('');

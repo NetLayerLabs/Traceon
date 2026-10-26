@@ -1237,7 +1237,7 @@
     ],
     "rowCount": 3,
     "proofHash": "531c204c5d062ba57983cee6c739b70b801f54b15b1e256bcd34c6f9d249733c",
-    "latencyMs": 14,
+    "latencyMs": 12,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "531c204c5d062ba57983cee6c739b70b801f54b15b1e256bcd34c6f9d249733c",
@@ -1274,7 +1274,7 @@
     ],
     "rowCount": 3,
     "proofHash": "1130021fa0a68b85dd10498ccd67b9dcf35e85a16ed8fb6bfe56231042b3f0a9",
-    "latencyMs": 8,
+    "latencyMs": 5,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "1130021fa0a68b85dd10498ccd67b9dcf35e85a16ed8fb6bfe56231042b3f0a9",
@@ -1306,7 +1306,7 @@
     ],
     "rowCount": 2,
     "proofHash": "d2732372fde574551d25ee496b667c03fd3deb4dd1431600f60a9e4e5a430353",
-    "latencyMs": 5,
+    "latencyMs": 4,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "d2732372fde574551d25ee496b667c03fd3deb4dd1431600f60a9e4e5a430353",
@@ -1791,7 +1791,7 @@
     ],
     "rowCount": 6,
     "proofHash": "3fe301cfb4a8f37deb719a72821399788e46126cc9c2c1fad7dc0f09d1720f64",
-    "latencyMs": 9,
+    "latencyMs": 8,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "3fe301cfb4a8f37deb719a72821399788e46126cc9c2c1fad7dc0f09d1720f64",
@@ -3375,7 +3375,7 @@
     ],
     "rowCount": 4,
     "proofHash": "3963eb1dce10ab194520c04c2c1da920bde597f1125262d380a76c3af9445fad",
-    "latencyMs": 8,
+    "latencyMs": 9,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "3963eb1dce10ab194520c04c2c1da920bde597f1125262d380a76c3af9445fad",
@@ -4012,7 +4012,7 @@
     ],
     "rowCount": 6,
     "proofHash": "94d3f0d7d66efeca7e473e78bd22a77c1e77806bb07453026118612e2a4caf87",
-    "latencyMs": 9,
+    "latencyMs": 8,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "94d3f0d7d66efeca7e473e78bd22a77c1e77806bb07453026118612e2a4caf87",
@@ -4074,7 +4074,7 @@
     ],
     "rowCount": 3,
     "proofHash": "75ebc3df1a16780be0c4e9baa2add72c311ca6ca3da6c5d3c238e706d93d3fb1",
-    "latencyMs": 9,
+    "latencyMs": 8,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "75ebc3df1a16780be0c4e9baa2add72c311ca6ca3da6c5d3c238e706d93d3fb1",
@@ -4139,7 +4139,7 @@
     ],
     "rowCount": 6,
     "proofHash": "9b58572cf594023c0d5d272b80304f066c55a8f08694c060398963909b2166d7",
-    "latencyMs": 9,
+    "latencyMs": 8,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "9b58572cf594023c0d5d272b80304f066c55a8f08694c060398963909b2166d7",
@@ -6101,7 +6101,7 @@
     ],
     "rowCount": 60,
     "proofHash": "faff08de2ee25614b9a9d13853765957c952007e77330a84cb4f6222c8413580",
-    "latencyMs": 8,
+    "latencyMs": 9,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "faff08de2ee25614b9a9d13853765957c952007e77330a84cb4f6222c8413580",
@@ -13046,7 +13046,7 @@
     ],
     "rowCount": 116,
     "proofHash": "c5201db273ef6878110aaa4b638b0840adfed4edcd40ef5cc325f0592e8773df",
-    "latencyMs": 44,
+    "latencyMs": 46,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "c5201db273ef6878110aaa4b638b0840adfed4edcd40ef5cc325f0592e8773df",
@@ -13075,7 +13075,7 @@
     ],
     "rowCount": 2,
     "proofHash": "97aa72ce3b5ca42897da0137ce7334a741f0880ed0a21a42b2273dd6ebe751fe",
-    "latencyMs": 14,
+    "latencyMs": 17,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "97aa72ce3b5ca42897da0137ce7334a741f0880ed0a21a42b2273dd6ebe751fe",
@@ -13133,7 +13133,7 @@
     ],
     "rowCount": 6,
     "proofHash": "7f3c13d9e65d250e1332099a9c768ba81d8be95b8f99668957f1c8d0fe00cc0b",
-    "latencyMs": 5,
+    "latencyMs": 6,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "7f3c13d9e65d250e1332099a9c768ba81d8be95b8f99668957f1c8d0fe00cc0b",
@@ -13170,7 +13170,7 @@
     ],
     "rowCount": 3,
     "proofHash": "e1ec376d994fc971c3d867e335bf8ecadd873cda55234fd5ff931d843ca3d4f4",
-    "latencyMs": 8,
+    "latencyMs": 9,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "e1ec376d994fc971c3d867e335bf8ecadd873cda55234fd5ff931d843ca3d4f4",
@@ -13239,7 +13239,7 @@
     ],
     "rowCount": 2,
     "proofHash": "c88cf3e45f31b462513034f654fb03ec7beb756dd83e3b7a8d19c2aff1fdd3d3",
-    "latencyMs": 7,
+    "latencyMs": 8,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "c88cf3e45f31b462513034f654fb03ec7beb756dd83e3b7a8d19c2aff1fdd3d3",
@@ -13276,7 +13276,7 @@
     ],
     "rowCount": 3,
     "proofHash": "e77d068bf50810b0bc2a36970393af6fc5a80d4817dbd06b67baf354c5018037",
-    "latencyMs": 6,
+    "latencyMs": 7,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "e77d068bf50810b0bc2a36970393af6fc5a80d4817dbd06b67baf354c5018037",

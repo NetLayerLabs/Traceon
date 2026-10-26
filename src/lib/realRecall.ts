@@ -191,6 +191,8 @@ export interface Backtest {
   series: { d: string; cases: number; prr: number; chi2: number }[]; // headline component, weekly
   firesBeforeAlert: TargetComplaint[];
   fireRecalls: { campaign: string; date: string; component: string; key: string; summary: string }[];
+  /** After each fire recall of the headline component: did the fix hold? */
+  followUp?: RecallFollowUp[];
 }
 
 /** Replay the complaint history day by day and find each component's first signal. */
@@ -279,4 +281,81 @@ export function analyze(s: Snapshot): Backtest {
     firesBeforeAlert,
     fireRecalls,
   };
+}
+
+// ---------- After the recall: did the fix hold? ----------
+
+export interface RecallFollowUp {
+  campaign: string;
+  date: string;
+  summary: string;
+  before: { days: number; fires: number };
+  /** Fires while the remedy was still reaching owners (the lag window). */
+  rollout: { days: number; fires: number };
+  /** The year after the lag; `complaints` counts every complaint, a check that owners kept reporting. */
+  after: { days: number; fires: number; complaints: number };
+  /** One-sided exact test that fires became rarer after the recall (conditional binomial on the two counts). */
+  pDecrease: number;
+  nextRecall: { campaign: string; date: string } | null;
+  verdict: 'held' | 'did-not-hold' | 'too-few';
+  reason: string;
+}
+
+/** P(X <= k) for X ~ Binomial(n, p). */
+function binomCdf(k: number, n: number, p: number) {
+  if (k >= n) return 1;
+  let term = Math.pow(1 - p, n);
+  let sum = term;
+  for (let i = 1; i <= k; i++) {
+    term *= ((n - i + 1) / i) * (p / (1 - p));
+    sum += term;
+  }
+  return Math.min(1, sum);
+}
+
+const DAY_MS = 86_400_000;
+const addDays = (iso: string, d: number) => new Date(Date.parse(iso) + d * DAY_MS).toISOString().slice(0, 10);
+
+/**
+ * For each fire recall of the backtest's headline component, compare fire
+ * complaints in the year after the recall with the year before. A fix that
+ * holds shows significantly fewer; one that does not keeps them coming,
+ * often followed by another recall of the same component. Complaints are
+ * dated by filing, remedies take months to reach owners, and publicity after
+ * a recall raises reporting, so this is evidence, not proof.
+ */
+export function recallFollowUp(s: Snapshot, bt: Backtest, windowDays = 365, lagDays = 90): RecallFollowUp[] {
+  const h = bt.headline;
+  if (!h) return [];
+  const recalls = bt.fireRecalls.filter((r) => r.key === h.component);
+  const fires = s.complaints.filter((c) => c.f && c.c.includes(h.component)).map((c) => c.d).sort();
+  const lastData = [...s.complaints.map((c) => c.d), ...s.comparators.map((c) => c.d)].sort().at(-1) ?? s.fetchedAt;
+  return recalls.map((r, i) => {
+    const next = recalls.slice(i + 1).find((x) => x.date > r.date) ?? null;
+    // Remedies take months to reach owners: the year after is counted from the end of a lag.
+    const beforeStart = addDays(r.date, -windowDays);
+    const afterStart = addDays(r.date, lagDays);
+    const afterEnd = [addDays(afterStart, windowDays), lastData].sort()[0];
+    const afterDays = Math.max(1, Math.round((Date.parse(afterEnd) - Date.parse(afterStart)) / DAY_MS));
+    const before = fires.filter((d) => d >= beforeStart && d < r.date).length;
+    const rollout = fires.filter((d) => d >= r.date && d < afterStart).length;
+    const after = fires.filter((d) => d >= afterStart && d < afterEnd).length;
+    const complaintsAfter = s.complaints.filter((c) => c.d >= afterStart && c.d < afterEnd).length;
+    const n = before + after;
+    const pDecrease = n ? binomCdf(after, n, afterDays / (afterDays + windowDays)) : 1;
+    const soonNext = next && Date.parse(next.date) - Date.parse(r.date) <= 2 * 365 * DAY_MS ? next : null;
+    let verdict: RecallFollowUp['verdict'];
+    let reason: string;
+    if (after >= 3 && pDecrease >= 0.05) {
+      verdict = 'did-not-hold';
+      reason = `${after} fire complaints in the year from ${lagDays} days after the recall, against ${before} in the year before (no significant drop, p = ${pDecrease.toFixed(2)})${soonNext ? `; another fire recall of the same component followed on ${soonNext.date} (${soonNext.campaign})` : ''}.`;
+    } else if (n >= 4 && pDecrease < 0.05) {
+      verdict = 'held';
+      reason = `${after} fire complaints in the year from ${lagDays} days after the recall, against ${before} in the year before (significant drop, p = ${pDecrease < 0.001 ? pDecrease.toExponential(1) : pDecrease.toFixed(3)}), while owners kept filing other complaints (${complaintsAfter}).`;
+    } else {
+      verdict = 'too-few';
+      reason = `${before} fire complaints in the year before and ${after} in the year after the lag: too few to tell.`;
+    }
+    return { campaign: r.campaign, date: r.date, summary: r.summary, before: { days: windowDays, fires: before }, rollout: { days: lagDays, fires: rollout }, after: { days: afterDays, fires: after, complaints: complaintsAfter }, pDecrease, nextRecall: next && { campaign: next.campaign, date: next.date }, verdict, reason };
+  });
 }

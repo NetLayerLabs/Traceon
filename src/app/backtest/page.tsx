@@ -220,6 +220,50 @@ function BacktestView({ bt }: { bt: Backtest }) {
           </p>
         </div>
       )}
+      {(bt.followUp?.length ?? 0) > 0 && (
+        <div className="card">
+          <h3>
+            After the recall: did the fix hold?
+            <span className="tag">real complaints</span>
+          </h3>
+          <div className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>
+            Fire complaints for the same component in the year before each recall against the year starting 90 days after it, leaving time for the remedy to reach owners. Exact one-sided test for a drop.
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Recall</th>
+                  <th>Year before</th>
+                  <th>First 90 days</th>
+                  <th>Year after</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bt.followUp!.map((f) => (
+                  <tr key={f.campaign}>
+                    <td className="mono">
+                      {f.date} {f.campaign}
+                    </td>
+                    <td>{f.before.fires} fires</td>
+                    <td className="faint">{f.rollout.fires}</td>
+                    <td>
+                      {f.after.fires} fires <span className="faint">({f.after.complaints} complaints in all)</span>
+                    </td>
+                    <td className={f.verdict === 'held' ? 'good' : f.verdict === 'did-not-hold' ? 'bad' : 'faint'} title={f.reason}>
+                      {f.verdict === 'held' ? 'Fix held' : f.verdict === 'did-not-hold' ? 'Did not hold' : 'Too few to tell'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="faint" style={{ fontSize: 11.5, marginTop: 6 }}>
+            {bt.followUp!.map((f) => `${f.campaign}: ${f.reason}`).join(' ')} Complaints are dated by filing, and publicity after a recall raises reporting, so this is evidence about the fix, not proof.
+          </div>
+        </div>
+      )}
       <div className="faint" style={{ fontSize: 12, borderLeft: '3px solid var(--ochre)', paddingLeft: 10 }}>
         Caveat: a match is by component family and fire wording in the complaint, not proof that the signal and the recall concern the same defect. Complaints have no sales denominator, so the test compares shares of complaints, not failure rates. Data: {bt.source}, fetched {bt.fetchedAt}.
       </div>

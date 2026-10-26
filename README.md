@@ -47,6 +47,7 @@ Each example below is reproduced by `./sample.sh`. Its full output for this run 
 **4. Real data: the Chevy Bolt EV battery fires**
 - **Input.** 229 public NHTSA complaints against 15,774 complaints for ten comparator vehicles.
 - **Output.** The fire signal fires on **30 October 2020**, 14 days before GM's recall 20V701000 on 13 November 2020. Across the five bundled vehicles it comes first on three (Bolt EV 14 days, Kia Sorento 72, Hyundai Santa Fe 380), shows no signal on the Kona Electric, and comes after the recall on the Ford Escape.
+- **After the recall.** The same data verifies the fixes. GM's first remedy (20V701000, a software update) **did not hold**: fires continued, and a second recall followed. The battery replacement (21V560000) **held**: no fire complaints in the year from 90 days after it, against 5 in the year before (p = 0.031), while owners kept filing other complaints.
 
 ## Five things to try, no login or key needed
 
@@ -308,7 +309,7 @@ Each step is optional. Without keys every model step uses a labelled template an
 | The Meterless H-MEM and Markovian engines, running locally | The ERP hold table, stop-sale notice, OTA order and CPSC draft: written locally, never sent to any ERP, distributor or regulator |
 | The Zetaris SQL API client, built from Zetaris's published OpenAPI spec, with a hash-parity check | Until a Zetaris instance is configured, queries run on the local alasql mirror; with Zetaris, only the reference scenario runs there and every other scenario and upload runs locally, labelled in each exhibit |
 | Your own CSV on **Your data**, and the bundled Backblaze sample: 355,689 real drives from Q2 2026 (public Drive Stats) | The second sample there, 12,000 chargers (`scripts/make-sample-csv.mts`), generated with a planted cause |
-| NHTSA complaints and recalls behind the backtest (snapshots in `data/nhtsa/`, or live) | The 30 days after a fix in **Verify the fix**, drawn from the scenario's own failure rates |
+| NHTSA complaints and recalls behind the backtest (snapshots in `data/nhtsa/`, or live), including the check after each recall of whether the fix held | The 30 days after a fix in the case file's **Verify the fix**, drawn from the scenario's own failure rates (the real-data version is under Real recalls) |
 | OpenTimestamps proofs from the public calendars, and the Ed25519 signature | Without a model, the photo's analysis is a labelled offline reference, which never counts as evidence in the gate |
 | The sample defect photo: a real NTSB evidence photo of the lithium-ion battery from the JAL Boeing 787 that went into thermal runaway at Boston on 7 January 2013 (public domain), analysed live by Nemotron | It stands in for a customer's photo: it is not a VoltRide pack, and the app says so under the photo |
 | The scoreboard, recorded from real runs with Nemotron | Watch mode replays the scenario's history day by day; it does not read a live warranty feed |

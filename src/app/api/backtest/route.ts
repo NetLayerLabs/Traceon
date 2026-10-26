@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
-import { analyze, CASES, liveSnapshot, loadSnapshot } from '@/lib/realRecall';
+import { analyze, CASES, liveSnapshot, loadSnapshot, recallFollowUp } from '@/lib/realRecall';
+import type { Snapshot } from '@/lib/realRecall';
+
+const withFollowUp = (snap: Snapshot) => {
+  const bt = analyze(snap);
+  return { ...bt, followUp: recallFollowUp(snap, bt) };
+};
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -11,7 +17,7 @@ export async function GET(req: Request) {
   if (id) {
     const snap = loadSnapshot(id);
     if (!snap) return NextResponse.json({ error: 'unknown case' }, { status: 404 });
-    return NextResponse.json(analyze(snap));
+    return NextResponse.json(withFollowUp(snap));
   }
   const cases = CASES.map((c) => {
     const snap = loadSnapshot(c.id);
@@ -32,7 +38,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'make, model and one to six model years are required' }, { status: 400 });
   }
   try {
-    return NextResponse.json(analyze(await liveSnapshot(make, model, years)));
+    return NextResponse.json(withFollowUp(await liveSnapshot(make, model, years)));
   } catch (err) {
     return NextResponse.json({ error: `NHTSA lookup failed: ${(err as Error).message}` }, { status: 502 });
   }

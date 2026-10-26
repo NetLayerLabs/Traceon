@@ -1,6 +1,6 @@
 # Traceon sample run
 
-Run 2026-10-26T21:53:03.678Z: offline, no keys, no network. Model steps use labelled templates; every statistic, verdict and proof is computed exactly as in live mode.
+Run 2026-10-26T21:58:13.336Z: offline, no keys, no network. Model steps use labelled templates; every statistic, verdict and proof is computed exactly as in live mode.
 
 ## 1. Reference case: 125 thermal claims, seven suspects
 - Verdict: **cell_batch = CB-B-0917**, relative risk 1668x, explains 92.8% of incidents
@@ -42,6 +42,10 @@ Run 2026-10-26T21:53:03.678Z: offline, no keys, no network. Model steps use labe
 | HYUNDAI SANTA FE | 2021-01-19 (SERVICE) | 2022-02-03 22V056000 | 380 days early |
 | HYUNDAI KONA ELECTRIC | never | 2020-10-13 20V630000 | no-signal |
 | FORD ESCAPE | 2014-03-20 (ENGINE) | 2012-09-04 12V431000 | late |
+
+After the recall (real complaints; year before vs the year from 90 days after):
+- Bolt EV 20V701000 (2020-11-13): did not hold. 6 fire complaints in the year from 90 days after the recall, against 3 in the year before (no significant drop, p = 0.91); another fire recall of the same component followed on 2021-07-23 (21V560000).
+- Bolt EV 21V560000 (2021-07-23): fix held. 0 fire complaints in the year from 90 days after the recall, against 5 in the year before (significant drop, p = 0.031), while owners kept filing other complaints (50).
 
 ## All checks passed.
 

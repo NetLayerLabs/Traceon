@@ -431,7 +431,7 @@ export function FollowUp({ id }: { id: string | null }) {
         <span className="tag warn">simulated 30 days</span>
       </h3>
       <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
-        A fix is a prediction. Simulate the 30 days after it on this scenario’s own failure rates, then check the pre-registered falsifiers.
+        A fix is a prediction. Simulate the 30 days after it on this scenario’s own failure rates, then check the pre-registered falsifiers. The same check on real recalls is under <a href="/backtest">Real recalls</a>.
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         <button className="btn small" style={{ flex: 1 }} onClick={() => go('planned')} disabled={!id || Boolean(busy)}>
