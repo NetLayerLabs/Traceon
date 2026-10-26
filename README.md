@@ -127,7 +127,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | `NVIDIA_API_KEY` | Server environment only | Call NIM chat completions for planning, red team, vision and the explanation | Reach the browser, produce a statistic, or trigger an action |
 | Zetaris token or login | Server environment only | Send `SELECT` queries through the SQL API | Write to Zetaris: the app sends no write statements; holds go to the local ERP table |
-| `BRIGHTDATA_API_TOKEN` | Server environment only | Fetch public review and forum pages | Reach the browser |
+| `BRIGHTDATA_API_TOKEN` | Server environment only | Fetch public news pages through the Web Unlocker (at most once per 30 minutes) | Reach the browser |
 | Named approver | Typed in the browser | Approve the confirmed causes of a completed run whose gate passed | Act on a blocked run, an unconfirmed cause or an unknown ledger root (403) |
 | Anyone with the URL | Browser | Run investigations, open exhibits, replay proofs, reset the demo | Start a second run while one is active (409) |
 
@@ -281,7 +281,8 @@ Each step is optional. Without keys every model step uses a labelled template an
 | Real | Simulated or local |
 | --- | --- |
 | CPSC, openFDA and NHTSA data, fetched live on each run | The company (VoltRide), its 180,000 units, lots, suppliers, warehouses and warranty claims |
-| Nemotron 3.5 Super VL and Lightning calls through NVIDIA NIM, with reasoning traces when thinking wins the race | Reviews and forum posts, unless `BRIGHTDATA_API_TOKEN` is set (labelled *simulated* in the app) |
+| Nemotron 3.5 Super VL and Lightning calls through NVIDIA NIM, with reasoning traces when thinking wins the race | Reviews and forum posts about the VR-48: the product is fictional, so they are simulated and labelled *simulated* |
+| Bright Data Web Unlocker fetching current news on e-bike battery fires (Google News), shown as live context in the intake | n/a |
 | Every statistic, verdict, gate decision and proof hash | The planted causes in each scenario (the agent is never told them) |
 | The Meterless H-MEM and Markovian engines, running locally | The ERP hold table, stop-sale notice, OTA order and CPSC draft: written locally, never sent to any ERP, distributor or regulator |
 | The Zetaris SQL API client, built from Zetaris's published OpenAPI spec, with a hash-parity check | Until a Zetaris instance is configured, queries run on the local alasql mirror; with Zetaris, only the reference scenario runs there and every other scenario and upload runs locally, labelled in each exhibit |
@@ -321,7 +322,7 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | `ZETARIS_API_URL`, `ZETARIS_ORG_ID` | Zetaris SQL API host and organisation | Unset: every query runs on the local mirror |
 | `ZETARIS_API_TOKEN`, or `ZETARIS_USERNAME` + `ZETARIS_PASSWORD` | Zetaris authentication (token, or Basic login with automatic refresh) | Required for the cloud path |
 | `ZETARIS_SCHEMA`, `ZETARIS_TABLE_MAP` | Where the tables live in Zetaris, for example `traceon`, or a per-table JSON map | Unqualified table names |
-| `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_ZONE` | Live review and forum fetch through the Web Unlocker | Unset: labelled simulated posts; zone `web_unlocker1` |
+| `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_ZONE` | Live news on e-bike battery fires through the Web Unlocker, shown as real-world context (cached 30 minutes) | Unset: no news feed; zone `web_unlocker1` |
 | `OPENFDA_API_KEY` | Higher openFDA rate limits | openFDA works without a key |
 | `METERLESS_STORAGE_DIR` | Where H-MEM and the world model persist | `./.meterless-data` (`/tmp/meterless-data` on Vercel) |
 | `DEMO_PACING_MS` | Delay between steps so a demo is watchable | 350 |
@@ -438,7 +439,7 @@ src/lib/zetaris.ts            Zetaris SQL API client, canonical proof hashes, lo
 src/lib/meterless.ts          H-MEM ingestion and convergence, world model, Markovian chain
 src/lib/nemotron.ts           NVIDIA NIM client: thinking race, retries, cache, de-duplication
 src/lib/vision.ts             defect-photo forensics
-src/lib/signals.ts            federal feeds, Bright Data, warranty claims
+src/lib/signals.ts            federal feeds, Bright Data news, warranty claims, simulated VR-48 chatter
 src/lib/actions.ts            remediation and proof replay
 src/lib/runRegistry.ts        one-run lock, watchdog, event log, server-side gate check
 src/lib/singleton.ts          process-wide state shared by every route

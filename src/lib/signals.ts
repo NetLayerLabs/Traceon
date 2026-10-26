@@ -2,6 +2,7 @@
 // and internal warranty claims. Live feeds are never faked: if a feed is
 // unreachable it comes back empty with status 'unreachable'.
 import { getEnterpriseMesh, getSimulatedChatter, PRODUCT_NAME, resolveScenario } from './enterpriseData';
+import { singleton } from './singleton';
 
 export type FeedStatus = 'live' | 'unreachable' | 'simulated' | 'uploaded';
 
@@ -14,7 +15,8 @@ export interface RadarItem {
   url?: string;
   tags: string[];
   city?: string;
-  kind: 'federal' | 'web' | 'warranty';
+  /** federal and news are real-world context; web and warranty are the product's own signals. */
+  kind: 'federal' | 'web' | 'warranty' | 'news';
 }
 
 export interface FeedResult {
@@ -172,39 +174,11 @@ const toIso = (d: string) => {
 const titleCase = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()).replace(/\bEv\b/, 'EV');
 
 /**
- * Bright Data Web Unlocker. With BRIGHTDATA_API_TOKEN set, fetches a Reddit
- * search for the product; otherwise returns the simulated chatter set,
- * explicitly labeled as simulated.
+ * Reviews and forum posts about the VoltRide VR-48. The product is fictional,
+ * so no real posts about it exist: this is the scenario's simulated chatter,
+ * always labelled simulated. It feeds H-MEM like the warranty claims.
  */
 export async function fetchWebSignals(scenarioId = 'reference'): Promise<FeedResult> {
-  const token = process.env.BRIGHTDATA_API_TOKEN;
-  // Live scraping only makes sense for the reference story; other scenarios are simulated end to end.
-  if (token && scenarioId === 'reference') {
-    const target = `https://www.reddit.com/search.json?q=${encodeURIComponent('"VR-48" battery')}&sort=new&limit=25`;
-    const data = (await getJson('https://api.brightdata.com/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ zone: process.env.BRIGHTDATA_ZONE || 'web_unlocker1', url: target, format: 'raw' }),
-    })) as { data?: { children?: any[] } } | null;
-    const posts = data?.data?.children ?? [];
-    if (posts.length) {
-      return {
-        feed: 'Bright Data (Reddit)',
-        status: 'live',
-        note: `${posts.length} live posts`,
-        items: posts.map((p) => ({
-          id: `BD-${p.data.id}`,
-          source: `Reddit r/${p.data.subreddit}`,
-          date: new Date(p.data.created_utc * 1000).toISOString().slice(0, 10),
-          title: p.data.title,
-          detail: String(p.data.selftext ?? '').slice(0, 260),
-          url: `https://reddit.com${p.data.permalink}`,
-          tags: symptomTags(`${p.data.title} ${p.data.selftext}`),
-          kind: 'web' as const,
-        })),
-      };
-    }
-  }
   const items = getSimulatedChatter(scenarioId).map((c) => ({
     id: c.id,
     source: c.channel,
@@ -215,12 +189,75 @@ export async function fetchWebSignals(scenarioId = 'reference'): Promise<FeedRes
     tags: symptomTags(c.text),
     kind: 'web' as const,
   }));
-  return {
-    feed: 'Bright Data (web reviews & forums)',
-    status: 'simulated',
-    note: token && scenarioId === 'reference' ? 'Live fetch returned no posts; showing simulated set' : token ? 'Simulated chatter for this scenario' : 'No BRIGHTDATA_API_TOKEN; simulated chatter for fictional SKU',
-    items,
+  return { feed: 'Web reviews & forums (VoltRide)', status: 'simulated', note: 'Simulated posts about the fictional VR-48; no real posts can exist', items };
+}
+
+/**
+ * Bright Data Web Unlocker: real, current news on e-bike and lithium-battery
+ * fires (Google News RSS fetched through Bright Data). Real-world context in
+ * the radar, like the federal feeds; it never enters a case's evidence. One
+ * request per 30 minutes at most, so judging costs cents of credit.
+ */
+const newsCache = singleton('bd-news', () => ({ at: 0, value: null as FeedResult | null }));
+export const NEWS_QUERY = '"e-bike" battery fire';
+
+export function parseNewsRss(xml: string) {
+  const text = (s: string) => s.replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+  return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)]
+    .map((m) => {
+      const get = (tag: string) => text(m[1].match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`))?.[1] ?? '');
+      const source = get('source');
+      const title = get('title').replace(new RegExp(`\\s+-\\s+${source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), '');
+      const date = new Date(get('pubDate'));
+      return { title, link: get('link'), source, date: Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10) };
+    })
+    .filter((n) => n.title && n.date);
+}
+
+export async function fetchBrightDataNews(): Promise<FeedResult | null> {
+  const token = process.env.BRIGHTDATA_API_TOKEN;
+  if (!token) return null;
+  if (newsCache.value && Date.now() - newsCache.at < 30 * 60_000) return newsCache.value;
+  const target = `https://news.google.com/rss/search?q=${encodeURIComponent(NEWS_QUERY)}&hl=en-US&gl=US&ceid=US:en`;
+  let xml: string | null = null;
+  try {
+    const res = await fetch('https://api.brightdata.com/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ zone: process.env.BRIGHTDATA_ZONE || 'web_unlocker1', url: target, format: 'raw' }),
+      signal: AbortSignal.timeout(TIMEOUT * 2),
+    });
+    xml = res.ok ? await res.text() : null;
+  } catch {
+    xml = null;
+  }
+  // Syndicated stories repeat under several outlets: keep the first of each headline.
+  const seen = new Set<string>();
+  const news = (xml ? parseNewsRss(xml) : [])
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .filter((n) => {
+      const k = n.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      return !seen.has(k) && Boolean(seen.add(k));
+    });
+  if (!news.length) return { feed: 'Bright Data (news)', status: 'unreachable', note: 'Bright Data returned no articles', items: [] };
+  const value: FeedResult = {
+    feed: 'Bright Data (news)',
+    status: 'live',
+    note: `${news.length} recent news reports of e-bike battery fires (Google News via Bright Data Web Unlocker)`,
+    items: news.slice(0, 15).map((n, i) => ({
+      id: `NEWS-${n.date}-${i}`,
+      source: n.source || 'News',
+      date: n.date,
+      title: n.title.slice(0, 140),
+      detail: `${n.source ? `${n.source}. ` : ''}Real-world report, context only.`,
+      url: n.link,
+      tags: symptomTags(n.title),
+      kind: 'news' as const,
+    })),
   };
+  newsCache.value = value;
+  newsCache.at = Date.now();
+  return value;
 }
 
 export function fetchWarrantyClaims(scenarioId = 'reference'): FeedResult {
@@ -256,11 +293,12 @@ export function symptomTags(text: string): string[] {
 export async function fetchAllFeeds(scenarioId = 'reference'): Promise<FeedResult[]> {
   // Uploaded data is someone else's product: the e-bike federal context does not apply.
   if (resolveScenario(scenarioId).custom) return [fetchWarrantyClaims(scenarioId)];
-  const [cpsc, fda, nhtsa, web] = await Promise.all([
+  const [cpsc, fda, nhtsa, web, news] = await Promise.all([
     fetchCpscEbikeRecalls(),
     fetchOpenFdaBatteryEvents(),
     fetchNhtsaBatteryFires(),
     fetchWebSignals(scenarioId),
+    fetchBrightDataNews(),
   ]);
-  return [fetchWarrantyClaims(scenarioId), web, cpsc, fda, nhtsa];
+  return [fetchWarrantyClaims(scenarioId), web, cpsc, fda, nhtsa, ...(news ? [news] : [])];
 }

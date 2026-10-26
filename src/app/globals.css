@@ -120,6 +120,7 @@ main.pane { background: var(--sheet); }
 .signal.warranty { border-left-color: var(--ink); }
 .signal.web { border-left-color: var(--link); }
 .signal.federal { border-left-color: var(--ochre); }
+.signal.news { border-left-color: var(--signal); }
 .signal.hit { background: linear-gradient(90deg, var(--signal-soft), transparent 60%); }
 .signal .meta { display: flex; gap: 8px; font: 10.5px/1.4 var(--mono); color: var(--muted); margin-bottom: 2px; flex-wrap: wrap; }
 .signal .meta b { color: var(--ink); font-weight: 500; }

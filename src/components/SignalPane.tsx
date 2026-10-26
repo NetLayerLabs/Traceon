@@ -8,6 +8,7 @@ const KINDS = [
   { id: 'warranty', label: 'Warranty' },
   { id: 'web', label: 'Web' },
   { id: 'federal', label: 'Federal' },
+  { id: 'news', label: 'News' },
 ] as const;
 
 export function SignalPane(props: {

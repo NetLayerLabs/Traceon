@@ -329,7 +329,8 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
 
   const productSignals: IncomingSignal[] = feeds
     .flatMap((f) => f.items)
-    .filter((i) => i.kind !== 'federal')
+    // Only the product's own signals; federal feeds and news are real-world context.
+    .filter((i) => i.kind === 'web' || i.kind === 'warranty')
     .map((i) => ({ id: i.id, channel: i.kind === 'warranty' ? 'warranty' : i.source, date: i.date, city: i.city, text: `${i.title}. ${i.detail}`, tags: i.tags }));
   const ing = ingestSignals(productSignals, scenarioId);
   log(`H-MEM: ${ing.added} new signals stored (${ing.total} memories total, durable across sessions)`);

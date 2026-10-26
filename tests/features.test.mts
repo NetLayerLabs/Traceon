@@ -182,3 +182,9 @@ test('openFDA intake keeps only lithium-battery thermal events', async () => {
   assert.equal(isLithiumThermalEvent('Battery overheat warning displayed; no lithium battery involved'), false);
   assert.equal(isLithiumThermalEvent('A latent internal battery cell defect in the lithium-ion battery caused an internal short circuit and thermal runaway'), true);
 });
+
+test('Bright Data news: RSS items parse, outlet suffix stripped, entities decoded', async () => {
+  const { parseNewsRss } = await import('../src/lib/signals.ts');
+  const xml = `<rss><channel><item><title>E-bike battery fires in Yosemite &amp; Grand Canyon trigger warning - SFGATE</title><link>https://news.google.com/x</link><pubDate>Thu, 22 Oct 2026 07:00:00 GMT</pubDate><source url="https://www.sfgate.com">SFGATE</source></item><item><title>No date</title></item></channel></rss>`;
+  assert.deepEqual(parseNewsRss(xml), [{ title: 'E-bike battery fires in Yosemite & Grand Canyon trigger warning', link: 'https://news.google.com/x', source: 'SFGATE', date: '2026-10-22' }]);
+});
