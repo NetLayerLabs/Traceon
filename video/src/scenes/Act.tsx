@@ -3,13 +3,14 @@ import { interpolate } from "remotion";
 import { C, mono, sans } from "../theme";
 import { clamp } from "../ui/motion";
 import { Brackets } from "../ui/Brackets";
-import { Browser } from "../ui/Footage";
+import { Browser, syncTo } from "../ui/Footage";
 import { Count } from "../ui/Count";
 import { Fill, Kicker, Note, R, SIM, ease, useCue } from "./common";
 
 /** A named person approves; Traceon holds the exact 1,380 units of lot L-409, not all 180,000. */
 export const Act: React.FC = () => {
   const { f, rel } = useCue("act");
+  const tApprove = rel("approve.");
   const tNamed = rel("named"), tHolds = rel("holds"), tNot = rel("not"), tSaves = rel("saves");
   const plan = R.reference.plan, lot = R.reference.cause.lot;
   // 180,000 units as 1,800 squares of 100; the 1,380 held are 14 of them, in one run (serials SN-88400..89779).
@@ -21,8 +22,9 @@ export const Act: React.FC = () => {
   const cr = { x: gx + 22 * cell - 6, y: gy + 18 * cell - 6, w: held * cell + 12, h: cell + 12 };
   return (
     <Fill tone="dark">
-      <Browser name="act" url="localhost · same build" width={1020} left={90} top={160}
-        cams={[{ f: 0, rect: "disposition", z: 1.3 }, { f: tNamed + 20, rect: "approve", z: 1.6 }, { f: tHolds + 30, rect: "disposition", z: 1.3 }]} />
+      <Browser name="act_local" url="localhost · this Mac · Traceon" width={1020} left={90} top={160}
+        startFrom={syncTo("act_local", "act_local.approved", tApprove)}
+        cams={[{ f: 0, rect: "approve", z: 1.7 }, { f: tNamed, rect: "approve", z: 1.8 }, { f: tHolds + 10, rect: "result", z: 1.5 }]} />
       <div style={{ position: "absolute", left: 1250, top: 150, width: 560 }}>
         <Kicker color="rgba(242,239,231,0.6)">A named person approves</Kicker>
         <div style={{ marginTop: 18, fontFamily: sans, fontWeight: 600, fontSize: 112, letterSpacing: "-0.05em", lineHeight: 1, color: C.signalHi }}>
