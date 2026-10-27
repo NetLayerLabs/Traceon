@@ -4,11 +4,15 @@
 //   - a client whose stream drops can catch up by polling the run's event log,
 //   - a run that hangs is ended by a watchdog instead of holding the lock forever.
 import crypto from 'node:crypto';
+import { caseIdFor, getCase } from './cases';
 import { runInvestigation } from './investigation';
 import type { InvestigationEvent, VisionFinding } from './investigation';
 import { singleton } from './singleton';
 
 export const RUN_TIMEOUT_MS = Number(process.env.RUN_TIMEOUT_MS ?? 240_000);
+// Finished runs stay readable (ask, reports, share, approve) until this many newer
+// runs exist. Everyone on a shared server counts; each run holds about 0.5 MB.
+const KEEP_RUNS = 100;
 
 export interface Run {
   id: string;
@@ -66,7 +70,11 @@ export function startRun(scenarioId: string, vision: VisionFinding | null): Run 
   const run: Run = { id: crypto.randomUUID(), scenarioId, startedAt: Date.now(), finishedAt: null, events: [], listeners: new Set() };
   state.active = run;
   state.recent.set(run.id, run);
-  while (state.recent.size > 8) state.recent.delete(state.recent.keys().next().value!);
+  // Oldest finished runs go first; a run that has not finished is never dropped.
+  for (const [id, r] of state.recent) {
+    if (state.recent.size <= KEEP_RUNS) break;
+    if (r.finishedAt !== null) state.recent.delete(id);
+  }
 
   const watchdog = setTimeout(() => push(run, { type: 'error', message: `Investigation timed out after ${RUN_TIMEOUT_MS / 1000}s` }), RUN_TIMEOUT_MS);
   runInvestigation((e) => push(run, e), { vision, scenarioId })
@@ -81,22 +89,22 @@ export function startRun(scenarioId: string, vision: VisionFinding | null): Run 
 
 /**
  * Server-side evidence gate for actions: a remediation is allowed only for a
- * completed run (still in the registry) whose ledger root matches, whose gate
- * passed, and which confirmed every requested cause. The UI hides the button
- * otherwise; this makes the API enforce the same rule.
+ * completed run (still in the registry, or shared as a case) whose ledger root
+ * matches, whose gate passed, and which confirmed every requested cause. The UI
+ * hides the button otherwise; this makes the API enforce the same rule.
  */
-export function authorizeRemediation(ledgerRoot: string, causes: { column: string; group: string; remedy: string }[]): { ok: true; run: Run } | { ok: false; reason: string } {
-  for (const run of [...state.recent.values()].reverse()) {
-    const ledger = run.events.find((e): e is Extract<InvestigationEvent, { type: 'ledger' }> => e.type === 'ledger');
-    if (!ledger || ledger.root !== ledgerRoot) continue;
-    if (run.finishedAt === null) return { ok: false, reason: 'The investigation is still running' };
-    const gate = run.events.find((e): e is Extract<InvestigationEvent, { type: 'gate' }> => e.type === 'gate');
-    if (!gate?.pass) return { ok: false, reason: 'The evidence gate did not pass for this investigation' };
-    const action = run.events.find((e): e is Extract<InvestigationEvent, { type: 'action' }> => e.type === 'action');
-    const confirmed = new Set((action?.plan.causes ?? []).map((c) => `${c.column}=${c.group}=${c.remedy}`));
-    const extra = causes.find((c) => !confirmed.has(`${c.column}=${c.group}=${c.remedy}`));
-    if (extra) return { ok: false, reason: `${extra.column}=${extra.group} was not confirmed by this investigation` };
-    return { ok: true, run };
-  }
-  return { ok: false, reason: 'Unknown ledger root: run the investigation again before acting' };
+export function authorizeRemediation(ledgerRoot: string, causes: { column: string; group: string; remedy: string }[]): { ok: true; scenarioId: string } | { ok: false; reason: string } {
+  const run = [...state.recent.values()].reverse().find((r) => r.events.some((e) => e.type === 'ledger' && e.root === ledgerRoot));
+  if (run && run.finishedAt === null) return { ok: false, reason: 'The investigation is still running' };
+  // A run that has left memory can still be acted on if it was shared: cases are saved finished runs.
+  const saved = run ? null : getCase(caseIdFor(ledgerRoot));
+  const found = run ?? (saved?.ledgerRoot === ledgerRoot ? saved : null);
+  if (!found) return { ok: false, reason: 'Unknown ledger root: run the investigation again before acting' };
+  const gate = found.events.find((e): e is Extract<InvestigationEvent, { type: 'gate' }> => e.type === 'gate');
+  if (!gate?.pass) return { ok: false, reason: 'The evidence gate did not pass for this investigation' };
+  const action = found.events.find((e): e is Extract<InvestigationEvent, { type: 'action' }> => e.type === 'action');
+  const confirmed = new Set((action?.plan.causes ?? []).map((c) => `${c.column}=${c.group}=${c.remedy}`));
+  const extra = causes.find((c) => !confirmed.has(`${c.column}=${c.group}=${c.remedy}`));
+  if (extra) return { ok: false, reason: `${extra.column}=${extra.group} was not confirmed by this investigation` };
+  return { ok: true, scenarioId: found.scenarioId };
 }

@@ -24,8 +24,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ ...v, publishedRoot: view.ledger.root, rootMatches, ok: v.ok && rootMatches });
     }
     if (!Array.isArray(body.evidence)) return NextResponse.json({ error: 'id, or an evidence array, is required' }, { status: 400 });
-    return NextResponse.json(await verifyLedger(body.evidence, resolveScenario(body.scenario).id));
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    const exhibit = (it: unknown) => !!it && typeof it === 'object' && ['id', 'label', 'proofHash'].every((k) => typeof (it as Record<string, unknown>)[k] === 'string');
+    if (!body.evidence.every(exhibit)) return NextResponse.json({ error: 'Each exhibit needs a string id, label and proofHash' }, { status: 400 });
+    let scenarioId: string;
+    try {
+      if (body.scenario != null && typeof body.scenario !== 'string') throw new Error('scenario must be a string');
+      scenarioId = resolveScenario(body.scenario).id;
+    } catch (err) {
+      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    }
+    return NextResponse.json(await verifyLedger(body.evidence, scenarioId));
+  } catch {
+    // Inputs are checked above; anything that still fails is ours, and its internals stay here.
+    return NextResponse.json({ error: 'The proof could not be replayed' }, { status: 500 });
   }
 }

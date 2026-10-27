@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const auth = authorizeRemediation(body.ledgerRoot, body.causes);
   if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 403 });
   try {
-    return NextResponse.json(await executeRemediation({ ...body, scenario: auth.run.scenarioId }));
+    return NextResponse.json(await executeRemediation({ ...body, scenario: auth.scenarioId }));
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });
   }
