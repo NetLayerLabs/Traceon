@@ -1,7 +1,7 @@
 import React from "react";
 import { C, mono, sans } from "../theme";
 import { pop } from "../ui/motion";
-import { Browser } from "../ui/Footage";
+import { Browser, syncTo } from "../ui/Footage";
 import { Count } from "../ui/Count";
 import { Logo } from "../ui/Logo";
 import { Words } from "../ui/Words";
@@ -16,8 +16,9 @@ export const Converge: React.FC = () => {
   const max = cities[0][1];
   return (
     <Fill tone="dark">
-      <Browser name="intake" url="traceon.netlayerlabs.com/app" width={1080} left={100} top={170} enter={0}
-        cams={[{ f: 0, z: 1 }, { f: tPulls, rect: "convergence", z: 1.6 }, { f: tSix + 30, rect: "convergence", z: 1.7 }]} />
+      <Browser name="run_live" url="traceon.netlayerlabs.com/app" width={1080} left={100} top={170} enter={0}
+        startFrom={syncTo("run_live", "run_live.converged", tInc)}
+        cams={[{ f: 0, z: 1 }, { f: tPulls - 8, rect: "convergence", z: 1.9 }, { f: tSix + 30, rect: "convergence", z: 2.0 }]} />
       <div style={{ position: "absolute", left: 1250, top: 150, width: 580 }}>
         <div style={{ opacity: ease(f, tMeter - 6, 14) }}><Logo name="meterlessLight" height={30} /></div>
         <Kicker style={{ marginTop: 16 }} color="rgba(242,239,231,0.6)">H-MEM · signal memory</Kicker>

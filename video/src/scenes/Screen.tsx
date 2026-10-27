@@ -1,7 +1,7 @@
 import React from "react";
 import { C, mono, sans } from "../theme";
 import { pop } from "../ui/motion";
-import { Browser } from "../ui/Footage";
+import { Browser, markOf } from "../ui/Footage";
 import { Count } from "../ui/Count";
 import { LogoChip } from "../ui/Logo";
 import { Words } from "../ui/Words";
@@ -15,8 +15,9 @@ export const Screen: React.FC = () => {
   const queries = live?.onZetaris ?? R.reference.sqlQueries;
   return (
     <Fill tone="light">
-      <Browser name="screen" url="traceon.netlayerlabs.com/app" width={1120} left={90} top={150} light
-        cams={[{ f: 0, z: 1 }, { f: tZ, rect: "trace", z: 1.45 }, { f: tModel, rect: "trace", z: 1.5 }]} />
+      <Browser name="run_live" url="traceon.netlayerlabs.com/app" width={1120} left={90} top={150} light
+        startFrom={Math.max(0, markOf("run_live", "run_live.converged") - 10)}
+        cams={[{ f: 0, rect: "graph", z: 1.25 }, { f: t46, rect: "graph", z: 1.45 }]} />
       <div style={{ position: "absolute", left: 1270, top: 150, width: 560 }}>
         <div style={{ opacity: ease(f, tNem - 6, 14) }}><LogoChip name="nvidia" height={34} pad={14} /></div>
         <Kicker style={{ marginTop: 18 }} color="rgba(26,23,20,0.55)">Nemotron plans the suspects</Kicker>

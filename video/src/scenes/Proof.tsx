@@ -1,7 +1,9 @@
 import React from "react";
+import { AbsoluteFill, Sequence, interpolate } from "remotion";
+import { clamp } from "../ui/motion";
 import { C, mono, sans } from "../theme";
 import { pop } from "../ui/motion";
-import { Browser } from "../ui/Footage";
+import { Browser, syncTo } from "../ui/Footage";
 import { Trace } from "../ui/Trace";
 import { Fill, Kicker, L, R, ease, useCue } from "./common";
 
@@ -14,8 +16,21 @@ export const Proof: React.FC = () => {
   const X = 1250;
   return (
     <Fill tone="dark">
-      <Browser name="proof" url="traceon.netlayerlabs.com/app" width={1080} left={90} top={170}
-        cams={[{ f: 0, rect: "graph", z: 1.3 }, { f: tLinks + 10, rect: "exhibit", z: 1.5 }, { f: tReplays - 6, rect: "replay", z: 1.5 }]} />
+      {/* Two beats of one recording: the exhibit behind a node, then the replay of the whole chain. */}
+      <Sequence durationInFrames={tReplays + 6} layout="none">
+        <AbsoluteFill style={{ opacity: 1 - interpolate(f, [tReplays - 8, tReplays + 6], [0, 1], clamp) }}>
+          <Browser name="proof_live" url="traceon.netlayerlabs.com/app" width={1080} left={90} top={170}
+            startFrom={syncTo("proof_live", "proof_live.exhibit", tLinks)}
+            cams={[{ f: 0, rect: "graph", z: 1.3 }, { f: tLinks + 4, rect: "modal", z: 1.25 }]} />
+        </AbsoluteFill>
+      </Sequence>
+      <Sequence from={tReplays - 8} layout="none">
+        <AbsoluteFill style={{ opacity: interpolate(f, [tReplays - 8, tReplays + 6], [0, 1], clamp) }}>
+          <Browser name="proof_live" url="traceon.netlayerlabs.com/app" width={1080} left={90} top={170}
+            startFrom={syncTo("proof_live", "proof_live.verified", tRoot - (tReplays - 8) - 4)}
+            cams={[{ f: 0, rect: "verified", z: 1.9 }]} />
+        </AbsoluteFill>
+      </Sequence>
       <div style={{ position: "absolute", left: X, top: 120 }}><Kicker color="rgba(242,239,231,0.6)">Under the hood</Kicker></div>
       {(chain.length ? chain : ["", "", "", "", ""]).map((h, i) => {
         const p = pop(f, tHashed - 6 + i * 5);
