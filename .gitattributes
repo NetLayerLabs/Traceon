@@ -1,2 +1,7 @@
 # The demo film never ships with the app (git archive deploys)
 video export-ignore
+# Shell scripts keep LF line endings on every checkout, including Git for
+# Windows (core.autocrlf=true), so ./sample.sh runs in Git Bash and WSL
+*.sh text eol=lf
+# The bundled sample datasets stay byte for byte as committed
+public/samples/*.csv -text

@@ -1,6 +1,6 @@
 # Traceon: 2-minute demo script
 
-**Before recording:** click **Reset demo**. Set `DEMO_PACING_MS=500` for a slightly slower, more watchable run. If you have an NVIDIA key, set it so the chips read *Nemotron live*.
+**Before recording:** click **Reset demo**. Set `DEMO_PACING_MS=500` for a slightly slower, more watchable run. On the Mac, start the Nightshift app and run `npm run nightshift:check`: the fast and deep lines should read **PASS** with *Meterless Nightshift* (not *stand-in*), and the photo line notes that it goes to NIM. With `NVIDIA_API_KEY` also set, the top bar reads *Nightshift online* and *Nemotron live*.
 
 ---
 
@@ -9,6 +9,11 @@
 
 **0:15–0:30 · Signals** (click **Run investigation**, point at the left pane)
 > "Traceon pulls warranty claims, web reviews and live CPSC, FDA and NHTSA feeds. Meterless H-MEM converges 131 weak signals from six cities into one cluster. Nemotron Super VL reads a real NTSB photo of a lithium-ion pack after thermal runaway and finds the fire started inside the cells."
+
+**Nightshift, 10 s** (top bar, then the agent trace; record this on the Mac)
+> "Planning, the red team and the explanation go through Meterless Nightshift, running on this Mac, which routes them to Nemotron."
+
+Point at the *Nightshift online* chip, then the trace line *Nemotron via Nightshift ranked 7 hypotheses (Meterless Nightshift · …)*, and later the explanation's provider tag, which names Nemotron Ultra through Meterless Nightshift. Optional cut: the Nightshift app's own activity view showing the same requests.
 
 **0:30–1:00 · Explain why** (watch the graph; this is the core of Track 02)
 > "Nemotron ranks seven suspects, and each one is tested with SQL across the Zetaris federated silos. Firmware and carrier are ruled out: flat failure rates. Now watch: heat, the plant, the BMS board and the supplier all look guilty on raw data."
@@ -43,6 +48,7 @@ Type an approver name, click **Execute**, then click **Replay & verify**.
 
 ### Backup plan
 - No network: the federal feeds show *unreachable* and everything else runs offline.
-- No NVIDIA key: every model step falls back to a labeled template, and the statistics are identical.
+- Nightshift not running: the chip reads *Nightshift offline*, every model call goes to Nemotron on NIM, and the trace says why.
+- No Nightshift and no NVIDIA key: every model step falls back to a labeled template, and the statistics are identical.
 - `/app?autorun=1` starts the run without a click.
 - The backtest runs on NHTSA snapshots bundled in the repo, so it works without network.

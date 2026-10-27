@@ -11,7 +11,8 @@ flowchart LR
   AG --> GATE{"Evidence gate<br/>7 criteria"}
   GATE -- "pass + named approver" --> ACT["Remediation<br/>actions.ts"]
   GATE -- "blocked" --> MON["Monitor<br/>no recall"]
-  AG <-- "plan, red team, explain" --> NIM["NVIDIA NIM<br/>Nemotron 3.5"]
+  AG <-- "plan, red team, questions, explain" --> NS["Meterless Nightshift<br/>Nemotron Lightning · Ultra"]
+  AG -. "photo, fallback, hosted site" .-> NIM["NVIDIA NIM<br/>Nemotron Super VL · Lightning"]
   AG -- "SQL" --> ZET["Zetaris SQL API"]
   AG -. "fallback" .-> MIR[("Local mirror<br/>alasql")]
   AG -- "every result" --> PROOF["Proof chain<br/>SHA-256"]
@@ -64,7 +65,7 @@ flowchart LR
   Q --> CL["Incident cluster<br/>131 signals in the reference"]
 ```
 
-- **Feeds** (`src/lib/signals.ts`): CPSC e-bike recalls since 2025; Bright Data Web Unlocker fetching current Google News on e-bike battery fires (deduplicated by headline, cached 30 minutes; real-world context only, never ingested into H-MEM); openFDA medical-device reports whose own narrative describes a lithium-battery fire, smoke, melting or thermal runaway (`isLithiumThermalEvent()`; full-text search alone also matches lithium heparin); NHTSA complaints for EVs with a known battery-fire history (Bolt EV 2017-19, Kona Electric 2019-20). NHTSA covers motor vehicles only, so e-bikes come from CPSC; the NHTSA feed keeps a complaint only if it reports a fire, involves no crash, and names the battery (`isBatteryFire()`). Each federal fetch has a 9-second timeout and returns `status: 'unreachable'` with no items on failure. Nothing is ever substituted. Bright Data's Web Unlocker is called only with `BRIGHTDATA_API_TOKEN` and only for the reference scenario; otherwise the simulated chatter is labelled `simulated`.
+- **Feeds** (`src/lib/signals.ts`): CPSC e-bike recalls since 2025; Bright Data Web Unlocker fetching current Google News on e-bike battery fires (deduplicated by headline, cached 30 minutes; real-world context only, never ingested into H-MEM); openFDA medical-device reports whose own narrative describes a lithium-battery fire, smoke, melting or thermal runaway (`isLithiumThermalEvent()`; full-text search alone also matches lithium heparin); NHTSA complaints for EVs with a known battery-fire history (Bolt EV 2017-19, Kona Electric 2019-20). NHTSA covers motor vehicles only, so e-bikes come from CPSC; the NHTSA feed keeps a complaint only if it reports a fire, involves no crash, and names the battery (`isBatteryFire()`). Each federal fetch has a 9-second timeout and returns `status: 'unreachable'` with no items on failure. Nothing is ever substituted. Bright Data's Web Unlocker is called only when `BRIGHTDATA_API_TOKEN` is set, and never for uploaded data. The reviews and forum posts about the fictional VR-48 are simulated in every case and labelled `simulated`.
 - **H-MEM** (`src/lib/meterless.ts`, engine in `vendor/meterless-hmem`): every product signal becomes a `factual` short-term memory with its channel as provenance. Retrieval uses the engine's hybrid score (semantic, keyword, tags, entities, layer, recency, multiplied by confidence) with threshold 0.18. Recency is scored as of the dataset date (`AS_OF`, 2026-10-24) rather than the wall clock, so the converged count is stable across days.
 - **Approved insights.** When a human approves a remediation, `commitRootCauseInsight()` writes a long-term memory with `derivedFrom` lineage to the converged signals. The next investigation's `priorInsights` recalls it.
 - **Lot world model.** `updateWorldModel()` keeps a risk state per lot. A quarantine is sticky: re-running an investigation never un-quarantines a lot.
@@ -115,9 +116,9 @@ flowchart TB
 4. **Robustness.** Each cause is re-measured within firmware, carrier, climate, BMS and warehouse strata. A stratification is consistent when the CMH test is significant and every informative stratum (at least 3 expected exposed failures) has relative risk above 2.
 5. **Scope and concordance.** Physical causes are joined through `supplier_bom_lineage` and `erp_production_lots` to exact lots and serial ranges. Claims for each cause are bucketed into symptom families (connector, charging, transit, assembly, BMS); a consistent signature needs at least 40% in one specific family. For the reference batch it is 85 of 116 claims citing the connector.
 6. **Residual screen.** All seven dimensions are re-screened with the confirmed causes removed. Any remaining significant structure blocks the gate. This replaced an earlier "explains at least 75% of incidents" rule, which wrongly blocked real causes that had few claims yet.
-7. **Red team.** Nemotron Lightning raises objections and maps each to a deterministic check (`confounding`, `geography`, `exposure_time`, `chance`, `granularity`, `subgroups`). Objections about things the data does not measure are logged as open questions, never as answered.
+7. **Red team.** Nemotron Lightning raises objections and maps each to a deterministic check (`confounding`, `geography`, `exposure_time`, `chance`, `granularity`, `subgroups`). Objections about things the data does not measure are logged as open questions, never as answered; an open question does not block the gate.
 8. **Early-warning replay.** Day by day from the first claim, the hot group is tested against the rest with a threshold Bonferroni-corrected over every group scanned. The reference batch crosses it on 2026-10-10 after 3 claims.
-9. **Evidence gate.** Seven criteria: beats the multiple-testing bar, survives adjustment for every other suspect, consistent in every subgroup, nothing unexplained remains, consistent failure signature, red-team objections answered, scope mapped to exact units. With no cause, the gate shows a blocked state and a "consistent with baseline noise" note instead.
+9. **Evidence gate.** Seven criteria: beats the multiple-testing bar, survives adjustment for every other suspect, consistent in every subgroup, nothing unexplained remains, consistent failure signature, red-team objections answered (open questions listed, not blocking), scope mapped to exact units. With no cause, the gate shows a blocked state and a "consistent with baseline noise" note instead.
 10. **Explanation and number guard.** Nemotron writes the explanation from a facts object; `numberGuard()` then checks every figure in the text against the facts (allowing unit shorthand such as `10k` = 10,000) and flags anything unverified.
 11. **Reveal.** Only now is the scenario's planted truth compared with what was found.
 
@@ -128,7 +129,7 @@ Every model call goes through `nemotronChat()` in `src/lib/nemotron.ts`, which t
 ```mermaid
 flowchart LR
   A["Agent call<br/>plan · red team · photo · explanation · Q&A"] --> NS{"Meterless Nightshift<br/>127.0.0.1:8088/v1"}
-  NS -- "answered" --> R["Reply labelled<br/>Meterless Nightshift · meterless/route"]
+  NS -- "answered" --> R["Reply labelled<br/>Meterless Nightshift · model or route"]
   NS -- "offline, refused or timed out" --> NIM["NVIDIA NIM<br/>Nemotron 3.5"]
   NIM --> R2["Reply labelled<br/>NVIDIA NIM · model,<br/>with the reason in the trace"]
   NIM -- "no answer" --> T["Labelled template"]
@@ -142,11 +143,11 @@ flowchart LR
 | Planning, red team, Ask the case | `meterless/fast` | Nemotron 3.5 Lightning |
 | Explanation | `meterless/deep` | Nemotron 3.5 Super VL, thinking raced |
 
-Measured on 26 Oct with Nightshift 0.92.7 on an M-series Mac and the NVIDIA key added in Nightshift: planning and red team through Nightshift to Lightning (about 0.3 s), the explanation through Nightshift to Nemotron 3 Ultra (1-12 s), a full reference case in 18 s with the number guard verifying 20 of 20 figures. Nightshift holds Super VL out of its lineup after unreliable responses and has no other vision lane, so the photo answers with a 400 there and goes to Super VL on NIM, labelled as the fallback.
+Measured on 26 Oct with Nightshift 0.92.7 on an M-series Mac and the NVIDIA key added in Nightshift: planning and red team through Nightshift to Lightning (2.7-5.1 s for the real prompts, 0.3 s for a one-word check), the explanation through Nightshift to Nemotron 3 Ultra (1-12 s), a full reference case in 18 s with the number guard verifying 20 of 20 figures. Nightshift holds Super VL out of its lineup after unreliable responses and has no other vision lane, so the photo answers with a 400 there and goes to Super VL on NIM; the photo card names NVIDIA NIM as the provider.
 
-**Nemotron through Nightshift.** Nightshift can connect external model APIs, including NVIDIA's. When Nemotron appears in Nightshift's model list (`GET /v1/models`, read at most once a minute), each job uses the matching Nemotron model through Nightshift: Super VL for the photo and the explanation, Lightning for planning, red team and Q&A. Names are matched exactly, by suffix, or by family (`nemotron…lightning`, `nemotron…super`), so a different naming still works; when Super VL is not listed, the explanation takes Nemotron Ultra (`nemotron…ultra`). Ultra may send its reasoning ahead of a lone `</think>`, which `splitThink()` moves into the trace; `NIGHTSHIFT_*_MODEL` overrides any job and `NIGHTSHIFT_USE_NEMOTRON=off` turns the lookup off. Nemotron's thinking switch (`chat_template_kwargs`) is sent off for the fast jobs, and off for the others unless `NIGHTSHIFT_THINKING=on`, since this path has no fast-answer race; if Nightshift refuses the field, the call is repeated without it. Replies read, for example, *Meterless Nightshift · nvidia/nemotron-3.5-super-vl-120b-a12b*, and the agent trace says *Nemotron via Nightshift*.
+**Nemotron through Nightshift.** Nightshift can connect external model APIs, including NVIDIA's. When Nemotron appears in Nightshift's model list (`GET /v1/models`, read at most once a minute), each job uses the matching Nemotron model through Nightshift: Super VL for the photo and the explanation, Lightning for planning, red team and Q&A. Names are matched exactly, by suffix, or by family (`nemotron…lightning`, `nemotron…super`), so a different naming still works; when Super VL is not listed, the explanation takes Nemotron Ultra (`nemotron…ultra`). Ultra may send its reasoning ahead of a lone `</think>`, which `splitThink()` moves into the trace; `NIGHTSHIFT_*_MODEL` overrides any job and `NIGHTSHIFT_USE_NEMOTRON=off` turns the lookup off. Nemotron's thinking switch (`chat_template_kwargs`) is sent off for the fast jobs, and off for the others unless `NIGHTSHIFT_THINKING=on`, since this path has no fast-answer race; if Nightshift refuses the field, the call is repeated without it. While Super VL is held back, replies read *Meterless Nightshift · nvidia/nemotron-3-ultra-550b-a55b* (explanation) or *Meterless Nightshift · nvidia/nemotron-3.5-lightning-30b-a3b* (planning, red team, Q&A), and the agent trace says *Nemotron via Nightshift*.
 
-`AI_PROVIDER=auto` (default) uses Nightshift when a token is configured and NIM otherwise; `nightshift` or `nim` forces one. `npm run nightshift:check` sends one real request on each route and warms the local models before a demo. `scripts/mock-nightshift.mts` (`npm run nightshift:standin`) is a development stand-in that speaks the same protocol; it marks its replies, and the app then labels them **Nightshift stand-in** so it can never pass for the real runtime.
+`AI_PROVIDER=auto` (default) tries Nightshift first when a token is configured, with NIM as the labelled fallback, and uses NIM alone otherwise. `nim` skips Nightshift; `nightshift` currently behaves like `auto`. To test Nightshift alone, use `npm run nightshift:check`, which also removes the NIM key: it sends one real request on each route and warms the local models before a demo. `scripts/mock-nightshift.mts` (`npm run nightshift:standin`) is a development stand-in that speaks the same protocol; it marks its replies, and the app then labels them **Nightshift stand-in** so it can never pass for the real runtime.
 
 ### Nemotron on NVIDIA NIM
 
@@ -156,8 +157,9 @@ Measured on 26 Oct with Nightshift 0.92.7 on an M-series Mac and the NVIDIA key 
 | --- | --- | --- | --- |
 | Planning (`planHypotheses`) | `nvidia/nemotron-3.5-lightning-30b-a3b` | off | 2,000 tokens, 20 s |
 | Red team (`redTeam`) | Lightning | off | 1,500 tokens, 20 s |
-| Explanation (`explain`) | `nvidia/nemotron-3.5-super-vl-120b-a12b` | raced | 4,096 tokens, 60 s, thinking deadline 20 s |
+| Explanation (`explain`) | `nvidia/nemotron-3.5-super-vl-120b-a12b` | raced | 4,096 tokens, 45 s, thinking deadline 20 s; on failure Lightning, 900 tokens, 25 s |
 | Vision (`analyzeDefectPhoto`) | Super VL | raced | 4,096 tokens, 75 s, thinking deadline 25 s |
+| Ask the case (`askCase`) | Lightning | off | 500 tokens, 25 s |
 
 These choices come from live measurement, not assumption:
 - Lightning with thinking on spent its whole token budget reasoning and returned an empty answer, so its JSON tasks run with thinking off.
@@ -167,7 +169,7 @@ These choices come from live measurement, not assumption:
 - Answers repeated in full or reworded from the same opening are de-duplicated (`dedupeRepeat`).
 - Replies are cached in `.nim-cache/` keyed by a SHA-256 of the request, so demo re-runs are instant. `NEMOTRON_CACHE=off` disables it.
 
-Every fallback is logged in the agent trace with its reason. Without `NVIDIA_API_KEY`, each step uses a labelled template and the statistics are unchanged.
+Through Nightshift the same deadlines apply, with at least 2,000 tokens for Nemotron and no thinking race. Every fallback is logged in the agent trace with its reason. With neither Nightshift nor `NVIDIA_API_KEY` configured, each step uses a labelled template and the statistics are unchanged.
 
 ## 7. Zetaris integration
 
@@ -294,7 +296,7 @@ flowchart LR
 | What if | `src/lib/counterfactual.ts`, `WhatIf` in `src/components/CaseTools.tsx` | `GET /api/counterfactual?id=` | The server sends the tested k×2 table and the cause's claims by date; the browser re-runs `chiSquareIndependence()` from `stats.ts` as the sliders move: the action date, the share of the excess failures that is real, and the share of the data available |
 | Falsifiers and intervals | `src/lib/investigation.ts` step 11b, `src/lib/stats.ts` | `forest` event, `CauseFinding.falsifiers` | Wilson intervals for rates and coverage, an exact Poisson 90% range for the 30-day projection, a forest plot of every suspect's relative risk, and four pre-registered conditions that would overturn each cause |
 | Verify the fix | `src/lib/followup.ts` | `POST /api/followup` | Simulates 30 days on the scenario's own hazards (seeded from the ledger root), then checks that failures return to baseline (exact Poisson) and that no factor concentrates the new failures. `wrong-fix` acts on the leading confounder instead, which reopens the case. Labelled as a simulation in the UI |
-| Reports | `src/lib/reports.ts` | `GET /api/report?id=&kind=8d|supplier` | Printable HTML. Every claim cites its exhibit; the exhibit index and the proof root close the document |
+| Reports | `src/lib/reports.ts` | `GET /api/report?id=&kind=8d\|supplier` | Printable HTML. Every claim cites its exhibit; the exhibit index and the proof root close the document |
 | Signed timestamp | `src/lib/stamp.ts` | `POST /api/proof/stamp`, `GET /api/proof/stamp?root=&file=`, `GET /api/proof/key` | An Ed25519 signature (key in storage, or `TRACEON_SIGNING_KEY`) over a short statement naming the root, plus an OpenTimestamps proof of that statement from the public calendars. The `.ots` file verifies with the standard `ots` client; if no calendar answers, the stamp is signature-only and says so |
 | Reviewer mode | `src/lib/cases.ts`, `src/app/case/[id]/page.tsx` | `POST /api/cases`, `GET /api/cases/[id]`, `GET/POST /api/cases/[id]/comments` | Freezes a finished run's events as a case whose id derives from the ledger root. The case page folds the events through the same reducer as the live app and is read-only; comments pin to an exhibit or to the whole case |
 | Scoreboard | `src/lib/scoreboard.ts` | `GET /api/scoreboard` | Each run where Nemotron planned records whether its first-ranked suspect was confirmed and, on generated data, whether it and the tested verdict matched the planted truth |
@@ -313,6 +315,7 @@ flowchart LR
 | `tests/zetaris.test.mts` | 4 | Transient cluster faults are retried, real refusals are not, repeated faults open a 60 s circuit breaker, and a rejected session is replaced by a fresh sign-in |
 | `tests/hardening.test.mts` | 7 | Regressions for the Oct 25 audit: read-only SQL, replayed bundles cannot write or forge summaries, upload validation (backslashes, single suspect, duplicate serials, malformed mapping, unparseable dates, full-content ids), strict scenario ids, reset scope, server-issued photo findings |
 | `tests/features.test.mts` | 18 | Bolt EV backtest and whether each recall's fix held; an uploaded CSV solved with its confounder ruled out; CSV parsing; watch alert and that day's verdict; as-of truth; falsifiers and intervals; counterfactual inputs; follow-up verified vs reopened; stamp signatures; reviewer cases and comments; cited Q&A; reports; scoreboard; the NHTSA and openFDA intake filters; Bright Data news parsing; the hottest group chosen by evidence |
+| `tests/fix-*.test.mts` | per file | Regressions for the Oct 27 audit, one file per area of the fixes; `tests/fix-docs.test.mts` keeps the docs and the landing page in line with the code (counts, labels, scripts, links, licences) |
 
 `scripts/eval.mts` (`npm run eval`) runs the agent blind on hidden scenarios and reports accuracy by cause type and whether any wrong cause was acted on.
 
@@ -322,8 +325,8 @@ flowchart LR
 - **Fixed dimensions per dataset.** The demo tests seven factors and an upload tests the columns it maps. Nemotron can name others, which are logged as untestable rather than tested.
 - **Follow-up is simulated.** Verification after the fix runs on simulated days drawn from the scenario's observed hazards. With real data the same checks would run on the claims that arrive.
 - **Backtest matching is approximate.** A signal and a recall are matched by component family and fire wording, not proven to be the same defect, and complaints have no sales denominator.
-- **No access control.** Shared cases, comments and uploaded datasets are stored as plain JSON on the server and anyone with the URL can read them; `GET /api/investigate` reveals the active run. Add authentication before real use. `TRACEON_DISABLE_RESET=1` turns off the demo reset.
+- **No access control.** Shared cases, comments and uploaded datasets are stored as plain JSON on the server. Anyone with a case's URL can read it and its comments, uploaded datasets are listed for every visitor (`GET /api/datasets`, and the list on `/data`), and `GET /api/investigate` reveals the active run. Add authentication before real use. `TRACEON_DISABLE_RESET=1` turns off the demo reset.
 - **CPU per new scenario.** Each new `random-<seed>` (1 to 999,999) builds a 180,000-row mesh and, in watch mode, about a second of screening. Meshes and replays are cached, but there is no rate limit.
 - **Bright Data's reach without KYC.** The Web Unlocker refuses Reddit, Endless Sphere and the Chevy Bolt forum until the account is verified, so the live feed uses Google News. Reviews of the fictional VR-48 stay simulated, and the news never enters a case's evidence, so the reference proof is unaffected by it.
 - **Single process.** The mirror, holds and run registry are in memory. Restarting the server clears holds (memory on disk survives).
-- **Zetaris not yet run against a live cluster.** The adapter is tested against a spec-conformant test double (`scripts/mock-zetaris.mts`); a live parity check is pending account setup.
+- **Zetaris holds the reference scenario only.** On the live server the Zetaris platform (the hackathon's Docker distribution) answers the reference case's 46 queries with hash parity (`npm run zetaris:check`, and the top bar's *Zetaris cloud · parity ok*). Other scenarios and uploads run on the local alasql mirror, labelled in each exhibit. The adapter is also tested against a spec-conformant test double (`scripts/mock-zetaris.mts`).

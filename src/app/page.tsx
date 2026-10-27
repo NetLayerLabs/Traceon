@@ -125,7 +125,7 @@ export default function Landing() {
                   Watch a live investigation
                 </a>
               </div>
-              <div className="lp-note">About 30 seconds on 180,000 units with live Nemotron; no setup.</div>
+              <div className="lp-note">Under a minute on 180,000 units with live Nemotron; no setup.</div>
             </div>
             <figure className="lp-figure">
               <div className="plate">
@@ -259,7 +259,7 @@ export default function Landing() {
             <ConfounderTable />
             <div className="lp-marginal" data-reveal>
               Phoenix and Austin really do see more failures, because that is where the bad batch was shipped. Within the batch, and outside it, Sun Belt units fail at the same rate as everywhere else.
-              <small>Nemotron’s own first guess was heat. The evidence overruled it, and the agent trace records that.</small>
+              <small>In our live runs, Nemotron’s first guess was one of these look-alikes, such as the heat or the cell supplier. The evidence overruled it, and the agent trace records that.</small>
             </div>
           </div>
         </div>
@@ -364,7 +364,7 @@ export default function Landing() {
                 ['5.1', 'The model never computes a statistic', 'Every p-value, rate and dollar figure is computed in code and checked against scipy and statsmodels. Nemotron plans, challenges and explains.'],
                 ['5.2', 'Every figure in the prose is checked', 'Numbers in the written explanation are matched against the evidence. Anything unverified is flagged.'],
                 ['5.3', 'The agent can block itself', 'No quarantine unless significance, confounders, subgroups, residuals, failure signature, red team and scope all pass.'],
-                ['5.4', 'Every query is replayable', 'Evidence is hashed into a SHA-256 chain. One control re-runs all 45 queries and verifies each hash and the root.'],
+                ['5.4', 'Every query is replayable', 'Evidence is hashed into a SHA-256 chain. One control re-runs all 46 queries and verifies each hash and the root.'],
                 ['5.5', 'Detection is dated', 'A day-by-day replay shows the defect became detectable on Oct 10 after three claims; 113 later incidents were preventable.'],
                 ['5.6', 'Findings are remembered', 'An approved finding becomes long-term H-MEM memory with lineage to its signals. The next investigation recalls it.'],
               ].map(([n, t, d]) => (
@@ -412,7 +412,7 @@ export default function Landing() {
                 <li><span>Survives adjustment for every other suspect</span><span className="d">CMH ×4</span></li>
                 <li><span>Consistent in every subgroup</span><span className="d">5 / 5</span></li>
                 <li><span>Nothing unexplained remains</span><span className="d">92.8% explained</span></li>
-                <li><span>Consistent failure signature</span><span className="d">photo + 85/116</span></li>
+                <li><span>Consistent failure signature</span><span className="d">85/116 claims</span></li>
                 <li><span>Red-team objections answered</span><span className="d">Nemotron</span></li>
                 <li><span>Scope mapped to exact serials</span><span className="d">L-409</span></li>
               </ul>
@@ -437,7 +437,7 @@ export default function Landing() {
                 [
                   ['/backtest', 'Real recalls', 'Would the signal have fired first?', 'Public NHTSA complaint histories replayed day by day through a standard safety-signal test. The Chevrolet Bolt EV fire signal fires 14 days before recall 20V701000; on 3 of 5 vehicles it comes first.'],
                   ['/watch', 'Watch', 'Screen every day, open a case on alert', 'The warranty stream is screened daily across every factor. The day it fires, a case opens on the data as it stood that day.'],
-                  ['/data', 'Your data', 'Bring a CSV', 'One row per unit, a failure column and your suspects. Same agent, same tests, same evidence gate. A 12,000-unit sample is included.'],
+                  ['/data', 'Your data', 'Bring a CSV', 'One row per unit, a failure column and your suspects. Same agent, same tests, same evidence gate. Two samples are included: 355,689 real Backblaze hard drives (Q2 2026) and a generated 12,000-charger set.'],
                   ['/app?autorun=1', 'In the case', 'Ask, test and challenge the verdict', 'Ask questions answered only from the exhibits, move what-if sliders that re-run the statistics, see every interval, and read what would prove the verdict wrong.'],
                   ['/app?autorun=1', 'After the fix', 'Verify, or reopen', 'Thirty simulated days after the fix are checked against the pre-registered falsifiers. Act on a confounder instead and the case reopens.'],
                   ['/app?autorun=1', 'For others', 'Reports, review and a timestamp', 'An 8D report and a supplier claim that cite their exhibits, a read-only case link for reviewers to comment on, and a signed root anchored with OpenTimestamps.'],
@@ -476,12 +476,12 @@ export default function Landing() {
               <tbody data-reveal data-stagger>
                 <tr>
                   <td>Meterless Nightshift</td>
-                  <td>The AI provider. Every model call goes to the local runtime first, which routes it to Nemotron; each reply says which route answered.</td>
+                  <td>The AI provider on a Mac. Text calls go to the local runtime first, which routes them to Nemotron; the photo, and any call it cannot serve, goes to NVIDIA NIM. Each reply says which route answered.</td>
                   <td className="mono">live on a Mac · NIM on this site</td>
                 </tr>
                 <tr>
                   <td>NVIDIA Nemotron</td>
-                  <td>Lightning plans, red-teams and answers questions; Ultra writes the explanation; Super VL inspects the photo.</td>
+                  <td>Lightning plans, red-teams and answers questions; Super VL inspects the photo. The explanation is written by Ultra through Nightshift on a Mac, and by Super VL on this site.</td>
                   <td className="mono">live</td>
                 </tr>
                 <tr>
@@ -501,7 +501,7 @@ export default function Landing() {
                 </tr>
                 <tr>
                   <td>CPSC, openFDA, NHTSA</td>
-                  <td>Base rates for e-bike recalls and lithium-battery incidents.</td>
+                  <td>Real-world context: current e-bike recalls, lithium-battery device incidents and EV battery-fire complaints. Shown in the case, never used in a statistic.</td>
                   <td className="mono">live</td>
                 </tr>
                 <tr>

@@ -2,13 +2,13 @@
 
 Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLabs/Traceon](https://github.com/NetLayerLabs/Traceon).
 
-## Built (as of Oct 25)
+## Built (as of Oct 27)
 
 - [x] Investigation agent, evidence gate, proof chain, remediation; blind accuracy 304/304, held out 250/250
 - [x] Live Nemotron for every model step, with thinking raced against a fast answer and replies cached
 - [x] The 13 features beyond one case, each in the section menu or next to the evidence it uses:
   - [x] Real-recall time machine (`/backtest`): Bolt EV 14 days early, Sorento 72, Santa Fe 380
-  - [x] Your data (`/data`), with a 12,000-unit sample
+  - [x] Your data (`/data`), with two samples: 355,689 real Backblaze drives and a generated 12,000-charger set
   - [x] Watch (`/watch`): alert on Oct 11, and that day's case confirms the batch
   - [x] Ask the case, with exhibit citations and the number guard
   - [x] What if sliders that re-run the statistics
@@ -21,40 +21,39 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
   - [x] Scoreboard of model guesses against tested verdicts
 - [x] Phone and tablet layout re-checked (55/55), including the section menu in the drawer
 
-## Required by the organisers (Remus, Oct 26)
+## Required by the organisers
 
-- [ ] **Create the HackOS submission today**, even unfinished. Add teammates first: the roster locks on creation.
-- [x] **Meterless Nightshift as the AI provider** (code): every model call goes to Nightshift first (`meterless/vision`, `meterless/fast`, `meterless/deep`), Nemotron on NIM as the labelled fallback. Built and tested against a stand-in.
-- [x] **Install Nightshift** (done Oct 26: v0.92.7; `.env.local` points `NIGHTSHIFT_TOKEN_FILE` at `~/Library/Application Support/ai.meterless.nightshift.m1m4/runtime-token`; real requests pass) (free Mac M1+ edition from meterless.ai), turn on its hotspot, put its token in `.env.local` as `NIGHTSHIFT_TOKEN` (or `NIGHTSHIFT_TOKEN_FILE=<stateDir>/proxy-token`), then `npm run nightshift:check` shows three PASS lines with **Meterless Nightshift** (not "stand-in").
-- [x] **In Nightshift, connect the NVIDIA API** (done Oct 26 under Setup → Cloud provider keys. Nightshift serves Lightning and Ultra but holds Super VL back as unreliable, so the explanation uses Ultra and the photo goes to Super VL on NIM, labelled) (your NVIDIA key). Traceon then finds Nemotron in Nightshift's model list and uses it for every job, so it is "Nemotron via Nightshift" (the requirement and the NVIDIA prize). `npm run nightshift:check` should then show `Meterless Nightshift · nvidia/nemotron-…` on all three lines. If the names differ, set `NIGHTSHIFT_*_MODEL` to the ids it lists.
+- [ ] **Create the HackOS submission**, even unfinished. Add teammates first: the roster locks on creation.
+- [x] **Meterless Nightshift as the AI provider** (code): every model call goes to Nightshift first, Nemotron on NIM as the labelled fallback. Tested against a stand-in and against the real Nightshift (next item).
+- [x] **Install Nightshift**: done Oct 26 (v0.92.7, the free Mac M1+ edition from meterless.ai). `NIGHTSHIFT_TOKEN_FILE` points at its `runtime-token` file, and `npm run nightshift:check` passes with **Meterless Nightshift** (not "stand-in").
+- [x] **In Nightshift, connect the NVIDIA API**: done Oct 26 under Setup → Cloud provider keys. Traceon finds Nemotron in Nightshift's model list and uses it, so planning, red team and Q&A are Nemotron Lightning via Nightshift and the explanation is Nemotron Ultra via Nightshift. Nightshift holds Super VL back as unreliable and has no vision lane, so the photo goes to Super VL on NIM, labelled.
 - [x] At least one Meterless engine in a working feature: done (H-MEM and Markovian).
 - [ ] **Public GitHub repo** with README (history checked: no keys or personal data).
-- [ ] **Slide deck**: problem, users, solution, architecture, sponsor tech.
+- [ ] **Slide deck**: problem, users, solution, architecture, sponsor tech (12 slides drafted; final check of the figures).
 - [ ] **Demo video (1-4 min)**: main workflow, Zetaris being queried, a Meterless engine at work, and one real request through Nightshift.
 - [ ] **Sponsor tech explanation** in the submission form.
-- [x] **At least three sample inputs and outputs in the README**: four, in "Examples: inputs and outputs", with the full outputs committed in `examples/`.
-- [x] **Judgeable without live access** (organisers, General Chat 11:12): `./sample.sh` runs the whole engine offline from a clean clone in one command (tested in a fresh clone; `--serve` starts the app offline).
-- [x] **Live deployment**: https://traceon.netlayerlabs.com on 38.49.213.208 (pm2 `traceon` on 127.0.0.1:3720, nginx + Let's Encrypt; Zetaris in /opt/zetaris-platform, ports localhost-only, memory-capped; 8 GB swap added). Live Zetaris parity OK; full case in ~15 s.
-- [ ] **Keep it running until results on 6 Nov**: the server, Zetaris and NVIDIA credits. If the server ever needs the memory back: `cd /opt/zetaris-platform && docker compose stop` (Traceon falls back to its own engine, labelled).
+- [x] **At least three sample inputs and outputs in the README**: four, in "Examples: inputs and outputs", with the reference case's outputs committed in `examples/`.
+- [x] **Judgeable without live access**: `./sample.sh` runs the whole engine offline in one command (tested in a fresh local clone; `--serve` then starts the app with every key switched off).
+- [x] **Live deployment**: https://traceon.netlayerlabs.com, with the Zetaris platform on the same server. Live Zetaris parity OK.
+- [ ] **Keep it running until the results on 6 Nov**: the server, Zetaris and the NVIDIA credits.
 - [ ] Before recording: `npm run zetaris:warm` (every demo query once) and `npm run nightshift:check` (warms the models); keep a recorded fallback take.
 
 ## Make it real, one at a time (in this order; finish one before starting the next)
 
-- [x] **1. Zetaris**: done Oct 26. Real Zetaris (hackathon Docker distribution) on the live server and on the Mac; tables TRACEON_PQ (Parquet), parity OK, 46/46 queries on Zetaris. Remaining nice-to-have: firmware/two-causes/noise as extra schemas. You: create the account and cluster (see section 2 below). Then: `npm run zetaris:export`, upload to `traceon`, set the env vars, `npm run zetaris:check` shows parity OK. Then I export firmware, two-causes and noise as extra schemas so the named scenarios run on Zetaris too.
-  - Done ahead: the client retries the 400 faults other teams hit on these clusters (`Could not create ResultSet: null`, `TTransportException`), waits up to 55 s for a cold start, and skips the cloud for 60 s if it keeps failing.
-  - Before recording: run `npm run zetaris:check` a few minutes before, to warm the cluster.
-  - Answered by other teams: org ID is under **Management → Organisation**; a local install's host is `http://localhost:8888` (set `ZETARIS_API_URL` to that; the app adds `/api/v1.0`), org ID 1; warm up by running every demo query once (`npm run zetaris:warm`); judging must work without live access (done: `./sample.sh`), and live access must stay up until 6 Nov.
-  - Still to ask the Zetaris team: the API host for an AWS cluster, and how to create an API token (a username and password also work).
-- [x] **2. Intake NHTSA feed**: done Oct 26. EVs with a battery-fire history (Bolt EV 2017-19, Kona Electric 2019-20), strict filter: fire reported, no crash, battery named. Live: 4 genuine Bolt EV battery fires (two are the fires the backtest flags before GM's recall). NHTSA has no e-bike data; CPSC covers e-bikes.: e-bike or e-scooter battery fire complaints with a strict fire filter, instead of Tesla Model 3 (one current match is an Autopilot complaint).
-- [x] **3. openFDA feed**: done Oct 26. Narrowed to lithium-battery thermal events: query on lithium + fire/smoke/thermal runaway/melted, then each report's narrative must name a lithium battery and the event (no lithium heparin). Live: 45 of the latest 100 reports, e.g. a cell defect causing thermal runaway, devices catching fire while charging.: narrow to lithium-battery thermal events, or drop it.
-- [x] **4. Sample defect photo**: done Oct 26. Real NTSB evidence photo (JAL Boeing 787 lithium-ion battery after thermal runaway, Boston 2013; public domain, via Wikimedia Commons), labelled in the app as a stand-in for a customer photo. Nemotron reads it live: thermal runaway, charred cells, melted busbars, burnt terminal block.: you pick a real, openly licensed burnt-connector photo (e.g. Wikimedia Commons) or take one; I wire it in.
-- [x] **5. Bright Data**: done Oct 26. Web Unlocker zone `web_unlocker1` (pay per success, free credits). Reddit and e-bike forums are blocked without KYC, so the live feed is Google News on e-bike battery fires (~95 real recent reports), shown as context; VR-48 reviews stay simulated because the product is fictional.: you add `BRIGHTDATA_API_TOKEN`; I point the scraper at the real-data case so real posts exist.
-- [x] **6. Real dataset on Your data**: done Oct 26. Backblaze Drive Stats Q2 2026 reduced to one row per drive (355,689 drives, 1,517 failures), bundled as the first sample with model, data centre and age as suspects. Fixed two method issues it exposed: the hottest group is chosen by evidence (z-score, at least 3 failures) not raw rate, and a suspect ruled out on materiality now says why.: Backblaze hard-drive data, reduced to one row per drive (check the size first), replacing the generated charger sample.
-- [ ] **7. Real follow-up**: on the NHTSA cases, real complaints after the recall date; the simulated follow-up stays for the demo scenarios, labelled.
+- [x] **1. Zetaris**: done Oct 26. The Zetaris platform (the hackathon's Docker distribution) runs on the live server and on the Mac; tables in Parquet, parity OK, 46/46 queries of the reference case on Zetaris. Remaining nice-to-have: firmware, two-causes and noise as extra schemas, so the named scenarios run on Zetaris too.
+  - The client retries the 400 faults other teams hit on these clusters (`Could not create ResultSet: null`, `TTransportException`), waits up to 55 s for a cold start, and skips the cloud for 60 s if it keeps failing.
+  - Before recording: run `npm run zetaris:warm` a few minutes before, to warm the cluster.
+  - Setup notes (org ID, local host, warm-up) are in [docs/ZETARIS_SETUP.md](docs/ZETARIS_SETUP.md).
+- [x] **2. Intake NHTSA feed**: done Oct 26. EVs with a battery-fire history (Bolt EV 2017-19, Kona Electric 2019-20), strict filter: fire reported, no crash, battery named. Live: 4 genuine Bolt EV battery fires (two are the fires the backtest flags before GM's recall). NHTSA has no e-bike data; CPSC covers e-bikes.
+- [x] **3. openFDA feed**: done Oct 26. Narrowed to lithium-battery thermal events: query on lithium + fire/smoke/thermal runaway/melted, then each report's narrative must name a lithium battery and the event (no lithium heparin). Live: 45 of the latest 100 reports, e.g. a cell defect causing thermal runaway, devices catching fire while charging.
+- [x] **4. Sample defect photo**: done Oct 26. Real NTSB evidence photo (JAL Boeing 787 lithium-ion battery after thermal runaway, Boston 2013; public domain, via Wikimedia Commons), labelled in the app as a stand-in for a customer photo. Nemotron reads it live: thermal runaway, charred cells, melted busbars, burnt terminal block.
+- [x] **5. Bright Data**: done Oct 26. Web Unlocker zone `web_unlocker1` (pay per success, free credits). Reddit and e-bike forums are blocked without KYC, so the live feed is Google News on e-bike battery fires (~95 real recent reports), shown as context; VR-48 reviews stay simulated because the product is fictional.
+- [x] **6. Real dataset on Your data**: done Oct 26. Backblaze Drive Stats Q2 2026 reduced to one row per drive (355,689 drives, 1,517 failures), bundled as the first sample with model, data centre and age as suspects. Fixed two method issues it exposed: the hottest group is chosen by evidence (z-score, at least 3 failures) not raw rate, and a suspect ruled out on materiality now says why.
+- [x] **7. Real follow-up**: done Oct 26. On the NHTSA cases, real complaints after each recall: the Bolt EV's first fix (20V701000) did not hold; the battery replacement (21V560000) held, 0 fire complaints against 5 in the year before (p = 0.031). The simulated follow-up stays for the demo scenarios, labelled.
 
 Simulated by design, and presented that way: VoltRide as the blind-test bench, ERP holds and notices as drafts, Watch replaying history.
 
-## 1. Nemotron, before recording
+## Nemotron, before recording
 
 - [x] Key added to `.env.local` (works on free credits)
 - [x] Every call tested live: `npm run nemotron:check`
@@ -62,31 +61,24 @@ Simulated by design, and presented that way: VoltRide as the blind-test bench, E
 - [ ] One warm-up run with `NEMOTRON_THINKING_DEADLINE_MS=60000` so the cache holds thinking traces, then record
 - [ ] Run five or more random scenarios live so the Scoreboard has entries
 
-## 2. Zetaris (the Zetaris CTO is a judge)
+## Zetaris
 
-A parity check passing against a real Zetaris instance is worth more than any feature. Full guide: [docs/ZETARIS_SETUP.md](docs/ZETARIS_SETUP.md).
-
-- [ ] Sign in at https://cloud.enterprise.zetaris.com/login (OTP sent to your hackathon email)
-- [ ] Create the Mini Template cluster (needs an AWS account) or run the local Docker version (`colima start` first)
-- [ ] `npm run zetaris:export`, then upload the 5 CSVs from `exports/zetaris/` into a database named `traceon`
-- [ ] Ask Zetaris support: which API host, where to find your org ID, how to create an API token
-- [ ] Set `ZETARIS_API_URL`, `ZETARIS_ORG_ID` and `ZETARIS_API_TOKEN` in `.env.local`
-- [ ] `npm run zetaris:check` shows **parity OK**, and the app's top bar shows **Zetaris cloud · parity ✓**
+- [x] Done Oct 26 (see Make it real, item 1): `npm run zetaris:check` shows **parity OK**, and the app's top bar shows **Zetaris cloud · parity ok**.
 - [ ] Bonus: put the silos in different sources and map them with `ZETARIS_TABLE_MAP`
 
-## 3. Ship
+## Ship
 
 - [x] `npm test` passes
-- [ ] Deploy to Railway, Render or Fly (not Vercel), with a volume for `.meterless-data/` (memory, shared cases, uploads, signing key) and `.nim-cache/`
+- [x] Deployed on one long-running server at https://traceon.netlayerlabs.com, with memory, shared cases, uploads and the signing key kept on disk
 - [ ] Set `TRACEON_SIGNING_KEY` on the host so the public key stays the same across deploys
 - [ ] Test the live URL from a phone and a second laptop, including `/backtest`, `/watch` and a shared case link
 - [ ] Record the 2-minute video ([DEMO_SCRIPT.md](DEMO_SCRIPT.md)), plus a backup take in offline mode
-- [ ] Replace `<VIDEO_URL>` in the README (the live URL is filled in)
+- [ ] Add the demo video link to the README (line 7)
 - [ ] Submit before Oct 27, 23:45 UTC
 
 ## Later (after the hackathon)
 
 - Authentication and per-team storage for uploads, shared cases and comments
-- Real follow-up on arriving claims, reopening the case automatically
+- Real follow-up on arriving claims for uploaded data, reopening the case automatically
 - Watch mode on a live warranty feed; continuous factors alongside categorical ones
 - Upgrade OpenTimestamps proofs after Bitcoin confirmation and verify them in the app
