@@ -154,23 +154,9 @@ export function chiSquareIndependence(groups: GroupCount[]): IndependenceTest {
   const invalid = small > 0.2 * expected.length || expected.some((e) => e < 1);
   // Astronomically small asymptotic p-values stay as-is: no simulation could
   // ever reach them, and the effect is unambiguous at any sample size.
-  // Sparse tables never keep the asymptotic p (it can be off by tens of orders of
-  // magnitude: 3 claims gave 1e-15 where the exact p is 0.005). Use the Monte
-  // Carlo p; when no simulated table is as extreme, bound the exact p with the
-  // most elevated group's binomial tail (union bound over groups, twice for the
-  // two tests), computed in log space so tiny values stay exact.
-  if (invalid && totalFail > 0) {
-    const sims = 20_000;
-    const mc = totalFail <= 5_000 ? monteCarloP(groups, chi2, sims) : null;
-    if (mc !== null && mc > 1 / (sims + 1)) {
-      p = mc;
-      negLog10P = -Math.log10(mc);
-    } else {
-      let minLog10 = 0;
-      for (const g of groups) if (g.units > 0 && g.failures / g.units > pFail) minLog10 = Math.min(minLog10, binomUpperTailLog10(g.failures, totalFail, g.units / totalUnits));
-      negLog10P = Math.max(0, -(minLog10 + Math.log10(2 * groups.length)));
-      p = 10 ** -negLog10P;
-    }
+  if (invalid && totalFail > 0 && totalFail <= 5_000 && p > 1e-6) {
+    p = monteCarloP(groups, chi2);
+    negLog10P = -Math.log10(p);
     test = 'Monte Carlo exact';
   }
   const rates = groups.map((g) => ({ ...g, ratePer10k: g.units ? (g.failures / g.units) * 10_000 : 0 }));
@@ -222,10 +208,7 @@ export function cochranMantelHaenszel(strata: Stratum[]): CmhResult {
     orNum += (a * d) / n;
     orDen += (b * c) / n;
   }
-  // Continuity correction only when it does not overshoot (R's mantelhaen.test):
-  // subtracting 0.5 from |O - E| < 0.5 would inflate the statistic instead.
-  const delta = Math.abs(sumA - sumE);
-  const chi2 = sumV > 0 ? (delta >= 0.5 ? delta - 0.5 : delta) ** 2 / sumV : 0;
+  const chi2 = sumV > 0 ? (Math.abs(sumA - sumE) - 0.5) ** 2 / sumV : 0;
   const { p, negLog10P } = chiSquarePValue(Math.max(0, chi2), 1);
   return {
     test: 'Cochran-Mantel-Haenszel',
@@ -314,47 +297,4 @@ export function hottestGroup<G extends GroupCount & { ratePer10k: number }>(grou
   const eligible = groups.filter((g) => g.failures >= minFailures);
   const pool = eligible.length ? eligible : groups;
   return [...pool].sort((a, b) => z(b) - z(a) || b.ratePer10k - a.ratePer10k || a.group.localeCompare(b.group))[0];
-}
-
-/** log10 P(X >= k) for X ~ Binomial(n, p), summed in log space so tiny tails never underflow. */
-export function binomUpperTailLog10(k: number, n: number, p: number): number {
-  if (k <= 0) return 0;
-  if (k > n || p <= 0) return -Infinity;
-  if (p >= 1) return 0;
-  const lnC = (r: number) => lnGamma(n + 1) - lnGamma(r + 1) - lnGamma(n - r + 1);
-  let lnSum = -Infinity;
-  for (let i = k; i <= n; i++) {
-    const t = lnC(i) + i * Math.log(p) + (n - i) * Math.log1p(-p);
-    lnSum = lnSum === -Infinity ? t : Math.max(lnSum, t) + Math.log1p(Math.exp(-Math.abs(lnSum - t)));
-    if (i > n * p && t < lnSum - 40) break;
-  }
-  return Math.min(0, lnSum / Math.LN10);
-}
-
-/**
- * Breslow-Day test that the odds ratio is the same in every stratum. When it
- * fails, the CMH pooled test averages opposite effects and must not be read as
- * "the effect disappears".
- */
-export function breslowDay(strata: Stratum[], commonOR: number): { stat: number; df: number; p: number } {
-  let stat = 0;
-  let k = 0;
-  for (const s of strata) {
-    const a = s.exposedFailures, n1 = s.exposedUnits, m1 = s.exposedFailures + s.unexposedFailures, N = s.exposedUnits + s.unexposedUnits;
-    if (n1 === 0 || n1 === N || m1 === 0 || m1 === N || !(commonOR > 0) || !Number.isFinite(commonOR)) continue;
-    const lo = Math.max(0, n1 + m1 - N), hi = Math.min(n1, m1);
-    const qa = 1 - commonOR, qb = N - n1 - m1 + commonOR * (n1 + m1), qc = -commonOR * n1 * m1;
-    let A: number;
-    if (Math.abs(qa) < 1e-12) A = -qc / qb;
-    else {
-      const d = Math.sqrt(qb * qb - 4 * qa * qc);
-      const r1 = (-qb + d) / (2 * qa);
-      A = r1 >= lo - 1e-9 && r1 <= hi + 1e-9 ? r1 : (-qb - d) / (2 * qa);
-    }
-    const v = 1 / (1 / A + 1 / (n1 - A) + 1 / (m1 - A) + 1 / (N - n1 - m1 + A));
-    if (!(v > 0) || !Number.isFinite(v)) continue;
-    stat += (a - A) ** 2 / v;
-    k++;
-  }
-  return { stat, df: Math.max(1, k - 1), p: k > 1 ? chiSquarePValue(stat, k - 1).p : 1 };
 }
