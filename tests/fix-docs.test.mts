@@ -30,7 +30,7 @@ const ns = await import('../src/lib/nemotron.ts');
 
 test('the README first screen has no raw placeholder and no stale private-repo note', () => {
   assert.doesNotMatch(README, /<VIDEO_URL>/);
-  assert.match(README, /Demo video: link added with the submission/);
+  assert.match(README, /Demo video: \[watch on YouTube\]\(https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}\)/);
   assert.doesNotMatch(README, /private, access on request/);
 });
 

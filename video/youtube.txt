@@ -20,16 +20,16 @@ Built for the Open Agent Hackathon 2026 (GenAI.works), Track 02: The Agent That 
 
 CHAPTERS
 0:00 A real fire, and a fix that did not hold
-0:25 The problem: the evidence is split
-0:43 Why Zetaris
-0:56 Traceon
-1:04 Meterless H-MEM converges the signals
-1:17 Every test is a query on Zetaris
-1:33 Explain why: the confounders unmasked
-1:54 The red team and the evidence gate
-2:07 A named person approves
-2:21 One real request through Meterless Nightshift
-2:34 Real data: the Bolt EV and 355,689 drives
-3:03 Under the hood: a proof anyone can replay
-3:15 What makes Traceon different
-3:29 Try it
+0:26 The problem: the evidence is split
+0:44 Why Zetaris
+0:57 Traceon
+1:05 Meterless H-MEM converges the signals
+1:18 Every test is a query on Zetaris
+1:31 Explain why: the confounders unmasked
+1:52 The red team and the evidence gate
+2:10 A named person approves
+2:24 One real request through Meterless Nightshift
+2:38 Real data: the Bolt EV and 355,689 drives
+3:06 Under the hood: a proof anyone can replay
+3:18 What makes Traceon different
+3:32 Try it

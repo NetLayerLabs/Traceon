@@ -29,8 +29,8 @@ Checklist and roadmap for the NetLayer Labs entry. The repository is [NetLayerLa
 - [x] **In Nightshift, connect the NVIDIA API**: done Oct 26 under Setup → Cloud provider keys. Traceon finds Nemotron in Nightshift's model list and uses it, so planning, red team and Q&A are Nemotron Lightning via Nightshift and the explanation is Nemotron Ultra via Nightshift. Nightshift holds Super VL back as unreliable and has no vision lane, so the photo goes to Super VL on NIM, labelled.
 - [x] At least one Meterless engine in a working feature: done (H-MEM and Markovian).
 - [ ] **Public GitHub repo** with README (history checked: no keys or personal data).
-- [ ] **Slide deck**: problem, users, solution, architecture, sponsor tech (12 slides drafted; final check of the figures).
-- [ ] **Demo video (1-4 min)**: main workflow, Zetaris being queried, a Meterless engine at work, and one real request through Nightshift.
+- [x] **Slide deck**: problem, users, solution, architecture, sponsor tech (12 slides drafted; final check of the figures).
+- [x] **Demo video (1-4 min)**: main workflow, Zetaris being queried, a Meterless engine at work, and one real request through Nightshift.
 - [ ] **Sponsor tech explanation** in the submission form.
 - [x] **At least three sample inputs and outputs in the README**: four, in "Examples: inputs and outputs", with the reference case's outputs committed in `examples/`.
 - [x] **Judgeable without live access**: `./sample.sh` runs the whole engine offline in one command (tested in a fresh local clone; `--serve` then starts the app with every key switched off).
@@ -72,8 +72,8 @@ Simulated by design, and presented that way: VoltRide as the blind-test bench, E
 - [x] Deployed on one long-running server at https://traceon.netlayerlabs.com, with memory, shared cases, uploads and the signing key kept on disk
 - [ ] Set `TRACEON_SIGNING_KEY` on the host so the public key stays the same across deploys
 - [ ] Test the live URL from a phone and a second laptop, including `/backtest`, `/watch` and a shared case link
-- [ ] Record the 2-minute video ([DEMO_SCRIPT.md](DEMO_SCRIPT.md)), plus a backup take in offline mode
-- [ ] Add the demo video link to the README (line 7)
+- [x] Record the demo video: a 3:49 film from real recorded runs, see [video/README.md](video/README.md)
+- [x] Add the demo video link to the README (line 7): https://www.youtube.com/watch?v=2oqKrH0U7Zw
 - [ ] Submit before Oct 27, 23:45 UTC
 
 ## Later (after the hackathon)

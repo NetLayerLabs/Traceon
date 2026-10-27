@@ -4,7 +4,7 @@
 
 It pulls scattered warning signs (warranty claims, reviews, federal safety reports) into one case, tests seven suspects against 180,000 units of factory data with federated SQL, separates real causes from look-alikes with stratified statistics, and hashes every query into a replayable proof. Everything is judged by one test: **does it name exactly the hidden cause, and act only when there is one?** On 250 held-out hidden scenarios it did, 250 times. Replayed on real public complaint data, the same kind of test flags the Chevrolet Bolt EV battery-fire signal 14 days before GM's recall.
 
-Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: [traceon.netlayerlabs.com](https://traceon.netlayerlabs.com) · Demo video: link added with the submission · Code: [github.com/NetLayerLabs/Traceon](https://github.com/NetLayerLabs/Traceon) · Team: NetLayer Labs
+Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: [traceon.netlayerlabs.com](https://traceon.netlayerlabs.com) · Demo video: [watch on YouTube](https://www.youtube.com/watch?v=2oqKrH0U7Zw) · Code: [github.com/NetLayerLabs/Traceon](https://github.com/NetLayerLabs/Traceon) · Team: NetLayer Labs
 
 **Judges, start here:** open `/app?autorun=1` for a full investigation in under a minute with no login, then `/app?scenario=random&autorun=1` to watch it solve a cause it has never seen, and `/backtest` for real recalls. The design is in **[ARCHITECTURE.md](ARCHITECTURE.md)** and the two-minute walkthrough in **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)**.
 
@@ -25,7 +25,7 @@ Requires Node.js 18.18 or newer. On Windows, run it in Git Bash or WSL, or run `
 
 It writes `sample-output/`: a summary, the event log, the proof bundle, the replay result, the explanation, an 8D report and a supplier claim. It exits non-zero if any result is wrong. `./sample.sh --serve` then starts the full app on http://localhost:3000 with every key switched off; building it downloads the fonts, and the public federal feeds are fetched when a network is available.
 
-In sample mode the model steps use labelled templates and queries run on the local SQL engine. Every statistic, verdict and proof is computed exactly as in live mode. **Live mode** (Meterless Nightshift with Nemotron, Zetaris, live feeds) is shown in the demo video; see [Live access](#live-access).
+In sample mode the model steps use labelled templates and queries run on the local SQL engine. Every statistic, verdict and proof is computed exactly as in live mode. **Live mode** (Meterless Nightshift with Nemotron, Zetaris, live feeds) is shown in the [demo video](https://www.youtube.com/watch?v=2oqKrH0U7Zw); see [Live access](#live-access).
 
 ## Examples: inputs and outputs
 
@@ -422,9 +422,7 @@ Status as of 2026-10-27. The pre-submission checklist is in [TODO_BEFORE_SUBMISS
 - After the verdict: Verify the fix, 8D report, supplier claim, reviewer mode, and a signed OpenTimestamps root.
 - Outside the simulation: the real-recall backtest on five NHTSA vehicle histories, and live for any vehicle.
 - Scoreboard of model guesses against tested verdicts.
-
-**Next, before submission**
-- Finish the demo video and the slide deck, and submit on HackOS.
+- The [demo film](https://www.youtube.com/watch?v=2oqKrH0U7Zw) (3:49) and the slide deck.
 
 **Later**
 - Authentication and per-team storage for uploads, shared cases and comments.
@@ -437,7 +435,7 @@ Status as of 2026-10-27. The pre-submission checklist is in [TODO_BEFORE_SUBMISS
 
 The live deployment is at **https://traceon.netlayerlabs.com** and stays running until the results are announced on **6 November 2026**. It is configured as follows:
 - **Data:** the Zetaris platform (the hackathon's Docker distribution) runs on the same server, and the reference scenario's queries go to it over the Zetaris REST API. The top bar shows the hash-parity check; other scenarios and uploads run on the local engine, labelled in each exhibit. A full reference investigation takes under a minute (15 to 50 seconds in our runs, mostly model latency), with all 46 queries on Zetaris.
-- **AI:** Nemotron on NVIDIA NIM. Meterless Nightshift is a desktop runtime (Mac, Windows, DGX), so it cannot run on this Linux server. The demo video shows the same app on a Mac with Nightshift as the AI provider: planning, red team and Q&A go through it to Nemotron Lightning, the explanation to Nemotron Ultra, and a full case takes about 18 seconds. To try that path yourself, install Nightshift (free Mac M1+ edition from meterless.ai), add an NVIDIA key under Setup → Cloud provider keys, set `NIGHTSHIFT_TOKEN_FILE` to its `runtime-token` file and run `npm run nightshift:check`.
+- **AI:** Nemotron on NVIDIA NIM. Meterless Nightshift is a desktop runtime (Mac, Windows, DGX), so it cannot run on this Linux server. The [demo video](https://www.youtube.com/watch?v=2oqKrH0U7Zw) shows the same app on a Mac with Nightshift as the AI provider: planning, red team and Q&A go through it to Nemotron Lightning, the explanation to Nemotron Ultra, and a full case takes under half a minute. To try that path yourself, install Nightshift (free Mac M1+ edition from meterless.ai), add an NVIDIA key under Setup → Cloud provider keys, set `NIGHTSHIFT_TOKEN_FILE` to its `runtime-token` file and run `npm run nightshift:check`.
 - **Feeds:** CPSC, openFDA and NHTSA, fetched live, and Bright Data news through the Web Unlocker.
 - **Reset demo** is enabled, so a judge can start fresh. It clears demo memory and ERP holds for everyone on the site (shared cases, uploads and the signing key are kept), and is refused while an investigation is running.
 
