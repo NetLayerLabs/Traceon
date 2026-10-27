@@ -147,7 +147,9 @@ export function simulateFollowUp(view: CaseView, mode: 'planned' | 'wrong-fix'):
 
   const verdict = checks.every((c) => c.pass) ? 'verified' : 'reopen';
   const appliedOut = applied.map((a) => ({ ...a, label: REMEDY[a.remedy].label, units: rows.filter((u) => inGroup(u, a)).length }));
-  const what = appliedOut.map((a) => `${a.label.toLowerCase()} of ${a.column.replace(/_/g, ' ')} ${a.group}`).join(' and ');
+  // Uploaded factors are named as the user named them, not by their f_ SQL column.
+  const factor = (column: string) => (mesh.custom ? (dims.find((d) => d.column === column)?.title ?? column.replace(/^f_/, '')) : column).replace(/_/g, ' ');
+  const what = appliedOut.map((a) => `${a.label.toLowerCase()} of ${factor(a.column)} ${a.group}`).join(' and ');
   const summary =
     verdict === 'verified'
       ? `After the ${what}, failures fell to the baseline rate and no factor concentrates them. The fix is verified; the case can close.`
