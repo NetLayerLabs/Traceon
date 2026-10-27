@@ -8,7 +8,14 @@ import path from 'node:path';
 
 // Ignore every key and account: sample mode must not depend on live services.
 for (const k of Object.keys(process.env)) if (/^(NVIDIA_|NEMOTRON_|NIGHTSHIFT_|ZETARIS_|BRIGHTDATA_|OPENFDA_|AI_PROVIDER)/.test(k)) delete process.env[k];
-process.env.METERLESS_STORAGE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'traceon-sample-'));
+const SAMPLE_TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'traceon-sample-'));
+process.env.METERLESS_STORAGE_DIR = SAMPLE_TMP;
+// Memory, uploads and holds of this run are scratch: remove them however the run ends.
+process.on('exit', () => {
+  try {
+    fs.rmSync(SAMPLE_TMP, { recursive: true, force: true });
+  } catch {}
+});
 process.env.NEMOTRON_CACHE = 'off';
 globalThis.fetch = (async () => {
   throw new Error('sample mode is offline');
@@ -62,7 +69,8 @@ fs.writeFileSync(path.join(dir, 'verify.json'), JSON.stringify(verified, null, 1
 fs.writeFileSync(path.join(dir, '8d-report.html'), eightD(view));
 fs.writeFileSync(path.join(dir, 'supplier-claim.html'), supplierPacket(view));
 fs.writeFileSync(path.join(dir, 'explanation.txt'), one(ref, 'narrative').text + '\n');
-say(`- Outputs: sample-output/reference/ (event log, proof bundle, replay result, explanation, 8D report, supplier claim)`);
+// Paths are relative to this summary, so they stay right when it is copied to examples/.
+say('- Outputs in reference/, next to this summary: proof bundle, replay result, explanation, 8D report and supplier claim');
 
 // 2. Verify the fix.
 const planned = simulateFollowUp(view, 'planned');
@@ -133,6 +141,7 @@ say('After the recall (real complaints; year before vs the year from 90 days aft
 say('');
 say(failures.length ? `## FAILED: ${failures.join(', ')}` : '## All checks passed.');
 say('');
-say('Open the reports in sample-output/reference/ in a browser. To use the full app in the same offline mode: ./sample.sh --serve, then http://localhost:3000');
+say('Open the reports in reference/, next to this summary, in a browser. To use the full app with every key switched off: ./sample.sh --serve, then http://localhost:3000');
 fs.writeFileSync(path.join(OUT, 'SUMMARY.md'), lines.join('\n') + '\n');
+console.log('Written to sample-output/: SUMMARY.md, and reference/ with the event log and the files above.');
 process.exit(failures.length ? 1 : 0);

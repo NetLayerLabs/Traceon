@@ -9,7 +9,7 @@ Run 2026-10-26T21:58:13.336Z: offline, no keys, no network. Model steps use labe
 - Action: hold 1,380 units instead of recalling 180,000, saving $4,465,500
 - Proof: 56 exhibits; replayed 46 SQL queries, root matches (8f694a74fa37d4c0…)
 - 1.0 s
-- Outputs: sample-output/reference/ (event log, proof bundle, replay result, explanation, 8D report, supplier claim)
+- Outputs in reference/, next to this summary: proof bundle, replay result, explanation, 8D report and supplier claim
 
 ## 2. Verify the fix (simulated 30 days)
 - Planned quarantine: fix verified, case closed
@@ -49,4 +49,4 @@ After the recall (real complaints; year before vs the year from 90 days after):
 
 ## All checks passed.
 
-Open the reports in sample-output/reference/ in a browser. To use the full app in the same offline mode: ./sample.sh --serve, then http://localhost:3000
+Open the reports in reference/, next to this summary, in a browser. To use the full app with every key switched off: ./sample.sh --serve, then http://localhost:3000

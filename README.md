@@ -4,9 +4,9 @@
 
 It pulls scattered warning signs (warranty claims, reviews, federal safety reports) into one case, tests seven suspects against 180,000 units of factory data with federated SQL, separates real causes from look-alikes with stratified statistics, and hashes every query into a replayable proof. Everything is judged by one test: **does it name exactly the hidden cause, and act only when there is one?** On 250 held-out hidden scenarios it did, 250 times. Replayed on real public complaint data, the same kind of test flags the Chevrolet Bolt EV battery-fire signal 14 days before GM's recall.
 
-Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: [traceon.netlayerlabs.com](https://traceon.netlayerlabs.com) · Demo: `<VIDEO_URL>` · Code: [github.com/NetLayerLabs/Traceon](https://github.com/NetLayerLabs/Traceon) (private, access on request) · Team: NetLayer Labs
+Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Why) · **The company and its factory data are fictional** · App: [traceon.netlayerlabs.com](https://traceon.netlayerlabs.com) · Demo video: link added with the submission · Code: [github.com/NetLayerLabs/Traceon](https://github.com/NetLayerLabs/Traceon) · Team: NetLayer Labs
 
-**Judges, start here:** open `/app?autorun=1` for a full investigation in about 30 seconds with no login, then `/app?scenario=random&autorun=1` to watch it solve a cause it has never seen, and `/backtest` for real recalls. The design is in **[ARCHITECTURE.md](ARCHITECTURE.md)** and the two-minute walkthrough in **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)**.
+**Judges, start here:** open `/app?autorun=1` for a full investigation in under a minute with no login, then `/app?scenario=random&autorun=1` to watch it solve a cause it has never seen, and `/backtest` for real recalls. The design is in **[ARCHITECTURE.md](ARCHITECTURE.md)** and the two-minute walkthrough in **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)**.
 
 ---
 
@@ -16,25 +16,25 @@ Built for the Open Agent Hackathon 2026, Track 02 (The Agent That Can Explain Wh
 git clone https://github.com/NetLayerLabs/Traceon.git && cd Traceon && ./sample.sh
 ```
 
-Requires Node.js 18.18 or newer. `./sample.sh` installs dependencies on first run, ignores any keys, and runs the real engine end to end in about ten seconds:
+Requires Node.js 18.18 or newer. On Windows, run it in Git Bash or WSL, or run `npm ci && npm run sample`. `./sample.sh` installs dependencies on first run (the only step that needs the network), ignores any keys, and runs the real engine end to end in about ten seconds:
 - the reference case, with its proof replayed;
 - verify-the-fix (the planned fix and the wrong fix);
 - five blind scenarios scored against their hidden truth;
 - two uploaded CSVs: 355,689 real Backblaze drives, and a generated 12,000-unit set;
 - the five real NHTSA backtests.
 
-It writes `sample-output/`: a summary, the event log, the proof bundle, the replay result, the explanation, an 8D report and a supplier claim. It exits non-zero if any result is wrong. `./sample.sh --serve` then starts the full app in the same offline mode on http://localhost:3000.
+It writes `sample-output/`: a summary, the event log, the proof bundle, the replay result, the explanation, an 8D report and a supplier claim. It exits non-zero if any result is wrong. `./sample.sh --serve` then starts the full app on http://localhost:3000 with every key switched off; building it downloads the fonts, and the public federal feeds are fetched when a network is available.
 
 In sample mode the model steps use labelled templates and queries run on the local SQL engine. Every statistic, verdict and proof is computed exactly as in live mode. **Live mode** (Meterless Nightshift with Nemotron, Zetaris, live feeds) is shown in the demo video; see [Live access](#live-access).
 
 ## Examples: inputs and outputs
 
-Each example below is reproduced by `./sample.sh`. Its full output for this run is committed in [`examples/`](examples/), with the summary in [`examples/SUMMARY.md`](examples/SUMMARY.md).
+Each example below is reproduced by `./sample.sh`. The outputs of one run are committed in [`examples/`](examples/): the reference case's files, and a summary of every example in [`examples/SUMMARY.md`](examples/SUMMARY.md).
 
 **1. The reference case: a hidden bad batch** (generated data, planted cause)
 - **Input.** 125 thermal warranty claims across 180,000 battery packs. Seven suspects: firmware, carrier, Sun Belt heat, plant, BMS board, cell supplier and cell batch.
 - **Output.** The cause is cell batch **CB-B-0917**: relative risk 1,668x, explaining 92.8% of incidents. Heat, plant, BMS board and supplier are all ruled out as confounders. The evidence gate passes 7/7. The action holds **1,380 units instead of recalling 180,000, saving $4,465,500**. 56 exhibits are hashed, and a replay of all 46 SQL queries matches the root.
-- **Files.** [explanation](examples/reference/explanation.txt), [8D report](examples/reference/8d-report.html), [supplier claim](examples/reference/supplier-claim.html), [proof bundle](examples/reference/proof-bundle.json), [replay result](examples/reference/verify.json).
+- **Files.** [explanation](examples/reference/explanation.txt), [8D report](examples/reference/8d-report.html), [supplier claim](examples/reference/supplier-claim.html), [proof bundle](examples/reference/proof-bundle.json), [replay result](examples/reference/verify.json). The two reports are HTML pages: GitHub shows their source, so download them (Raw) and open them in a browser.
 
 **2. A blind test with no defect** (generated data, nothing planted)
 - **Input.** About 100 claims scattered across the same 180,000 units, with no real cause.
@@ -42,7 +42,7 @@ Each example below is reproduced by `./sample.sh`. Its full output for this run 
 
 **3. Real data: every drive in Backblaze's fleet, Q2 2026**
 - **Input.** [Backblaze Drive Stats](https://www.backblaze.com/cloud-storage/resources/hard-drive-test-data) reduced to one row per drive: 355,689 real drives and 1,517 failures, with model, data centre and age as suspects. Bundled as [`public/samples/backblaze-drives-q2-2026.csv`](public/samples/backblaze-drives-q2-2026.csv).
-- **Output.** The worst model is **HGST HUH721212ALN604**: 180 failures in 9,694 drives, about 4x the fleet. The agent shows that its excess is **confined to data centre sac2**: outside sac2 the model fails at 42/10k against 34/10k for other drives, and sac2's own excess disappears without it. Age is ruled out as a confounder. The gate **blocks a fleet-wide action**: the failures sit in one cohort (that model in sac2), which is where to look next.
+- **Output.** The worst model is **HGST HUH721212ALN604**: 180 failures in 9,694 drives, about 4x the fleet. The agent shows that its excess is **confined to data centre sac2**: outside sac2 the model fails at 42/10k against 34/10k for other drives, and without it sac2's excess falls from 2.1x to 1.6x (56 vs 34 per 10k), below the 2x bar though still above the rest of the fleet. Age is ruled out as a confounder. The gate **blocks a fleet-wide action**: the failures sit in one cohort (that model in sac2), which is where to look next.
 
 **4. Real data: the Chevy Bolt EV battery fires**
 - **Input.** 229 public NHTSA complaints against 15,774 complaints for ten comparator vehicles.
@@ -54,7 +54,7 @@ Each example below is reproduced by `./sample.sh`. Its full output for this run 
 | Feature | What it is | Try it |
 | --- | --- | --- |
 | **Investigate** | 131 weak signals from six cities converge in Meterless H-MEM (hierarchical memory) into one incident cluster. Seven suspects (firmware, carrier, Sun Belt heat, plant, battery-management board, cell supplier, cell batch) are each tested with a federated SQL query and a chi-square test. The verdict: cell batch `CB-B-0917` in lot L-409, failing at 841 per 10,000 units against 0.5 elsewhere, a relative risk of 1,668×. | `/app?autorun=1` |
-| **Explain why** | Heat, the plant, the BMS board and the cell supplier all look guilty on raw data. A Cochran–Mantel–Haenszel test (a test that holds a second factor fixed) shows each effect vanishes once the batch is held fixed: heat goes from p = 1.6e-6 to p = 0.23. Every node in the proof graph opens its exhibit: the SQL, where it ran, the rows and the proof hash. *In our live runs, Nemotron's first guess was one of these look-alikes. The statistics overruled it, and the agent trace says so.* | Select any node in Fig. 1, or flip **Hold cell batch fixed** on `/` |
+| **Explain why** | Heat, the plant, the BMS board and the cell supplier all look guilty on raw data. A Cochran–Mantel–Haenszel test (a test that holds a second factor fixed) shows each effect vanishes once the batch is held fixed: heat goes from p = 1.6e-6 to p = 0.23. Every node in the proof graph opens its exhibit: the SQL, where it ran, the rows and the proof hash. *In our live runs, Nemotron's first guess was one of these look-alikes. The statistics overruled it, and the agent trace says so.* | Select any node in the proof graph on `/app?autorun=1` once the run finishes, or flip **Hold cell batch fixed** on `/` |
 | **Blind test** | Pick a hidden scenario: a firmware bug, a bad plant, transit damage, faulty BMS boards, two causes at once, or no defect. The agent investigates without the answer; the planted truth is revealed only after its verdict. With no defect, it finds nothing and **refuses to recall**. | `/app?scenario=random&autorun=1` · `/app?scenario=noise&autorun=1` · `/app?scenario=two-causes&autorun=1` |
 | **Act** | A seven-criterion evidence gate must pass before any action appears. A named approver then places an ERP hold on exactly 1,380 serials (SN-88400 to SN-89779) instead of recalling 180,000, saving $4,465,500 at $25 a unit, and Traceon drafts a stop-sale notice and a CPSC Section 15(b) report draft. Firmware causes get an over-the-air rollback instead of a quarantine. | Disposition pane: type a name, **Execute remediation** |
 | **Verify** | **Replay & verify** re-runs every SQL query in the case and rebuilds the SHA-256 chain. A tampered query, reordered evidence or the wrong scenario all fail. | Disposition pane: **Replay & verify**, or **Export proof bundle** |
@@ -90,7 +90,7 @@ The app's top bar has a section menu: **Case file**, **Watch**, **Real recalls**
 | **Signed timestamp** | The ledger root signed with Ed25519 and anchored in Bitcoin through OpenTimestamps. The `.ots` file verifies with the standard `ots` client. | Disposition pane, Proof ledger |
 | **Scoreboard** | Nemotron's first-ranked suspect against the tested verdict, and on generated data, who was right. | `/scoreboard` |
 
-The landing page (`/`) reads like an investigation report, with an animated proof figure, the interactive confounder experiment and the blind-test results. The app (`/app`) is a three-pane case file: **Intake**, **Investigation**, **Disposition**. The top bar shows which integrations are live, a scenario picker and **Reset demo**. On phones and tablets (900 px and below) the panes become tabs under a sticky top bar, the controls move into a left drawer, the proof graph scrolls sideways, and exhibits open as a full-screen sheet. There is no login.
+The landing page (`/`) reads like an investigation report, with an animated proof figure, the interactive confounder experiment and the blind-test results. The app (`/app`) is a three-pane case file: **Intake**, **Investigation**, **Disposition**. The top bar shows the status of each integration, a scenario picker and **Reset demo**. On phones and tablets (900 px and below) the panes become tabs under a sticky top bar, the controls move into a left drawer, the proof graph scrolls sideways, and exhibits open as a full-screen sheet. There is no login.
 
 ## Why the statistics, not the model, have to decide
 
@@ -107,7 +107,7 @@ A language model can sound certain about a correlation. A recall decision has to
 Traceon has five layers in one Node.js process:
 - **Signals:** warranty claims, reviews and forums, and live federal feeds.
 - **Context:** Meterless H-MEM stores and converges signals; the Markovian engine bounds the investigation chain.
-- **Reasoning:** Nemotron plans, red-teams, inspects photos and explains; the statistics engine decides.
+- **Reasoning:** Nemotron plans, red-teams, inspects photos and explains; the statistics engine decides. Model calls go through Meterless Nightshift (Lightning, and Ultra for the explanation), with NVIDIA NIM for the photo, as the labelled fallback and on the hosted site.
 - **Data:** federated SQL through the Zetaris SQL API, with a local mirror as a labelled fallback.
 - **Action:** the evidence gate, the named approver, remediation and the proof chain.
 
@@ -122,7 +122,8 @@ flowchart LR
   AG --> GATE{"Evidence gate<br/>7 criteria"}
   GATE -- "pass + named approver" --> ACT["Remediation<br/>actions.ts"]
   GATE -- "blocked" --> MON["Monitor<br/>no recall"]
-  AG <-- "plan, red team, explain" --> NIM["NVIDIA NIM<br/>Nemotron 3.5"]
+  AG <-- "plan, red team, questions, explain" --> NS["Meterless Nightshift<br/>Nemotron Lightning · Ultra"]
+  AG -. "photo, fallback, hosted site" .-> NIM["NVIDIA NIM<br/>Nemotron Super VL · Lightning"]
   AG -- "SQL" --> ZET["Zetaris SQL API"]
   AG -. "fallback" .-> MIR[("Local mirror<br/>alasql")]
   AG -- "every result" --> PROOF["Proof chain<br/>SHA-256"]
@@ -131,13 +132,14 @@ flowchart LR
   ACT -- "approved insight" --> DISK
 ```
 
-Signals flow left to right into the agent, which reaches out to Nemotron for language tasks and to Zetaris for data, falling back to the local mirror with the reason recorded. Every result lands in the proof chain. Only a passed gate and a named approver lead to action; a blocked gate means monitoring, not a recall.
+Signals flow left to right into the agent, which reaches out to Nemotron for language tasks (through Meterless Nightshift, with NVIDIA NIM for the photo, as the labelled fallback and on the hosted site) and to Zetaris for data, falling back to the local mirror with the reason recorded. Every result lands in the proof chain. Only a passed gate and a named approver lead to action; a blocked gate means monitoring, not a recall.
 
 ### Who holds which key
 
 ```mermaid
 flowchart LR
   B["Browser<br/>no keys"] -- "investigate, read, approve" --> API["Traceon API"]
+  API -- "NIGHTSHIFT_TOKEN" --> NS["Meterless Nightshift<br/>local runtime"]
   API -- "NVIDIA_API_KEY" --> NIM["NVIDIA NIM"]
   API -- "Zetaris token, SELECT only" --> ZET["Zetaris"]
   API -- "Bright Data token" --> BD["Bright Data"]
@@ -147,11 +149,13 @@ flowchart LR
 
 | Key or role | Lives in | Can | Can never |
 | --- | --- | --- | --- |
-| `NVIDIA_API_KEY` | Server environment only | Call NIM chat completions for planning, red team, vision and the explanation | Reach the browser, produce a statistic, or trigger an action |
+| `NIGHTSHIFT_TOKEN` (or the file in `NIGHTSHIFT_TOKEN_FILE`) | Server environment only | Call the local Nightshift runtime, which routes planning, red team, questions and the explanation to Nemotron | Reach the browser, produce a statistic, or trigger an action |
+| `NVIDIA_API_KEY` | Server environment only | Call NIM chat completions: the photo, any call Nightshift cannot answer, and every model call where Nightshift is not configured (the hosted site) | Reach the browser, produce a statistic, or trigger an action |
 | Zetaris token or login | Server environment only | Send `SELECT` queries through the SQL API | Write to Zetaris: the app sends no write statements; holds go to the local ERP table |
 | `BRIGHTDATA_API_TOKEN` | Server environment only | Fetch public news pages through the Web Unlocker (at most once per 30 minutes) | Reach the browser |
+| `TRACEON_SIGNING_KEY` | Server environment, or generated once in the storage folder | Sign proof roots (Ed25519); the public key is at `/api/proof/key` | Reach the browser |
 | Named approver | Typed in the browser | Approve the confirmed causes of a completed run whose gate passed | Act on a blocked run, an unconfirmed cause or an unknown ledger root (403) |
-| Anyone with the URL | Browser | Run investigations, open exhibits, replay proofs, reset the demo | Start a second run while one is active (409) |
+| Anyone with the URL | Browser | Run investigations, open exhibits, replay proofs, upload data, reset the demo (unless `TRACEON_DISABLE_RESET=1`) | Start a second run while one is active (409) |
 
 ### The investigation pipeline
 
@@ -187,7 +191,7 @@ sequenceDiagram
   participant R as Run registry
   participant E as Agent
   participant M as H-MEM
-  participant N as Nemotron
+  participant N as Nemotron (Nightshift or NIM)
   participant Z as Zetaris or mirror
 
   B->>R: POST /api/investigate
@@ -272,7 +276,7 @@ flowchart TB
   end
   subgraph S2["Live models"]
     direction LR
-    D["NVIDIA_API_KEY"] --> E["npm run nemotron:check"]
+    D["Nightshift token<br/>and NVIDIA_API_KEY"] --> E["npm run nightshift:check<br/>npm run nemotron:check"]
   end
   subgraph S3["Federated data"]
     direction LR
@@ -295,14 +299,14 @@ Each step is optional. Without keys every model step uses a labelled template an
 - **Every external call has a deadline.** Federal feeds 9 s; Zetaris 55 s to start a query and 30 s per page, with two retries for known transient cluster faults and a 60 s circuit breaker after repeated failures; Nemotron 20 to 75 s depending on the call, capped by `NEMOTRON_TIMEOUT_MS`; thinking requests race a fast answer so latency spikes never stall a run.
 - **Nothing is faked when it fails.** An unreachable feed is shown as unreachable; a Zetaris failure falls back to the mirror with the reason in the exhibit; a model failure falls back to a labelled template with the reason in the agent trace.
 - **Open by design for judging.** There is no login. `/api/reset` clears demo memory and holds (shared cases, uploads and the signing key are kept); set `TRACEON_DISABLE_RESET=1` to turn it off. Put the app behind authentication before any real use.
-- **Shared data is not private.** Uploaded datasets, shared cases and their comments are stored on the server as plain JSON and are readable by anyone with the link.
-- **Test coverage.** 67 tests: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case and the real-data feeds (18), regressions for every fix from the end-to-end audit (7), Zetaris fault handling and session refresh (4), and Meterless Nightshift as the AI provider (7).
+- **Shared data is not private.** Uploaded datasets, shared cases and their comments are stored on the server as plain JSON. Uploaded datasets are listed on `/data` for every visitor, and shared cases and their comments are readable by anyone with the link.
+- **Test coverage.** 67 tests at commit f321d67: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case and the real-data feeds (18), regressions for every fix from the Oct 25 end-to-end audit (7), Zetaris fault handling and session refresh (4), and Meterless Nightshift as the AI provider (7). The fixes from the Oct 27 audit add their own regression suites (`tests/fix-*.test.mts`).
 
 ## What's real and what's simulated
 
 | Real | Simulated or local |
 | --- | --- |
-| CPSC, openFDA and NHTSA data, fetched live on each run | The company (VoltRide), its 180,000 units, lots, suppliers, warehouses and warranty claims |
+| CPSC, openFDA and NHTSA data, fetched live (cached for up to 10 minutes) | The company (VoltRide), its 180,000 units, lots, suppliers, warehouses and warranty claims |
 | Meterless Nightshift as the AI provider, running on the Mac: planning, red team and Q&A go through it to Nemotron 3.5 Lightning, the explanation to Nemotron 3 Ultra. Each reply is labelled with the route that answered | Reviews and forum posts about the VR-48: the product is fictional, so they are simulated and labelled *simulated* |
 | Nemotron on NVIDIA NIM directly: the photo (Super VL, which Nightshift does not serve yet), the fallback when Nightshift cannot answer, and the hosted site, with reasoning traces when thinking wins the race | n/a |
 | Bright Data Web Unlocker fetching current news on e-bike battery fires (Google News), shown as live context in the intake | n/a |
@@ -321,7 +325,7 @@ Next.js 15.5 (App Router), React 19.3, TypeScript 5.9, alasql 4.21 (in-process S
 
 ## Run it locally
 
-**Prerequisites:** Node.js 18.18 or newer (developed on Node 26.5) and npm. No database.
+**Prerequisites:** Node.js 18.18 or newer for the app and `./sample.sh`, 20.10 or newer for `npm test` (it uses the test runner's `--test-concurrency` flag), and npm. Developed on Node 26.5. No database.
 
 ```bash
 npm install
@@ -334,8 +338,10 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | Variable | What it does | Default or when unset |
 | --- | --- | --- |
 | `NIGHTSHIFT_TOKEN` (or `NIGHTSHIFT_TOKEN_FILE`) | Meterless Nightshift as the AI provider: every model call goes to the local runtime first | Unset: Nemotron on NVIDIA NIM answers directly |
-| `NIGHTSHIFT_URL`, `AI_PROVIDER` | Where Nightshift listens; `auto`, `nightshift` or `nim` | `http://127.0.0.1:8088/v1`; `auto` |
-| `NIGHTSHIFT_VISION_MODEL`, `_FAST_MODEL`, `_DEEP_MODEL` | The model id Nightshift is asked for, per job | Nemotron if it is connected to Nightshift (Lightning for fast; Super VL, or Ultra while Nightshift holds Super VL back, for deep), else `meterless/vision`, `meterless/fast`, `meterless/deep` |
+| `NIGHTSHIFT_URL`, `AI_PROVIDER` | Where Nightshift listens; `auto` or `nightshift` (Nightshift first, labelled NIM fallback), or `nim` (NIM only) | `http://127.0.0.1:8088/v1`; `auto` |
+| `NIGHTSHIFT_USE_NEMOTRON`, `NIGHTSHIFT_THINKING` | `off` keeps the `meterless/*` routes instead of Nemotron; `on` lets Nemotron think on the photo and the explanation (slower) | Nemotron picked from Nightshift's model list; thinking off |
+| `NIGHTSHIFT_APP` | The app name sent to Nightshift in the `meterless-app` header | `traceon` |
+| `NIGHTSHIFT_VISION_MODEL`, `NIGHTSHIFT_FAST_MODEL`, `NIGHTSHIFT_DEEP_MODEL` | The model id Nightshift is asked for, per job | Nemotron if it is connected to Nightshift (Lightning for fast; Super VL, or Ultra while Nightshift holds Super VL back, for deep), else `meterless/vision`, `meterless/fast`, `meterless/deep` |
 | `NVIDIA_API_KEY` | Nemotron on NVIDIA NIM: the fallback when Nightshift cannot answer, or the provider when it is not configured | Unset: labelled templates; the statistics are unchanged |
 | `NVIDIA_NIM_BASE_URL` | NIM endpoint | `https://integrate.api.nvidia.com/v1` |
 | `NEMOTRON_MODEL` / `NEMOTRON_FAST_MODEL` | Vision and explanation model / planning and red-team model | `nvidia/nemotron-3.5-super-vl-120b-a12b` / `nvidia/nemotron-3.5-lightning-30b-a3b` |
@@ -343,7 +349,7 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | `NEMOTRON_THINKING_DEADLINE_MS` | How long a thinking answer may take before the fast answer is used | 20,000 for the explanation, 25,000 for vision |
 | `NEMOTRON_CACHE` | Reply cache in `.nim-cache/` for instant demo re-runs | On; set `off` to always call the model |
 | `ZETARIS_API_URL`, `ZETARIS_ORG_ID` | Zetaris SQL API host and organisation | Unset: every query runs on the local mirror |
-| `ZETARIS_API_TOKEN`, or `ZETARIS_USERNAME` + `ZETARIS_PASSWORD` | Zetaris authentication (token, or Basic login with automatic refresh) | Required for the cloud path |
+| `ZETARIS_API_TOKEN` (also read as `ZETARIS_ID_TOKEN`), or `ZETARIS_USERNAME` + `ZETARIS_PASSWORD` | Zetaris authentication (token, or Basic login with automatic refresh) | Required for the cloud path |
 | `ZETARIS_SCHEMA`, `ZETARIS_TABLE_MAP` | Where the tables live in Zetaris, for example `traceon`, or a per-table JSON map | Unqualified table names |
 | `BRIGHTDATA_API_TOKEN`, `BRIGHTDATA_ZONE` | Live news on e-bike battery fires through the Web Unlocker, shown as real-world context (cached 30 minutes) | Unset: no news feed; zone `web_unlocker1` |
 | `OPENFDA_API_KEY` | Higher openFDA rate limits | openFDA works without a key |
@@ -372,15 +378,15 @@ npx tsx scripts/make-sample-csv.mts             # rebuild the charger sample for
 
 ### Test status
 
-Run on 2026-10-26 (`npm test`, which includes a production build and server):
+`npm test` at commit f321d67 (it includes a production build and server), before the Oct 27 audit's regression suites were added:
 
 ```
-ℹ tests 61
-ℹ pass 61
+ℹ tests 67
+ℹ pass 67
 ℹ fail 0
 ```
 
-Blind accuracy (`npm run eval`): seeds 1-300 re-run on 2026-10-25 at 22:31 UTC after the as-of and uploaded-data changes to the engine; the held-out run is from 21:06 UTC the same day:
+Blind accuracy (`npm run eval`), both runs re-run on 2026-10-27 at commit f321d67, after the latest method change (`npm run eval -- 300 1` and `npm run eval -- 250 151`, offline, about three minutes each):
 
 ```
 seeds 1-300 + 4 named:    304/304 correct (100.0%)   wrong but safely blocked: 0 · wrong and acted: 0
@@ -401,7 +407,7 @@ The method was tuned on seeds 1-150 (three statistical flaws were found and fixe
 
 ## Roadmap
 
-Status as of 2026-10-26. The pre-submission checklist is in [TODO_BEFORE_SUBMISSION.md](TODO_BEFORE_SUBMISSION.md).
+Status as of 2026-10-27. The pre-submission checklist is in [TODO_BEFORE_SUBMISSION.md](TODO_BEFORE_SUBMISSION.md).
 
 **Done**
 - The investigation agent, evidence gate, proof chain and remediation; 304/304 blind scenarios and 250/250 held out.
@@ -415,7 +421,7 @@ Status as of 2026-10-26. The pre-submission checklist is in [TODO_BEFORE_SUBMISS
 - Scoreboard of model guesses against tested verdicts.
 
 **Next, before submission**
-- Record the demo video and submit on HackOS.
+- Finish the demo video and the slide deck, and submit on HackOS.
 
 **Later**
 - Authentication and per-team storage for uploads, shared cases and comments.
@@ -427,11 +433,12 @@ Status as of 2026-10-26. The pre-submission checklist is in [TODO_BEFORE_SUBMISS
 ## Live access
 
 The live deployment is at **https://traceon.netlayerlabs.com** and stays running until the results are announced on **6 November 2026**. It is configured as follows:
-- **Data:** the Zetaris platform (the hackathon's Docker distribution) runs on the same server, and the reference scenario's queries go to it over the Zetaris REST API. The top bar shows the hash-parity check; other scenarios and uploads run on the local engine, labelled in each exhibit. A full reference investigation takes about 15 seconds, with all 46 queries on Zetaris.
+- **Data:** the Zetaris platform (the hackathon's Docker distribution) runs on the same server, and the reference scenario's queries go to it over the Zetaris REST API. The top bar shows the hash-parity check; other scenarios and uploads run on the local engine, labelled in each exhibit. A full reference investigation takes under a minute (15 to 50 seconds in our runs, mostly model latency), with all 46 queries on Zetaris.
 - **AI:** Nemotron on NVIDIA NIM. Meterless Nightshift is a desktop runtime (Mac, Windows, DGX), so it cannot run on this Linux server. The demo video shows the same app on a Mac with Nightshift as the AI provider: planning, red team and Q&A go through it to Nemotron Lightning, the explanation to Nemotron Ultra, and a full case takes about 18 seconds. To try that path yourself, install Nightshift (free Mac M1+ edition from meterless.ai), add an NVIDIA key under Setup → Cloud provider keys, set `NIGHTSHIFT_TOKEN_FILE` to its `runtime-token` file and run `npm run nightshift:check`.
 - **Feeds:** CPSC, openFDA and NHTSA, fetched live, and Bright Data news through the Web Unlocker.
+- **Reset demo** is enabled, so a judge can start fresh. It clears demo memory and ERP holds for everyone on the site (shared cases, uploads and the signing key are kept), and is refused while an investigation is running.
 
-If any live service is unavailable, the app says so in each exhibit and in the top bar, and falls back without changing a verdict. The sample mode above needs none of it.
+If any live service is unavailable, the app says so in each exhibit and in the agent trace, and falls back without changing a verdict. The sample mode above needs none of it.
 
 ## Deploying
 
@@ -462,7 +469,7 @@ src/lib/stats.ts              chi-square, Monte Carlo exact test, Cochran–Mant
 src/lib/investigation.ts      the agent: screen, adjudicate, robustness, residual, red team, gate, explanation
 src/lib/zetaris.ts            Zetaris SQL API client, canonical proof hashes, local mirror, parity check
 src/lib/meterless.ts          H-MEM ingestion and convergence, world model, Markovian chain
-src/lib/nemotron.ts           NVIDIA NIM client: thinking race, retries, cache, de-duplication
+src/lib/nemotron.ts           AI gateway: Meterless Nightshift first, then NVIDIA NIM (thinking race, retries, cache, de-duplication)
 src/lib/vision.ts             defect-photo forensics
 src/lib/signals.ts            federal feeds, Bright Data news, warranty claims, simulated VR-48 chatter
 src/lib/actions.ts            remediation and proof replay
@@ -482,13 +489,17 @@ src/lib/cases.ts              shared cases and reviewer comments
 src/lib/scoreboard.ts         model guesses against tested verdicts
 src/components/               proof graph, panes, exhibits, case tools, section menu, landing motion, confounder table, landing nav
 data/nhtsa/                   NHTSA complaint and recall snapshots for five vehicles
-tests/                        stats, scenarios, proof, degrade, registry and end-to-end suites; scipy fixtures
-scripts/                      eval, nemotron-check, zetaris export, check and mock, NHTSA snapshots, sample CSV
-vendor/                       Meterless H-MEM and Markovian reference engines (Apache-2.0)
-public/samples/               the sample defect photo (NTSB, public domain; the earlier illustration is kept as SVG/PNG) and the charger CSV
+tests/                        stats, scenarios, proof, degrade, registry, features, hardening, Nightshift, Zetaris
+                              and end-to-end suites, the audit regressions (fix-*); scipy fixtures
+scripts/                      sample mode, eval, nemotron-check, nightshift check and stand-in, zetaris export,
+                              check, warm and mock, NHTSA snapshots, sample CSV
+vendor/                       Meterless H-MEM and Markovian reference engines (Apache-2.0, licence text in each folder)
+public/samples/               the sample defect photo (NTSB, public domain; the earlier illustration is kept as SVG/PNG),
+                              the Backblaze drive CSV and the charger CSV
 public/brand/                 the Traceon lockup (footer) and header logo
 src/app/icon.png              favicon (apple-icon.png for iOS)
-docs/                         Zetaris setup; the original hackathon plan, archived
+docs/                         Zetaris setup
+examples/                     committed outputs of one sample run (summary, reference case files)
 ARCHITECTURE.md               the full design
 DEMO_SCRIPT.md                the two-minute demo
 TODO_BEFORE_SUBMISSION.md     the pre-submission checklist and roadmap
@@ -500,17 +511,18 @@ VoltRide, the VR-48 battery pack and all factory, supplier, warehouse and warran
 
 ## Pre-existing work and credits
 
-- **Meterless H-MEM and Markovian reference engines**, vendored unmodified from [Meterless/Meterless](https://github.com/Meterless/Meterless) under Apache-2.0 (`vendor/README.md`).
+- **Meterless H-MEM and Markovian reference engines**, vendored unmodified from [Meterless/Meterless](https://github.com/Meterless/Meterless) under Apache-2.0, with the licence text in each folder (`vendor/README.md`).
+- **Backblaze Drive Stats**, Q2 2026, reduced to one row per drive for the bundled real-data sample. Source: [Backblaze](https://www.backblaze.com/cloud-storage/resources/hard-drive-test-data).
 - **alasql** (MIT) for the in-process SQL mirror. Other open-source packages are listed in `package.json`.
 - **Sample defect photo:** ["1-7-12 JAL787 APU Battery"](https://commons.wikimedia.org/wiki/File:1-7-12_JAL787_APU_Battery.JPG), National Transportation Safety Board, public domain (U.S. government work), via Wikimedia Commons.
 - **Fonts:** Newsreader, IBM Plex Sans and IBM Plex Mono (SIL Open Font License), served through `next/font`.
-- **APIs and data:** NVIDIA NIM, the Zetaris SaaS SQL API (built from its published OpenAPI spec), Bright Data Web Unlocker, CPSC SaferProducts, openFDA and NHTSA.
+- **APIs and data:** Meterless Nightshift (local runtime), NVIDIA NIM, the Zetaris SaaS SQL API (built from its published OpenAPI spec), Bright Data Web Unlocker, CPSC SaferProducts, openFDA and NHTSA.
 - **Statistics reference values** generated with scipy 1.18.1 and statsmodels 0.15.0.
 - **No prior Traceon code.** The configuration was written by hand (no `create-next-app` template), and everything else was written for the Open Agent Hackathon 2026.
 
 ## License
 
-There is no license file for Traceon's own code yet. The vendored Meterless engines are Apache-2.0.
+There is no license file for Traceon's own code yet. The vendored Meterless engines are Apache-2.0; their licence text is in `vendor/meterless-hmem/LICENSE` and `vendor/meterless-markovian/LICENSE`.
 
 ---
 

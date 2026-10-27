@@ -4,5 +4,7 @@ const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   // alasql pulls optional Node-only deps; keep it out of the bundle.
   serverExternalPackages: ['alasql'],
+  // No X-Powered-By banner on any response.
+  poweredByHeader: false,
 };
 export default nextConfig;
