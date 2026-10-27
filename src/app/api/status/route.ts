@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { resolveScenario } from '@/lib/enterpriseData';
-import { readWorldModel, scenarioDir } from '@/lib/meterless';
+import { readWorldModel, resetEnabled, scenarioDir } from '@/lib/meterless';
 import { aiProviders, NEMOTRON_FAST_MODEL, NEMOTRON_MODEL, nightshiftStatus, pickNightshiftModel } from '@/lib/nemotron';
 import { zetarisMode, zetarisParityCheck } from '@/lib/zetaris';
 
@@ -47,6 +47,6 @@ export async function GET(req: Request) {
     meterless: { memories, quarantinedLots: Object.values(world).filter((l) => l.status === 'QUARANTINED').map((l) => l.lotId) },
     brightdata: { live: Boolean(process.env.BRIGHTDATA_API_TOKEN) },
     // Same rule as POST /api/reset, so the app can hide the button.
-    resetDisabled: process.env.TRACEON_DISABLE_RESET === '1',
+    resetDisabled: !resetEnabled(),
   });
 }

@@ -155,7 +155,7 @@ flowchart LR
 | `BRIGHTDATA_API_TOKEN` | Server environment only | Fetch public news pages through the Web Unlocker (at most once per 30 minutes) | Reach the browser |
 | `TRACEON_SIGNING_KEY` | Server environment, or generated once in the storage folder | Sign proof roots (Ed25519); the public key is at `/api/proof/key` | Reach the browser |
 | Named approver | Typed in the browser | Approve the confirmed causes of a completed run whose gate passed | Act on a blocked run, an unconfirmed cause or an unknown ledger root (403) |
-| Anyone with the URL | Browser | Run investigations, open exhibits, replay proofs, upload data, reset the demo (unless `TRACEON_DISABLE_RESET=1`) | Start a second run while one is active (409) |
+| Anyone with the URL | Browser | Run investigations, open exhibits, replay proofs, upload data, reset the demo (local `next dev`, or a server with `TRACEON_ENABLE_RESET=1`) | Start a second run while one is active (409) |
 
 ### The investigation pipeline
 
@@ -298,7 +298,7 @@ Each step is optional. Without keys every model step uses a labelled template an
 - **One investigation at a time.** A second start gets 409 and can attach. A watchdog ends a run after 240 seconds (`RUN_TIMEOUT_MS`); the lock is released once the timed-out run has actually stopped.
 - **Every external call has a deadline.** Federal feeds 9 s; Zetaris 55 s to start a query and 30 s per page, with two retries for known transient cluster faults and a 60 s circuit breaker after repeated failures; Nemotron 20 to 75 s depending on the call, capped by `NEMOTRON_TIMEOUT_MS`; thinking requests race a fast answer so latency spikes never stall a run.
 - **Nothing is faked when it fails.** An unreachable feed is shown as unreachable; a Zetaris failure falls back to the mirror with the reason in the exhibit; a model failure falls back to a labelled template with the reason in the agent trace.
-- **Open by design for judging.** There is no login. `/api/reset` clears demo memory and holds (shared cases, uploads and the signing key are kept); set `TRACEON_DISABLE_RESET=1` to turn it off. Put the app behind authentication before any real use.
+- **Open by design for judging.** There is no login. `/api/reset` clears demo memory and holds (shared cases, uploads and the signing key are kept); it is off on a production server unless `TRACEON_ENABLE_RESET=1`, so the live demo cannot be wiped by a visitor. Put the app behind authentication before any real use.
 - **Shared data is not private.** Uploaded datasets, shared cases and their comments are stored on the server as plain JSON. Uploaded datasets are listed on `/data` for every visitor, and shared cases and their comments are readable by anyone with the link.
 - **Test coverage.** 67 tests at commit f321d67: statistics against scipy and statsmodels (7), blind scenarios (6), proof and remediation (6), degradation (5), the run registry (2), a real production server end to end (5), the features built on a finished case and the real-data feeds (18), regressions for every fix from the Oct 25 end-to-end audit (7), Zetaris fault handling and session refresh (4), and Meterless Nightshift as the AI provider (7). The fixes from the Oct 27 audit add their own regression suites (`tests/fix-*.test.mts`).
 
@@ -338,7 +338,7 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | Variable | What it does | Default or when unset |
 | --- | --- | --- |
 | `NIGHTSHIFT_TOKEN` (or `NIGHTSHIFT_TOKEN_FILE`) | Meterless Nightshift as the AI provider: every model call goes to the local runtime first | Unset: Nemotron on NVIDIA NIM answers directly |
-| `NIGHTSHIFT_URL`, `AI_PROVIDER` | Where Nightshift listens; `auto` or `nightshift` (Nightshift first, labelled NIM fallback), or `nim` (NIM only) | `http://127.0.0.1:8088/v1`; `auto` |
+| `NIGHTSHIFT_URL`, `AI_PROVIDER` | Where Nightshift listens; `auto` (Nightshift first, labelled NIM fallback), `nightshift` (Nightshift only, no fallback) or `nim` (NIM only) | `http://127.0.0.1:8088/v1`; `auto` |
 | `NIGHTSHIFT_USE_NEMOTRON`, `NIGHTSHIFT_THINKING` | `off` keeps the `meterless/*` routes instead of Nemotron; `on` lets Nemotron think on the photo and the explanation (slower) | Nemotron picked from Nightshift's model list; thinking off |
 | `NIGHTSHIFT_APP` | The app name sent to Nightshift in the `meterless-app` header | `traceon` |
 | `NIGHTSHIFT_VISION_MODEL`, `NIGHTSHIFT_FAST_MODEL`, `NIGHTSHIFT_DEEP_MODEL` | The model id Nightshift is asked for, per job | Nemotron if it is connected to Nightshift (Lightning for fast; Super VL, or Ultra while Nightshift holds Super VL back, for deep), else `meterless/vision`, `meterless/fast`, `meterless/deep` |
@@ -347,6 +347,7 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | `NEMOTRON_MODEL` / `NEMOTRON_FAST_MODEL` | Vision and explanation model / planning and red-team model | `nvidia/nemotron-3.5-super-vl-120b-a12b` / `nvidia/nemotron-3.5-lightning-30b-a3b` |
 | `NEMOTRON_TIMEOUT_MS` | Cap on every model call | No cap beyond each call's own deadline |
 | `NEMOTRON_THINKING_DEADLINE_MS` | How long a thinking answer may take before the fast answer is used | 20,000 for the explanation, 25,000 for vision |
+| `NEMOTRON_THINKING_GRACE_MS` | How long a thinking answer may still arrive after the fast answer is ready | 4,000 |
 | `NEMOTRON_CACHE` | Reply cache in `.nim-cache/` for instant demo re-runs | On; set `off` to always call the model |
 | `ZETARIS_API_URL`, `ZETARIS_ORG_ID` | Zetaris SQL API host and organisation | Unset: every query runs on the local mirror |
 | `ZETARIS_API_TOKEN` (also read as `ZETARIS_ID_TOKEN`), or `ZETARIS_USERNAME` + `ZETARIS_PASSWORD` | Zetaris authentication (token, or Basic login with automatic refresh) | Required for the cloud path |
@@ -356,7 +357,8 @@ With no keys, everything runs: model steps use labelled templates, queries run o
 | `METERLESS_STORAGE_DIR` | Where H-MEM and the world model persist | `./.meterless-data` (`/tmp/meterless-data` on Vercel) |
 | `DEMO_PACING_MS` | Delay between steps so a demo is watchable | 350 |
 | `RUN_TIMEOUT_MS` | Watchdog for one investigation | 240,000 |
-| `TRACEON_DISABLE_RESET` | Set to `1` on a shared deployment so nobody can clear demo memory | Unset: **Reset demo** works |
+| `TRACEON_ENABLE_RESET`, `TRACEON_DISABLE_RESET` | `POST /api/reset` is off on a production server unless `TRACEON_ENABLE_RESET=1`, so nobody can clear what other visitors see; `TRACEON_DISABLE_RESET=1` turns it off everywhere | Reset works under `next dev`, off under `next start` |
+| `TRACEON_OFFLINE` | `1` makes every feed and live NHTSA lookup report unreachable without a request (sample mode sets it) | Unset: feeds are fetched live |
 | `TRACEON_SIGNING_KEY` | Ed25519 private key (PEM) that signs proof roots, so a deployment keeps one identity | Unset: a key is generated once and kept in the storage folder |
 
 The same list with comments is in [`.env.example`](.env.example).

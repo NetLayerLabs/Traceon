@@ -83,23 +83,22 @@ test('the landing page says who writes the explanation on each route', () => {
   assert.match(LANDING, /the photo, and any call it cannot serve, goes to NVIDIA NIM/);
 });
 
-test('AI_PROVIDER is documented as it behaves: nim skips Nightshift, nightshift equals auto', () => {
+test('AI_PROVIDER is documented as it behaves: auto falls back, nightshift and nim use one provider', () => {
   process.env.NIGHTSHIFT_TOKEN = 'ns-token';
   process.env.NVIDIA_API_KEY = 'nvapi-test';
   try {
-    for (const mode of ['auto', 'nightshift']) {
-      process.env.AI_PROVIDER = mode;
-      assert.deepEqual(ns.aiProviders(), ['nightshift', 'nim'], mode);
-    }
+    process.env.AI_PROVIDER = 'auto';
+    assert.deepEqual(ns.aiProviders(), ['nightshift', 'nim']);
+    process.env.AI_PROVIDER = 'nightshift';
+    assert.deepEqual(ns.aiProviders(), ['nightshift']);
     process.env.AI_PROVIDER = 'nim';
     assert.deepEqual(ns.aiProviders(), ['nim']);
   } finally {
     for (const k of ['NIGHTSHIFT_TOKEN', 'NVIDIA_API_KEY', 'AI_PROVIDER']) delete process.env[k];
   }
-  assert.doesNotMatch(ARCH, /forces one/);
-  assert.match(ARCH, /`nightshift` currently behaves like `auto`/);
-  assert.match(README, /`auto` or `nightshift` \(Nightshift first, labelled NIM fallback\), or `nim` \(NIM only\)/);
-  assert.match(read('.env.example'), /nightshift currently behaves the same, and nim skips Nightshift/);
+  assert.match(ARCH, /`nightshift` uses Nightshift alone, with no NIM fallback/);
+  assert.match(README, /`auto` \(Nightshift first, labelled NIM fallback\), `nightshift` \(Nightshift only, no fallback\) or `nim` \(NIM only\)/);
+  assert.match(read('.env.example'), /nightshift uses Nightshift only \(no fallback\), and nim skips Nightshift/);
 });
 
 test('the system diagrams and the key table include Meterless Nightshift', () => {
