@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { CaseComment } from '@/lib/cases';
 import type { EvidenceItem } from './state';
 
@@ -62,23 +62,31 @@ export function CommentThread({ exhibitId, review }: { exhibitId: string | null;
 
 export function EvidenceModal(props: { title: string; subtitle?: string; body?: React.ReactNode; evidence: EvidenceItem[]; onClose: () => void; review?: ReviewProps }) {
   const [selected, setSelected] = useState<EvidenceItem | null>(props.evidence[0] ?? null);
+  const titleId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && props.onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [props]);
+  // Focus moves into the exhibit, and back to whatever opened it when it closes.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => opener?.focus?.();
+  }, []);
 
   const rows = selected?.query?.rows ?? [];
   const cols = rows.length ? Object.keys(rows[0]) : [];
   return (
     <div className="modal-back" onClick={props.onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div style={{ display: 'flex', alignItems: 'start', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <h2>{props.title}</h2>
+            <h2 id={titleId}>{props.title}</h2>
             {props.subtitle && <div className="muted">{props.subtitle}</div>}
           </div>
-          <button className="btn small ghost" onClick={props.onClose}>
+          <button ref={closeRef} className="btn small ghost" onClick={props.onClose}>
             Close
           </button>
         </div>

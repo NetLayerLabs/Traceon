@@ -132,8 +132,17 @@ const titleCase = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.to
 
 function BacktestView({ bt }: { bt: Backtest }) {
   const h = bt.headline;
+  // Model years NHTSA returned nothing for, when the live lookup reports them.
+  const missing = (bt as Backtest & { missingYears?: number[] }).missingYears ?? [];
   return (
     <>
+      {(bt.totals.complaints === 0 || missing.length > 0) && (
+        <div className="warn" style={{ fontSize: 13, borderLeft: '3px solid var(--ochre)', paddingLeft: 10, margin: '12px 0' }}>
+          {bt.totals.complaints === 0
+            ? `NHTSA returned no complaints for ${titleCase(bt.vehicle)} (${bt.years.join(', ')}), so there is nothing to replay. Check the make and model as NHTSA spells them.`
+            : `NHTSA returned no complaints for model year${missing.length > 1 ? 's' : ''} ${missing.join(', ')}; the result covers the other years only.`}
+        </div>
+      )}
       <div className="stat-row">
         <div>
           <div className="lbl">Complaints</div>

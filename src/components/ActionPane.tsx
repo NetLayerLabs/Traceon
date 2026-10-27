@@ -49,6 +49,7 @@ export function ActionPane({ state, onQuarantined, caseId, readOnly }: { state: 
   const [tab, setTab] = useState<string>('');
   const [verify, setVerify] = useState<VerifyResult | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [verifyErr, setVerifyErr] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const a = state.action;
   const gate = state.gate;
@@ -81,7 +82,8 @@ export function ActionPane({ state, onQuarantined, caseId, readOnly }: { state: 
 
   const runVerify = async () => {
     setVerifying(true);
-    setErr(null);
+    setVerify(null);
+    setVerifyErr(null);
     try {
       const res = await fetch('/api/verify', {
         method: 'POST',
@@ -94,7 +96,7 @@ export function ActionPane({ state, onQuarantined, caseId, readOnly }: { state: 
       if (!res.ok) throw new Error(data.error);
       setVerify(data);
     } catch (e) {
-      setErr((e as Error).message);
+      setVerifyErr((e as Error).message);
     } finally {
       setVerifying(false);
     }
@@ -144,8 +146,27 @@ export function ActionPane({ state, onQuarantined, caseId, readOnly }: { state: 
               No suspect survives testing, so there is nothing to recall. The agent blocks action and keeps watching.
             </div>
           </>
-        ) : !a ? (
+        ) : !a || !gate ? (
           <div className="empty">Cost impact appears once the root cause is mapped to exact units.</div>
+        ) : !gate.pass ? (
+          // A blocked gate means no action: no remedy, no savings figure.
+          <>
+            <div className="cost-compare">
+              <div className="cost-box">
+                <div className="lbl">Blanket recall</div>
+                <div className="big-num">{usd(a.blanketCostUsd)}</div>
+                <div className="faint">{a.blanketUnits.toLocaleString('en-US')} units</div>
+              </div>
+              <div className="cost-box surgical">
+                <div className="lbl">Traceon</div>
+                <div className="big-num good">No action</div>
+                <div className="faint">evidence gate blocked</div>
+              </div>
+            </div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+              {gate.criteria.filter((c) => !c.na && !c.pass).length} of {gate.criteria.filter((c) => !c.na).length} evidence-gate criteria failed, so Traceon proposes no remedy and claims no savings. Action stays blocked until every criterion passes.
+            </div>
+          </>
         ) : (
           <>
             <div className="cost-compare">
@@ -290,8 +311,8 @@ export function ActionPane({ state, onQuarantined, caseId, readOnly }: { state: 
                   : `Verification failed for ${verify.mismatches.length} item(s): ${verify.mismatches.map((m) => m.id).join(', ')}`}
               </div>
             )}
+            {verifyErr && <div className="bad" style={{ marginTop: 6, fontSize: 12 }}>Replay failed: {verifyErr}</div>}
             {state.doneMs !== null && <StampProof id={id} root={state.ledger.root} />}
-            {err && !gate?.pass && <div className="bad" style={{ marginTop: 6, fontSize: 12 }}>{err}</div>}
           </>
         )}
       </div>

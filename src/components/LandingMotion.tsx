@@ -54,23 +54,23 @@ export function LandingMotion() {
     );
     document.querySelectorAll('[data-reveal]').forEach((el) => reveal.observe(el));
 
-    // Scroll-spy: underline the section currently in the reading band.
+    // Scroll-spy: underline the last listed section whose top has reached the
+    // reading band, so nothing is marked while the cover is in view.
     const links = new Map<string, HTMLAnchorElement>();
     document.querySelectorAll<HTMLAnchorElement>('.lp-links a[href^="#"]').forEach((a) => links.set(a.hash.slice(1), a));
+    const sections = [...links.keys()].map((id) => document.getElementById(id)).filter((s): s is HTMLElement => s !== null);
     const spy = new IntersectionObserver(
       (entries) => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          links.forEach((a) => a.classList.remove('on'));
-          links.get(e.target.id)?.classList.add('on');
-        }
+        const band = entries[0]?.rootBounds?.top ?? innerHeight * 0.45;
+        let active: string | null = null;
+        for (const s of sections) if (s.getBoundingClientRect().top <= band) active = s.id;
+        links.forEach((a, id) => a.classList.toggle('on', id === active));
       },
       { rootMargin: '-45% 0px -50% 0px' }
     );
-    links.forEach((_, id) => {
-      const s = document.getElementById(id);
-      if (s) spy.observe(s);
-    });
+    // Every block of the page is watched, so the mark is re-checked whenever the band
+    // moves into another one (also after a jump, e.g. back to the cover).
+    document.querySelectorAll('.lp > header, .lp > section').forEach((el) => spy.observe(el));
 
     return () => {
       reveal.disconnect();

@@ -69,7 +69,7 @@ export default function WatchPage() {
           <div className="kicker">Live watch</div>
           <h1>Screen every day. Open a case the day it fires.</h1>
           <p>
-            Each day the warranty stream is screened across every factor with the same multiple-testing bar the investigation uses. The screen only says something is concentrating; when it fires, a full investigation opens on the data exactly as it stood that day, and decides whether it is a cause or a confounder.
+            Each day the warranty stream is screened across every factor with the same multiple-testing bar the investigation uses. To avoid alerting on noise, it also waits until the strongest group has at least 5 failures, so it can fire later than the date the case file&apos;s early-warning replay gives, which tests only the confirmed cause. The screen only says something is concentrating; when it fires, a full investigation opens on the data exactly as it stood that day, and decides whether it is a cause or a confounder.
           </p>
         </div>
 
@@ -175,7 +175,7 @@ export default function WatchPage() {
                 {alerted && data.alert ? (
                   <>
                     <p style={{ font: '17px/1.5 var(--serif)', margin: '0 0 10px' }}>
-                      On <b>{data.alert.date}</b>, after {data.alert.claims} claims, failures concentrated in <b>{data.alert.title.toLowerCase()}</b> ({data.alert.group}) beyond the bar. A case opens on the data as it stood that day.
+                      On <b>{data.alert.date}</b>, after {data.alert.claims} claims ({data.days[alertIdx].top!.failures} in {data.alert.group}), failures concentrated in <b>{data.alert.title.toLowerCase()}</b> beyond the bar. A case opens on the data as it stood that day.
                     </p>
                     <a className="btn primary" href={`/app?scenario=${encodeURIComponent(data.alert.caseId)}&autorun=1`}>
                       Investigate as of {data.alert.date}

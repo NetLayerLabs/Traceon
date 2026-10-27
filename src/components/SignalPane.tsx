@@ -23,8 +23,9 @@ export function SignalPane(props: {
   const { feeds, state } = props;
   const [kind, setKind] = useState<(typeof KINDS)[number]['id']>('all');
   const matched = useMemo(() => new Set(state.convergence?.matched.map((m) => m.source.split(':').slice(1).join(':')) ?? []), [state.convergence]);
-  const items: RadarItem[] = useMemo(() => {
-    const all = (feeds ?? []).flatMap((f) => f.items);
+  const items: (RadarItem & { simulated: boolean })[] = useMemo(() => {
+    // Items of a simulated feed (e.g. the fictional VR-48 posts) are marked one by one.
+    const all = (feeds ?? []).flatMap((f) => f.items.map((i) => ({ ...i, simulated: f.status === 'simulated' })));
     return all
       .filter((i) => kind === 'all' || i.kind === kind)
       .sort((a, b) => b.date.localeCompare(a.date))
@@ -33,6 +34,9 @@ export function SignalPane(props: {
 
   const conv = state.convergence;
   const maxCity = conv ? Math.max(1, ...Object.values(conv.cities)) : 1;
+  const nChannels = conv ? Object.keys(conv.channels).length : 0;
+  // The quoted signature describes the VR-48 battery; uploaded data has its own.
+  const custom = Boolean(state.scenario?.id.startsWith('custom-'));
 
   return (
     <aside className="pane">
@@ -65,8 +69,8 @@ export function SignalPane(props: {
         ) : (
           <>
             <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
-              Signature <span className="mono">“connector · scorch · overheat · smoke”</span> seen from {conv.firstSeen} to {conv.lastSeen} across{' '}
-              {Object.keys(conv.channels).length} channels.
+              {custom ? 'Seen' : <>Signature <span className="mono">“connector · scorch · overheat · smoke”</span> seen</>} from {conv.firstSeen} to {conv.lastSeen} across{' '}
+              {nChannels === 1 ? '1 channel' : `${nChannels} channels`}.
             </div>
             <div className="bars">
               {Object.entries(conv.cities)
@@ -82,7 +86,7 @@ export function SignalPane(props: {
                 ))}
             </div>
             {conv.priorInsights.length > 0 && (
-              <div className="tag good" style={{ display: 'block', marginTop: 8, padding: '6px 8px', borderRadius: 6 }}>
+              <div className="tag good" style={{ display: 'block', marginTop: 8, padding: '6px 8px', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                 Recalled from a previous session: {conv.priorInsights[0].content}
               </div>
             )}
@@ -109,6 +113,7 @@ export function SignalPane(props: {
             <div key={i.id} className={`signal ${i.kind} ${matched.has(i.id) ? 'hit' : ''}`}>
               <div className="meta">
                 <b>{i.source}</b>
+                {i.simulated && <span className="warn">simulated</span>}
                 <span>{i.date}</span>
                 {i.city && <span>{i.city}</span>}
                 {matched.has(i.id) && <span className="good">● converged</span>}
@@ -131,8 +136,20 @@ export function SignalPane(props: {
   );
 }
 
+/** A short label for the photo box: no trailing parenthetical, cut at a word boundary. */
+export function boxLabel(component: string, max = 28) {
+  const t = component.split('/')[0].trim();
+  if (t.length <= max) return t;
+  const bare = t.replace(/\s*\(.*$/, '') || t;
+  if (bare.length <= max) return bare;
+  const sp = bare.lastIndexOf(' ', max);
+  return `${bare.slice(0, sp > 0 ? sp : max).replace(/[\s,;:-]+$/, '')}…`;
+}
+
 function VisionCard(props: { photo: string; vision: VisionFinding | null; visionBusy: boolean; onPhoto: (d: string) => void; onAnalyze: () => void }) {
   const { vision } = props;
+  // Set when the planned route failed and another answered (e.g. Nightshift has no vision route).
+  const fallbackFrom = (vision as (VisionFinding & { fallbackFrom?: string }) | null)?.fallbackFrom;
   const onFile = (f: File | undefined) => {
     if (!f) return;
     const r = new FileReader();
@@ -143,7 +160,10 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
     <div className="card">
       <h3>
         Visual evidence
-        <span className={`tag ${vision?.live ? 'nv' : ''}`}>{vision ? (vision.live ? (vision.model.includes('·') ? vision.model : 'Nemotron VL') : 'offline reference') : 'not analyzed'}</span>
+        <span className={`tag ${vision?.live ? 'nv' : ''}`} title={fallbackFrom ? `Fallback: ${fallbackFrom}` : undefined}>
+          {vision ? (vision.live ? (vision.model.includes('·') ? vision.model : 'Nemotron VL') : 'offline reference') : 'not analyzed'}
+          {fallbackFrom ? ' · fallback' : ''}
+        </span>
       </h3>
       <div className="vision-frame">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -153,7 +173,7 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
             className="bbox"
             style={{ left: `${vision.bbox.x * 100}%`, top: `${vision.bbox.y * 100}%`, width: `${vision.bbox.w * 100}%`, height: `${vision.bbox.h * 100}%` }}
           >
-            <span>{vision.suspectedComponent.split('/')[0].trim().slice(0, 28)}</span>
+            <span title={vision.suspectedComponent}>{boxLabel(vision.suspectedComponent)}</span>
           </div>
         )}
       </div>
@@ -165,7 +185,7 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
       <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
         <label className="btn small" style={{ flex: 1, textAlign: 'center' }}>
           Upload photo
-          <input type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} />
+          <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => onFile(e.target.files?.[0])} />
         </label>
         <button className="btn small" style={{ flex: 1 }} onClick={props.onAnalyze} disabled={props.visionBusy}>
           {props.visionBusy ? 'Inspecting…' : 'Analyze'}
@@ -189,7 +209,6 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
           )}
         </div>
       )}
-      <div className="faint" style={{ fontSize: 10.5, marginTop: 6 }}>Sample image is an illustration. Upload a real photo for live analysis.</div>
     </div>
   );
 }
