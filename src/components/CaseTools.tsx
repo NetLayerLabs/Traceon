@@ -164,7 +164,18 @@ export function Falsifiers({ state }: { state: InvState }) {
 const fmt = (v: number | null) => (v === null ? 'n/a' : v !== 0 && Math.abs(v) < 0.01 ? v.toExponential(1) : String(Number(v.toPrecision(3))));
 
 /* ---------- Ask the case ---------- */
-const SUGGESTED = ['Why is the Sun Belt heat ruled out?', 'How sure are you, and what would change your mind?', 'Why not recall everything?', 'Which units exactly are affected?'];
+const SUGGESTED = ['How sure are you, and what would change your mind?', 'Why not recall everything?', 'Which units exactly are affected?'];
+
+/** The first suggestion asks about a suspect this case ruled out: the Sun Belt heat in the built-in cases, a confounder of the uploaded data otherwise. */
+function suggestions(state: InvState) {
+  const out = state.hypotheses.filter((h) => h.status === 'CONFOUNDED' || h.status === 'NO_ASSOCIATION');
+  if (!state.scenario?.id.startsWith('custom-') && out.some((h) => h.id === 'H-HEAT')) return ['Why is the Sun Belt heat ruled out?', ...SUGGESTED];
+  const h = out.find((x) => x.status === 'CONFOUNDED') ?? out[0];
+  return h ? [`Why is ${h.title}${h.hotGroup ? ` (${h.hotGroup})` : ''} ruled out?`, ...SUGGESTED] : SUGGESTED;
+}
+
+// Long provider labels wrap inside the card instead of widening the grid column.
+const WRAP = { whiteSpace: 'normal', overflowWrap: 'anywhere' } as const;
 
 export function AskCase({ id, state, onOpenExhibit }: { id: string | null; state: InvState; onOpenExhibit: (id: string) => void }) {
   const [q, setQ] = useState('');
@@ -194,7 +205,7 @@ export function AskCase({ id, state, onOpenExhibit }: { id: string | null; state
         <span className="tag nv">answers cite exhibits</span>
       </h3>
       {!ready ? (
-        <div className="empty">After the verdict, ask anything about it. Answers come only from this case’s exhibits, and every figure is checked.</div>
+        <div className="empty">After the verdict, ask anything about it. Answers come only from this case’s exhibits, and every figure and citation is checked.</div>
       ) : (
         <>
           {thread.map((t, i) => (
@@ -208,18 +219,41 @@ export function AskCase({ id, state, onOpenExhibit }: { id: string | null; state
                 <>
                   <div className="a">
                     {t.a.answer.split(/\n\s*\n/).map((p, j) => (
-                      <p key={j}>{linkCites(p, onOpenExhibit)}</p>
+                      <p key={j}>{linkCites(p, onOpenExhibit, struck(t.a!))}</p>
                     ))}
                   </div>
                   <div className="qa-meta">
-                    <span className={`tag ${t.a.source === 'nemotron' ? 'nv' : ''}`}>{t.a.source === 'nemotron' ? t.a.via ?? 'Nemotron' : 'case file (model unavailable)'}</span>
-                    <span className={`tag ${t.a.guard.unverified.length ? 'bad' : 'good'}`}>
-                      {t.a.guard.verified}/{t.a.guard.checked} figures verified
+                    <span className={`tag ${t.a.source === 'nemotron' ? 'nv' : ''}`} style={WRAP}>
+                      {t.a.source === 'nemotron' ? `${t.a.via ?? 'Nemotron'}${t.a.cached ? ' · cached' : ''}` : t.a.withheld ? 'case file' : 'case file (model unavailable)'}
                     </span>
+                    {t.a.withheld && (
+                      <span className="tag bad" style={WRAP}>
+                        model answer withheld: {t.a.withheld}
+                      </span>
+                    )}
+                    {/* Green only when every figure checks out and every citation holds its figures; nothing to check, no badge. */}
+                    {t.a.guard.checked > 0 && (
+                      <span className={`tag ${t.a.guard.unverified.length ? 'bad' : t.a.invalidCitations.length || t.a.miscited.length ? '' : 'good'}`}>
+                        {t.a.guard.verified}/{t.a.guard.checked} figures verified
+                      </span>
+                    )}
                     {t.a.invalidCitations.length > 0 && <span className="tag bad">invalid citation {t.a.invalidCitations.join(', ')}</span>}
+                    {t.a.miscited.map((m, k) => (
+                      <span key={k} className="faint mono" style={{ fontSize: 11 }}>
+                        <span className="bad">
+                          {m.figures.join(', ')} {m.figures.length > 1 ? 'are' : 'is'} not in {m.cited.join(', ')}
+                        </span>
+                        ; see{' '}
+                        {m.heldBy.map((c) => (
+                          <button key={c} className="cite-btn" onClick={() => onOpenExhibit(c)}>
+                            {c}
+                          </button>
+                        ))}
+                      </span>
+                    ))}
                     {t.a.citations.length > 0 && (
                       <span className="faint mono" style={{ fontSize: 11 }}>
-                        {t.a.citationsInferred ? 'sources (inferred):' : 'sources:'}{' '}
+                        sources:{' '}
                         {t.a.citations.map((c) => (
                           <button key={c} className="cite-btn" onClick={() => onOpenExhibit(c)}>
                             {c}
@@ -234,7 +268,7 @@ export function AskCase({ id, state, onOpenExhibit }: { id: string | null; state
           ))}
           {thread.length === 0 && (
             <div className="suggest">
-              {SUGGESTED.map((s) => (
+              {suggestions(state).map((s) => (
                 <button key={s} className="btn ghost small" onClick={() => ask(s)} disabled={busy}>
                   {s}
                 </button>
@@ -259,18 +293,39 @@ export function AskCase({ id, state, onOpenExhibit }: { id: string | null; state
   );
 }
 
-function linkCites(text: string, open: (id: string) => void) {
-  const parts = text.split(/(\[E-\d{2,4}\])/g);
-  return parts.map((p, i) => {
-    const m = p.match(/^\[(E-\d{2,4})\]$/);
-    return m ? (
-      <button key={i} className="cite-btn" onClick={() => open(m[1])}>
-        {m[1]}
-      </button>
+/** Citations to strike in an answer: ids that are not exhibits of the case, and exhibits cited for figures they do not hold. */
+function struck(a: AskAnswer) {
+  const out = new Map<string, string>(a.invalidCitations.map((c) => [c, 'Not an exhibit of this case']));
+  for (const m of a.miscited) for (const c of m.cited) if (!a.citations.includes(c)) out.set(c, `Does not hold ${m.figures.join(', ')}`);
+  return out;
+}
+
+// Exhibit ids as answers write them: [E-15], [E-15, E-55], (E-15) or a bare E-15.
+const CITES = /([[(]\s*E-\d{2,4}(?:\s*[,;]\s*E-\d{2,4})*\s*[\])]|\bE-\d{2,4}\b)/;
+
+function linkCites(text: string, open: (id: string) => void, flagged: Map<string, string>) {
+  return text.split(CITES).map((p, i) =>
+    i % 2 ? (
+      <span key={i}>
+        {p.match(/E-\d{2,4}/g)!.map((id, j) => (
+          <span key={j}>
+            {j > 0 && ' '}
+            {flagged.has(id) ? (
+              <s className="mono faint" style={{ fontSize: 11 }} title={flagged.get(id)}>
+                {id}
+              </s>
+            ) : (
+              <button className="cite-btn" onClick={() => open(id)}>
+                {id}
+              </button>
+            )}
+          </span>
+        ))}
+      </span>
     ) : (
       <span key={i}>{p}</span>
-    );
-  });
+    ),
+  );
 }
 
 /* ---------- What if ---------- */
@@ -475,7 +530,8 @@ export function Documents({ id, state, shared }: { id: string | null; state: Inv
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const done = Boolean(id && state.doneMs !== null && state.ledger);
-  const physical = state.action?.causes.some((c) => c.remedy === 'QUARANTINE');
+  // A supplier claim needs a physical cause and an evidence gate that passed.
+  const physical = Boolean(state.gate?.pass) && state.action?.causes.some((c) => c.remedy === 'QUARANTINE');
   const share = async () => {
     setBusy(true);
     setErr(null);
@@ -504,7 +560,7 @@ export function Documents({ id, state, shared }: { id: string | null; state: Inv
             <a className={`btn small ${state.action ? '' : 'disabled'}`} href={state.action ? href('8d') : undefined} target="_blank" rel="noreferrer" aria-disabled={!state.action}>
               8D report
             </a>
-            <a className={`btn small ${physical ? '' : 'disabled'}`} href={physical ? href('supplier') : undefined} target="_blank" rel="noreferrer" aria-disabled={!physical} title={physical ? '' : 'Only for a physical (supplier) cause'}>
+            <a className={`btn small ${physical ? '' : 'disabled'}`} href={physical ? href('supplier') : undefined} target="_blank" rel="noreferrer" aria-disabled={!physical} title={physical ? '' : 'Only when the evidence gate passes on a physical (supplier) cause'}>
               Supplier claim
             </a>
             {!shared && (
