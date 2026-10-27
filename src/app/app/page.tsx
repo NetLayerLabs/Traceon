@@ -31,11 +31,21 @@ const STEPS = [
 ];
 
 interface Status {
-  nemotron: { live: boolean; model: string; fastModel: string };
+  /** live: Nemotron answers on NIM, or through Nightshift (viaNightshift: the Nemotron models Nightshift serves). */
+  nemotron: { live: boolean; model: string; fastModel: string; viaNightshift?: string[] };
   ai?: { providers: string[]; nightshift: { configured: boolean; state: string; url: string; standIn?: boolean } };
   zetaris: { mode: string; host: string | null; parity: { ok: boolean; probes: { sql: string; ok: boolean; error?: string }[] } | null };
   meterless: { memories: number; quarantinedLots: string[] };
   brightdata: { live: boolean };
+  resetDisabled?: boolean;
+}
+
+/** Where Nemotron answers, for the chip's tooltip. */
+function nemotronTitle(s: Status) {
+  const lines: string[] = [];
+  if (s.nemotron.viaNightshift?.length) lines.push(`Through Nightshift: ${s.nemotron.viaNightshift.join(', ')}`);
+  if (s.ai?.providers.includes('nim')) lines.push(`On NVIDIA NIM: ${s.nemotron.model}, ${s.nemotron.fastModel}`);
+  return lines.join('\n') || 'No Nemotron provider configured';
 }
 
 /** Nemotron VL needs a raster image; draw SVG/other images onto a canvas and export PNG. */
@@ -71,6 +81,7 @@ export default function Home() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [feeds, setFeeds] = useState<FeedResult[] | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
+  const [statusFailed, setStatusFailed] = useState(false);
   const [photo, setPhoto] = useState(SAMPLE_PHOTO);
   const [vision, setVision] = useState<VisionFinding | null>(null);
   const [visionBusy, setVisionBusy] = useState(false);
@@ -87,7 +98,13 @@ export default function Home() {
   const scenarioId = scenarioKind === 'random' ? `random-${seed}` : scenarioKind;
 
   const loadStatus = useCallback(() => {
-    fetch(`/api/status?scenario=${encodeURIComponent(scenarioId)}`).then((r) => r.json()).then(setStatus).catch(() => {});
+    fetch(`/api/status?scenario=${encodeURIComponent(scenarioId)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`status ${r.status}`))))
+      .then((s: Status) => {
+        setStatus(s);
+        setStatusFailed(false);
+      })
+      .catch(() => setStatusFailed(true));
   }, [scenarioId]);
 
   // The signal radar follows the selected scenario.
@@ -203,6 +220,8 @@ export default function Home() {
   };
 
   const reset = async () => {
+    // Demo memory is shared by everyone using this deployment.
+    if (!window.confirm('Reset the demo? This clears demo memory and ERP holds for everyone using this deployment.')) return;
     const res = await fetch('/api/reset', { method: 'POST' });
     if (!res.ok) {
       setNotice((await res.json().catch(() => ({}))).error ?? 'Reset failed');
@@ -277,36 +296,49 @@ export default function Home() {
           </div>
           <div className="chips">
             <span className="drawer-label">Integrations</span>
-            {status?.ai?.nightshift.configured && (
-              <span className={`chip ${status.ai.nightshift.state === 'online' ? 'live' : 'sim'}`} title={`Meterless Nightshift at ${status.ai.nightshift.url}`} data-short="Nightshift">
+            {!status ? (
+              // Until the status is known, no integration is shown as live, simulated or offline.
+              <span className="chip" data-short={statusFailed ? 'Status unavailable' : 'Checking…'} title={statusFailed ? 'The integration status could not be loaded' : 'Checking which integrations are live'}>
                 <span className="dot" />
-                Nightshift {status.ai.nightshift.standIn ? 'stand-in' : status.ai.nightshift.state}
+                {statusFailed ? 'Integration status unavailable' : 'Checking integrations…'}
               </span>
+            ) : (
+              <>
+                {status.ai?.nightshift.configured && (
+                  <span className={`chip ${status.ai.nightshift.state === 'online' ? 'live' : 'sim'}`} title={`Meterless Nightshift at ${status.ai.nightshift.url}`} data-short="Nightshift">
+                    <span className="dot" />
+                    Nightshift {status.ai.nightshift.standIn ? 'stand-in' : status.ai.nightshift.state}
+                  </span>
+                )}
+                <span className={`chip ${status.nemotron.live ? 'live' : 'sim'}`} title={nemotronTitle(status)} data-short="Nemotron">
+                  <span className="dot" />
+                  Nemotron {status.nemotron.live ? 'live' : 'offline'}
+                </span>
+                <span
+                  className={`chip ${status.zetaris.mode === 'ZETARIS_CLOUD' && status.zetaris.parity?.ok ? 'live' : 'sim'}`}
+                  data-short={status.zetaris.mode === 'ZETARIS_CLOUD' ? `Zetaris · ${status.zetaris.parity?.ok ? 'parity ok' : 'parity failed'}` : 'Zetaris local'}
+                  title={status.zetaris.parity ? status.zetaris.parity.probes.map((p) => `${p.ok ? 'PASS' : 'FAIL'} ${p.sql}${p.error ? ` (${p.error})` : ''}`).join('\n') : 'Queries run on the local federated mirror'}
+                >
+                  <span className="dot" />
+                  Zetaris {status.zetaris.mode === 'ZETARIS_CLOUD' ? `cloud · ${status.zetaris.parity?.ok ? 'parity ok' : 'parity failed'}` : 'local mirror'}
+                </span>
+                <span className="chip live" data-short="H-MEM" title={`Meterless H-MEM: ${status.meterless.memories} memories for this scenario`}>
+                  <span className="dot" />
+                  H-MEM {status.meterless.memories} memories
+                </span>
+                {/* Without a token there is no news feed at all; nothing from Bright Data is simulated. */}
+                <span className={status.brightdata.live ? 'chip live' : 'chip'} data-short="Bright Data" title={status.brightdata.live ? 'Bright Data Web Unlocker: live news on e-bike battery fires' : 'Bright Data is not configured: no news feed'}>
+                  <span className="dot" />
+                  Bright Data {status.brightdata.live ? 'live' : 'off'}
+                </span>
+              </>
             )}
-            <span className={`chip ${status?.ai?.providers.includes('nim') ?? status?.nemotron.live ? 'live' : 'sim'}`} title={status?.nemotron.model} data-short="Nemotron">
-              <span className="dot" />
-              Nemotron {(status?.ai?.providers.includes('nim') ?? status?.nemotron.live) ? 'live' : 'offline'}
-            </span>
-            <span
-              className={`chip ${status?.zetaris.mode === 'ZETARIS_CLOUD' && status.zetaris.parity?.ok ? 'live' : 'sim'}`}
-              data-short={status?.zetaris.mode === 'ZETARIS_CLOUD' ? `Zetaris · ${status.zetaris.parity?.ok ? 'parity ok' : 'parity failed'}` : 'Zetaris local'}
-              title={status?.zetaris.parity ? status.zetaris.parity.probes.map((p) => `${p.ok ? 'PASS' : 'FAIL'} ${p.sql}${p.error ? ` (${p.error})` : ''}`).join('\n') : 'Queries run on the local federated mirror'}
-            >
-              <span className="dot" />
-              Zetaris {status?.zetaris.mode === 'ZETARIS_CLOUD' ? `cloud · ${status.zetaris.parity?.ok ? 'parity ok' : 'parity failed'}` : 'local mirror'}
-            </span>
-            <span className="chip live" data-short="H-MEM">
-              <span className="dot" />
-              H-MEM {status?.meterless.memories ?? 0} memories
-            </span>
-            <span className={`chip ${status?.brightdata.live ? 'live' : 'sim'}`} data-short="Bright Data">
-              <span className="dot" />
-              Bright Data {status?.brightdata.live ? 'live' : 'simulated'}
-            </span>
           </div>
-          <button className="btn ghost small" onClick={reset} disabled={state.running} title="Clear memory and ERP holds">
-            Reset demo
-          </button>
+          {status && !status.resetDisabled && (
+            <button className="btn ghost small" onClick={reset} disabled={state.running} title="Clear memory and ERP holds">
+              Reset demo
+            </button>
+          )}
           <a className="btn ghost small drawer-only" href="/">
             Overview
           </a>

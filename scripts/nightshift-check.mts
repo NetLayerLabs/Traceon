@@ -18,7 +18,7 @@ const { nightshiftStatus, nemotronChat, NEMOTRON_FAST_MODEL, NEMOTRON_MODEL } = 
 const st = await nightshiftStatus();
 console.log(`Nightshift at ${st.url}: ${st.state}${st.standIn ? ' (STAND-IN, not the real runtime)' : ''}${st.routes.length ? ` (${st.routes.length} routes: ${st.routes.slice(0, 8).join(', ')})` : ''}`);
 if (st.state === 'not configured') {
-  console.log('Set NIGHTSHIFT_TOKEN (or NIGHTSHIFT_TOKEN_FILE pointing at the runtime\'s proxy-token file) in .env.local.');
+  console.log("Set NIGHTSHIFT_TOKEN (or NIGHTSHIFT_TOKEN_FILE pointing at Nightshift's runtime-token file, on a Mac ~/Library/Application Support/ai.meterless.nightshift.m1m4/runtime-token) in .env.local.");
   process.exit(1);
 }
 if (st.state !== 'online') {
