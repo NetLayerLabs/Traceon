@@ -113,7 +113,7 @@ export default function ScoreboardPage() {
             </div>
           </>
         )}
-        <div className="faint" style={{ fontSize: 12, marginTop: 14 }}>Offline benchmark (no model): 304/304 generated scenarios and 250/250 held-out scenarios correct, run on 2026-10-25. See the README for the method.</div>
+        <div className="faint" style={{ fontSize: 12, marginTop: 14 }}>Offline benchmark (no model): 304/304 generated scenarios and 250/250 held-out scenarios correct, run on 2026-10-27 at commit f321d67. See the README for the method.</div>
       </div>
     </div>
   );

@@ -43,9 +43,13 @@ button:disabled { cursor: not-allowed; opacity: 0.45; }
 code, pre, .mono { font-family: var(--mono); }
 a { color: var(--link); text-underline-offset: 2px; }
 :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+/* Hidden from view but still reachable by keyboard and screen readers (a file input inside a styled label). */
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+label:has(> .visually-hidden:focus-visible) { outline: 2px solid var(--signal); outline-offset: 2px; }
 
 /* ---------- Shell ---------- */
-.shell { display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+/* One column at the viewport width: a crowded top bar can never widen the panes. */
+.shell { display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); height: 100vh; }
 .topbar {
   display: flex; align-items: center; gap: 18px; padding: 0 20px; height: 56px;
   border-bottom: 1px solid var(--ink); background: var(--sheet);
@@ -97,6 +101,8 @@ main.pane { background: var(--sheet); }
 .card h3::before { counter-increment: section; content: counter(section, decimal-leading-zero); color: var(--signal); }
 .card h3 .tag { margin-left: auto; }
 .card h3 .tag + .tag { margin-left: 0; }
+/* Long labels (the model route that answered) wrap inside their column instead of widening it. */
+.card h3 .tag, .qa-meta .tag { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .tag {
   font: 500 10px/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px;
   border: 1px solid var(--rule-2); color: var(--muted); border-radius: 0; white-space: nowrap;
@@ -112,7 +118,7 @@ main.pane { background: var(--sheet); }
 .bad { color: var(--signal); }
 
 /* ---------- Signals ---------- */
-.feed-row { display: grid; grid-template-columns: 74px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px dotted var(--rule-2); font-size: 13px; align-items: baseline; }
+.feed-row { display: grid; grid-template-columns: 108px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px dotted var(--rule-2); font-size: 13px; align-items: baseline; }
 .feed-row:last-child { border-bottom: 0; }
 .feed-row .note { color: var(--muted); font-size: 11.5px; }
 .signal-list { display: flex; flex-direction: column; }
@@ -154,6 +160,7 @@ main.pane { background: var(--sheet); }
 .dag-wrap svg { display: block; width: 100%; height: auto; }
 .dag-node { cursor: pointer; }
 .dag-node:hover .box { stroke-width: 2; }
+.dag-node:focus-visible .box { stroke-width: 3; }
 .dag-legend { display: flex; gap: 18px; padding: 10px 12px; font: 11px/1.3 var(--mono); color: var(--ink-2); border-top: 1px solid var(--rule); flex-wrap: wrap; }
 .dag-legend i { display: inline-block; width: 12px; height: 9px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--ink); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -176,7 +183,8 @@ main.pane { background: var(--sheet); }
 .f-ochre-soft { fill: var(--ochre-soft); }
 .f-ink { fill: var(--ink); }
 
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
+.grid2 > * { min-width: 0; }
 .narrative p { margin: 0 0 10px; font: 16px/1.55 var(--serif); color: var(--ink); }
 .thinking { margin-top: 10px; border-top: 1px dotted var(--rule-2); padding-top: 8px; }
 .thinking summary { cursor: pointer; font: 11px var(--mono); color: var(--ink-2); letter-spacing: 0.04em; }
@@ -274,7 +282,8 @@ main.pane { background: var(--sheet); }
 
 /* Phones and tablets: sticky top bar, controls drawer, one pane at a time. */
 @media (max-width: 900px) {
-  html, body { overflow-x: hidden; }
+  /* clip (hidden where unsupported): hidden on both would make <body>, not the window, the page's scroller. */
+  html, body { overflow-x: hidden; overflow-x: clip; }
   .shell { height: auto; min-height: 100dvh; display: block; }
   .topbar { position: sticky; top: 0; z-index: 30; height: 56px; padding: 0 12px; gap: 10px; background: rgba(250, 248, 243, 0.94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   .brand small { display: none; }
@@ -357,7 +366,6 @@ main.pane { background: var(--sheet); }
   .cost-compare { grid-template-columns: 1fr 1fr; }
   .big-num { font-size: 24px; }
   .bar-row { grid-template-columns: 84px 1fr 30px; }
-  .feed-row { grid-template-columns: 70px 1fr; }
   .narrative p { font-size: 15.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -380,8 +388,12 @@ main.pane { background: var(--sheet); }
 @media (min-width: 901px) and (max-width: 1180px) {
   .topbar .chips { display: none; }
   .topbar { gap: 12px; padding: 0 14px; }
-  .section-nav a { padding: 0 7px; }
+  .section-nav a { padding: 0 5px; }
   .topbar .scenario-pick select { max-width: 170px; }
+}
+/* If the bar is still too full (e.g. a random scenario's seed button), the scenario menu narrows first, so the Run button stays in view. */
+@media (min-width: 901px) {
+  .topbar .scenario-pick, .topbar .scenario-pick select { min-width: 0; }
 }
 
 /* ---------- Case tools ---------- */
@@ -476,8 +488,9 @@ main.pane { background: var(--sheet); }
 }
 /* The top bar never wraps. */
 .topbar .chips { flex-wrap: nowrap; }
-/* Laptop widths: the integration chips become coloured dots (hover for details). */
-@media (min-width: 1181px) and (max-width: 1439px) {
+/* Laptop widths: the integration chips become coloured dots (hover for details). With
+   every chip labelled the bar needs about 1,610px, so labels start at 1,700px. */
+@media (min-width: 1181px) and (max-width: 1699px) {
   .topbar .chip::after { content: none; }
   .topbar .chips { gap: 7px; }
   .topbar .scenario-pick select { max-width: 190px; }
@@ -485,5 +498,5 @@ main.pane { background: var(--sheet); }
 
 .samples { margin-top: 14px; border-top: 1px solid var(--rule); }
 .sample-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dotted var(--rule-2); }
-.sample-row .btn { text-decoration: none; }
+.sample-row .btn { text-decoration: none; display: inline-flex; align-items: center; }
 @media (max-width: 600px) { .sample-row { flex-direction: column; align-items: flex-start; } }

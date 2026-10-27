@@ -6,7 +6,6 @@ const CAUSE_PREFIX: Record<string, string> = { cell_batch: 'cell batch ', firmwa
 
 export type DagSelection = { kind: 'cluster' } | { kind: 'hypothesis'; id: string } | { kind: 'root' } | { kind: 'gate' };
 
-const W = 960;
 const H = 486;
 const NODE_W = 122;
 const NODE_H = 88;
@@ -38,12 +37,28 @@ function wrap(text: string, max = 16): string[] {
   return lines.slice(0, 2);
 }
 
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
 export function CausalDag({ state, onSelect }: { state: InvState; onSelect: (s: DagSelection) => void }) {
   const hs = state.hypotheses;
   const n = Math.max(1, hs.length);
   const gap = 10;
   const totalW = n * NODE_W + (n - 1) * gap;
+  // Wide enough for every suspect (uploaded data allows up to 12); the SVG scales to its frame.
+  const W = Math.max(960, totalW + 40);
   const x0 = (W - totalW) / 2;
+  // Every node opens its exhibit by mouse or keyboard (Enter or Space).
+  const node = (sel: DagSelection, label: string) => ({
+    role: 'button',
+    tabIndex: 0,
+    'aria-label': label,
+    onClick: () => onSelect(sel),
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      onSelect(sel);
+    },
+  });
   const cx = (i: number) => x0 + i * (NODE_W + gap) + NODE_W / 2;
   const cluster = { x: W / 2 - 170, y: 34, w: 340, h: 62 };
   const root = { x: W / 2 - 200, y: 300, w: 400, h: 74 };
@@ -57,7 +72,7 @@ export function CausalDag({ state, onSelect }: { state: InvState; onSelect: (s: 
 
   return (
     <div className="dag-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Causal proof graph" style={{ fontFamily: 'var(--mono)' }}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Causal proof graph" style={{ fontFamily: 'var(--mono)' }}>
         <defs>
           <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <rect width="6" height="6" className="f-ochre-soft" />
@@ -100,7 +115,7 @@ export function CausalDag({ state, onSelect }: { state: InvState; onSelect: (s: 
         )}
 
         {/* cluster */}
-        <g className="dag-node" onClick={() => onSelect({ kind: 'cluster' })}>
+        <g className="dag-node" {...node({ kind: 'cluster' }, `Incident cluster: ${conv ? `${conv.matched.length} converged signals` : 'awaiting signals'}`)}>
           <rect className="box svg-ink f-sheet" x={cluster.x} y={cluster.y} width={cluster.w} height={cluster.h} strokeWidth="1" />
           <text x={cluster.x + 12} y={cluster.y + 18} className="t-muted" fontSize="9.5" letterSpacing="1.4">
             INCIDENT CLUSTER · H-MEM
@@ -109,7 +124,11 @@ export function CausalDag({ state, onSelect }: { state: InvState; onSelect: (s: 
             {conv ? `${conv.matched.length} converged signals` : 'Awaiting signals'}
           </text>
           <text x={cluster.x + 12} y={cluster.y + 55} className="t-muted" fontSize="10">
-            {conv ? `${Object.keys(conv.cities).length} cities · ${Object.keys(conv.channels).length} channels · ${conv.firstSeen} → ${conv.lastSeen}` : ''}
+            {conv
+              ? [Object.keys(conv.cities).length ? count(Object.keys(conv.cities).length, 'city', 'cities') : null, count(Object.keys(conv.channels).length, 'channel', 'channels'), `${conv.firstSeen} → ${conv.lastSeen}`]
+                  .filter(Boolean)
+                  .join(' · ')
+              : ''}
           </text>
         </g>
 
@@ -120,7 +139,7 @@ export function CausalDag({ state, onSelect }: { state: InvState; onSelect: (s: 
           const lines = wrap(h.title);
           const pText = h.status === 'CONFOUNDED' && h.adjusted?.length ? `adj ${maxAdj(h)}` : h.rawTest ? h.rawTest.pLabel : '';
           return (
-            <g key={h.id} className={`dag-node ${h.status === 'TESTING' ? 'pulsing' : ''}`} onClick={() => onSelect({ kind: 'hypothesis', id: h.id })}>
+            <g key={h.id} className={`dag-node ${h.status === 'TESTING' ? 'pulsing' : ''}`} {...node({ kind: 'hypothesis', id: h.id }, `${h.id} ${h.title}: ${st.label.toLowerCase()}`)}>
               <rect className={`box ${st.box} ${st.fill === 'hatch' ? '' : st.fill}`} fill={st.fill === 'hatch' ? 'url(#hatch)' : undefined} x={x} y={HY} width={NODE_W} height={NODE_H} strokeWidth={h.status === 'CONFIRMED' ? 2 : 1} />
               <text x={x + 9} y={HY + 15} className="t-muted" fontSize="9">
                 {h.id}
@@ -141,7 +160,7 @@ export function CausalDag({ state, onSelect }: { state: InvState; onSelect: (s: 
         })}
 
         {/* root cause: the one place the page turns solid */}
-        <g className="dag-node" onClick={() => onSelect({ kind: 'root' })} opacity={confirmed || noCause ? 1 : 0.35}>
+        <g className="dag-node" {...node({ kind: 'root' }, confirmed ? `Root cause: ${confirmedAll.map((c) => c.hotGroup).join(' + ')}` : noCause ? 'No actionable root cause' : 'Root cause: not yet established')} opacity={confirmed || noCause ? 1 : 0.35}>
           <rect className={`box ${confirmed ? 'f-ink svg-ink' : noCause ? 'svg-ochre' : 'svg-rule f-sheet'}`} fill={noCause ? 'url(#hatch)' : undefined} x={root.x} y={root.y} width={root.w} height={root.h} strokeWidth="1" />
           <text x={root.x + 14} y={root.y + 19} className={confirmed ? 't-signal' : noCause ? 't-ochre' : 't-faint'} fontSize="9.5" fontWeight="600" letterSpacing="1.4">
             {confirmedAll.length > 1 ? `${confirmedAll.length} INDEPENDENT ROOT CAUSES` : noCause ? 'NO ACTIONABLE ROOT CAUSE' : 'CONFIRMED ROOT CAUSE'}
@@ -176,7 +195,7 @@ export function CausalDag({ state, onSelect }: { state: InvState; onSelect: (s: 
 
         {/* evidence gate, drawn as a stamp */}
         <path d={`M${W / 2} ${root.y + root.h} V${gate.y - 2}`} className="svg-ink" strokeWidth="1" markerEnd="url(#tip)" />
-        <g className="dag-node" onClick={() => onSelect({ kind: 'gate' })} opacity={state.gate ? 1 : 0.35} transform={state.gate ? `rotate(-1.5 ${W / 2} ${gate.y + gate.h / 2})` : undefined}>
+        <g className="dag-node" {...node({ kind: 'gate' }, `Evidence gate: ${state.gate ? (state.gate.pass ? 'action allowed' : 'action blocked') : 'pending'}`)} opacity={state.gate ? 1 : 0.35} transform={state.gate ? `rotate(-1.5 ${W / 2} ${gate.y + gate.h / 2})` : undefined}>
           <rect className={`box svg-${gateCls} f-sheet`} x={gate.x} y={gate.y} width={gate.w} height={gate.h} strokeWidth="2" />
           <rect className={`svg-${gateCls}`} fill="none" x={gate.x + 4} y={gate.y + 4} width={gate.w - 8} height={gate.h - 8} strokeWidth="0.8" />
           <text x={W / 2} y={gate.y + 22} className="t-muted" fontSize="9" textAnchor="middle" letterSpacing="1.6">

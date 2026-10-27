@@ -1,6 +1,9 @@
 'use client';
 import type { InvState } from './state';
 
+/** ' · cached' when a reply was replayed from the reply cache (older events carry no flag). */
+const cachedMark = (x: object) => ('cached' in x && x.cached ? ' · cached' : '');
+
 export function Narrative({ state }: { state: InvState }) {
   const n = state.narrative;
   return (
@@ -8,8 +11,8 @@ export function Narrative({ state }: { state: InvState }) {
       <h3>
         Explain why
         {n && (
-          <span className={`tag ${n.source === 'nemotron' ? 'nv' : ''}`}>
-            {n.source === 'nemotron' ? `${n.via ?? 'Nemotron'}${n.reasoning ? ' · thinking' : ''}${n.cached ? ' · cached' : ''}` : 'template (model unavailable)'}
+          <span className={`tag ${n.source === 'nemotron' ? 'nv' : ''}`} title={n.fallbackFrom ? `Fallback: ${n.fallbackFrom}` : undefined}>
+            {n.source === 'nemotron' ? `${n.via ?? 'Nemotron'}${n.reasoning ? ' · thinking' : ''}${cachedMark(n)}${n.fallbackFrom ? ' · fallback' : ''}` : 'template (model unavailable)'}
           </span>
         )}
         {n && (
@@ -44,7 +47,7 @@ export function RedTeam({ state }: { state: InvState }) {
     <div className="card">
       <h3>
         Red team
-        {r && <span className={`tag ${r.source === 'nemotron' ? 'nv' : ''}`}>{r.source === 'nemotron' ? `${r.via ?? 'Nemotron'} · devil’s advocate` : 'built-in objections'}</span>}
+        {r && <span className={`tag ${r.source === 'nemotron' ? 'nv' : ''}`}>{r.source === 'nemotron' ? `${r.via ?? 'Nemotron'}${cachedMark(r)} · devil’s advocate` : 'built-in objections'}</span>}
       </h3>
       {!r ? (
         <div className="empty">A second pass attacks the verdict. Each objection is answered by a deterministic test, not by argument.</div>
@@ -53,7 +56,16 @@ export function RedTeam({ state }: { state: InvState }) {
           <div className="objection" key={i}>
             <div className="q">“{o.objection}”</div>
             <div className="a">
-              {o.check === 'untestable' ? <span className="faint mono">OPEN QUESTION</span> : <span className={`mono ${o.survived ? 'good' : 'bad'}`}>{o.survived ? 'ANSWERED' : 'NOT ANSWERED'}</span>}{' '}
+              {o.check === 'untestable' ? (
+                <span className="faint mono">OPEN QUESTION</span>
+              ) : r.source === 'nemotron' ? (
+                // The model chose which check to run; say what the check found, not that it answers the objection.
+                <span className={`mono ${o.survived ? 'good' : 'bad'}`} title="The model chose which check to run for this objection">
+                  {o.survived ? 'CHECK PASSED' : 'CHECK FAILED'}
+                </span>
+              ) : (
+                <span className={`mono ${o.survived ? 'good' : 'bad'}`}>{o.survived ? 'ANSWERED' : 'NOT ANSWERED'}</span>
+              )}{' '}
               <span className="mono faint">[{o.check}]</span> {o.result}
             </div>
           </div>
@@ -160,10 +172,12 @@ export function RevealCard({ state }: { state: InvState }) {
 export function TimeMachine({ state }: { state: InvState }) {
   const t = state.timeline;
   if (!t) {
+    // A finished run without a replay: say why instead of keeping the placeholder.
+    const why = state.doneMs === null || !state.gate ? null : state.action ? 'this data has no usable failure dates (YYYY-MM-DD)' : 'no cause was confirmed';
     return (
       <div className="card">
         <h3>Early-warning replay</h3>
-        <div className="empty">Replays the claim history day by day to show when this defect first became statistically detectable.</div>
+        <div className="empty">{why ? `No replay for this run: ${why}.` : 'Replays the claim history day by day to show when this defect first became statistically detectable.'}</div>
       </div>
     );
   }
@@ -218,6 +232,8 @@ export function TimeMachine({ state }: { state: InvState }) {
 }
 
 export function AgentLog({ state }: { state: InvState }) {
+  // A tested hypothesis id is never "not testable" (the planner sometimes lists one).
+  const untestable = state.plan?.untestable.filter((u) => !state.hypotheses.some((h) => h.id === u.trim())) ?? [];
   return (
     <div className="card">
       <h3>
@@ -238,10 +254,10 @@ export function AgentLog({ state }: { state: InvState }) {
       </div>
       {state.plan && (
         <div style={{ marginTop: 8, fontSize: 11.5 }} className="muted">
-          <b>Plan</b> ({state.plan.source === 'nemotron' ? state.plan.via ?? 'Nemotron' : 'exhaustive catalog'}): {state.plan.reasoning}
-          {state.plan.untestable.length > 0 && (
+          <b>Plan</b> ({state.plan.source === 'nemotron' ? `${state.plan.via ?? 'Nemotron'}${cachedMark(state.plan)}` : 'exhaustive catalog'}): {state.plan.reasoning}
+          {untestable.length > 0 && (
             <div className="faint" style={{ marginTop: 4 }}>
-              Not testable with this data (logged as open questions): {state.plan.untestable.join('; ')}
+              Not testable with this data (logged as open questions): {untestable.join('; ')}
             </div>
           )}
         </div>
