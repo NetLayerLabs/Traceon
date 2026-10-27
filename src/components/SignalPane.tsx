@@ -162,6 +162,7 @@ function VisionCard(props: { photo: string; vision: VisionFinding | null; vision
         Visual evidence
         <span className={`tag ${vision?.live ? 'nv' : ''}`} title={fallbackFrom ? `Fallback: ${fallbackFrom}` : undefined}>
           {vision ? (vision.live ? (vision.model.includes('·') ? vision.model : 'Nemotron VL') : 'offline reference') : 'not analyzed'}
+          {vision?.live && vision.cached ? ' · cached' : ''}
           {fallbackFrom ? ' · fallback' : ''}
         </span>
       </h3>

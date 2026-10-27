@@ -104,7 +104,7 @@ export async function executeRemediation(req: RemediationRequest) {
   // Human approval is the boundary at which the finding becomes long-term memory.
   const conv = convergeSignals('VR-48 pack hot overheat connector pin scorch burning smoke swelling charging', scenarioId);
   const insight = commitRootCauseInsight(
-    `Root cause confirmed for ${SKU} thermal incidents: ${req.causes.map((c) => `${c.column} ${c.group} (${REMEDY[c.remedy].label})`).join('; ')}. Remediation ${holdId}.`,
+    `Root cause confirmed for ${SKU} thermal incidents: ${req.causes.map((c) => `${factor(c.column)} ${c.group} (${REMEDY[c.remedy].label})`).join('; ')}. Remediation ${holdId}.`,
     conv.matched.map((m) => m.id),
     scenarioId
   );
@@ -172,20 +172,30 @@ Supporting evidence: Traceon proof ledger root ${req.ledgerRoot}`;
   };
 }
 
-/** Re-run every SQL query in the ledger and rebuild the hash chain. */
-export async function verifyLedger(items: EvidenceItem[], scenarioId = 'reference') {
+/**
+ * Re-run every SQL query in the ledger and rebuild the hash chain. With
+ * `recorded` (the evidence this server recorded for the run), only a query
+ * whose SQL matches a recorded one is executed, and it runs as recorded:
+ * SQL supplied by a client is never executed.
+ */
+export async function verifyLedger(items: EvidenceItem[], scenarioId = 'reference', recorded?: EvidenceItem[]) {
+  const known = recorded && new Map(recorded.filter((r) => r.query?.sql).map((r) => [r.query!.sql, r.query!]));
   let head = chainGenesis(scenarioId);
   const results: { id: string; label: string; replayed: boolean; match: boolean; chainOk: boolean }[] = [];
   for (const it of items) {
     let replayed = false;
     let match = true;
     if (it.query?.sql) {
-      replayed = true;
-      try {
-        const rerun = await runFederatedQuery(String(it.query.sql), Array.isArray(it.query.sourceSilos) ? it.query.sourceSilos : [], scenarioId);
-        match = hashRows(it.query.sql, rerun.rows) === it.proofHash;
-      } catch {
-        match = false; // refused (not a read-only SELECT) or failed: it cannot be the agent's query
+      const query = known ? known.get(String(it.query.sql)) : it.query;
+      if (!query) match = false; // not a query this server recorded for the run: it is not replayed
+      else {
+        replayed = true;
+        try {
+          const rerun = await runFederatedQuery(String(query.sql), Array.isArray(query.sourceSilos) ? query.sourceSilos : [], scenarioId);
+          match = hashRows(query.sql, rerun.rows) === it.proofHash;
+        } catch {
+          match = false; // refused (not a read-only SELECT) or failed: it cannot be the agent's query
+        }
       }
     }
     head = chainStep(head, String(it.proofHash), String(it.label), String(it.summary ?? ''));

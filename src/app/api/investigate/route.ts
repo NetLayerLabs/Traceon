@@ -3,6 +3,7 @@ import { resolveScenario } from '@/lib/enterpriseData';
 import type { InvestigationEvent, VisionFinding } from '@/lib/investigation';
 import { activeRun, BusyError, getRun, startRun } from '@/lib/runRegistry';
 import { getVisionFinding } from '@/lib/vision';
+import { readJson } from '@/lib/http';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,9 @@ export const maxDuration = 300;
 // POST starts an investigation and streams its events as NDJSON. The run itself
 // lives in the run registry, so a dropped stream never loses the result.
 export async function POST(req: Request) {
-  const body = ((await req.json().catch(() => null)) ?? {}) as { vision?: Partial<VisionFinding> | null; scenario?: string };
+  const raw = await readJson<{ vision?: Partial<VisionFinding> | null; scenario?: string }>(req);
+  if (raw instanceof Response) return raw;
+  const body = (raw ?? {}) as { vision?: Partial<VisionFinding> | null; scenario?: string };
   let scenarioId: string;
   try {
     scenarioId = resolveScenario(body.scenario).id;

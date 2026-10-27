@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { addComment, getCase, listComments } from '@/lib/cases';
+import { readJson } from '@/lib/http';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +11,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const body = ((await req.json().catch(() => null)) ?? {}) as { exhibitId?: string | null; author?: string; role?: string; text?: string };
+  const raw = await readJson<{ exhibitId?: string | null; author?: string; role?: string; text?: string }>(req);
+  if (raw instanceof Response) return raw;
+  const body = (raw ?? {}) as { exhibitId?: string | null; author?: string; role?: string; text?: string };
   const { id } = await params;
   if (!getCase(id)) return NextResponse.json({ error: 'Unknown case' }, { status: 404 });
   try {

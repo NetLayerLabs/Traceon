@@ -214,7 +214,7 @@ sequenceDiagram
   end
 ```
 
-Every evidence item (feeds, memory, model output, SQL, statistics) is appended to `ProofChain` in `src/lib/investigation.ts`. `verifyLedger()` in `src/lib/actions.ts` replays it. `tests/proof.test.mts` proves that a tampered query, swapped or dropped evidence, and a ledger checked against the wrong scenario all fail.
+Every evidence item (feeds, memory, model output, SQL, statistics) is appended to `ProofChain` in `src/lib/investigation.ts`. `verifyLedger()` in `src/lib/actions.ts` replays it; an uploaded bundle is replayed only if it belongs to a run or case this server recorded, and only the SQL recorded for that run is executed. `tests/proof.test.mts` proves that a tampered query, swapped or dropped evidence, and a ledger checked against the wrong scenario all fail.
 
 ## 9. Remediation
 

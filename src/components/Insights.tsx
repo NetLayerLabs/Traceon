@@ -12,7 +12,7 @@ export function Narrative({ state }: { state: InvState }) {
         Explain why
         {n && (
           <span className={`tag ${n.source === 'nemotron' ? 'nv' : ''}`} title={n.fallbackFrom ? `Fallback: ${n.fallbackFrom}` : undefined}>
-            {n.source === 'nemotron' ? `${n.via ?? 'Nemotron'}${n.reasoning ? ' · thinking' : ''}${cachedMark(n)}${n.fallbackFrom ? ' · fallback' : ''}` : 'template (model unavailable)'}
+            {n.source === 'nemotron' ? `${n.via ?? 'Nemotron'}${n.reasoning ? ' · thinking' : ''}${cachedMark(n)}${n.fallbackFrom ? ' · fallback' : ''}` : n.fallbackFrom ? 'template (model reply not used)' : 'template (model unavailable)'}
           </span>
         )}
         {n && (

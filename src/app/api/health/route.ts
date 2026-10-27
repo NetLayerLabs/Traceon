@@ -23,8 +23,8 @@ export async function GET() {
     const r = await runFederatedQuery('SELECT COUNT(*) AS n FROM unit_fact', ['unit_fact']);
     const n = Number(r.rows[0]?.n);
     checks.queryEngine = { ok: n === 180_000, detail: `${r.executedVia}: ${n} units in ${Math.round(performance.now() - t)}ms` };
-  } catch (err) {
-    checks.queryEngine = { ok: false, detail: (err as Error).message };
+  } catch {
+    checks.queryEngine = { ok: false, detail: 'query failed' };
   }
 
   try {
@@ -32,9 +32,10 @@ export async function GET() {
     const probe = path.join(STORAGE_DIR, '.health');
     fs.writeFileSync(probe, String(Date.now()));
     fs.rmSync(probe);
-    checks.storage = { ok: true, detail: `writable: ${STORAGE_DIR}` };
-  } catch (err) {
-    checks.storage = { ok: false, detail: (err as Error).message };
+    // The path stays on the server: this endpoint is public.
+    checks.storage = { ok: true, detail: 'writable' };
+  } catch {
+    checks.storage = { ok: false, detail: 'not writable' };
   }
 
   if (!feedCache || Date.now() - feedCache.at > 300_000) {

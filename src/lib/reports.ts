@@ -33,6 +33,9 @@ const reEscape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  * suspect's own adjustments say which test decided it.
  */
 function verdictExhibit(view: CaseView, h: HypothesisNode): EvidenceItem | undefined {
+  // The engine records the exhibit each verdict quotes; older runs fall back to reading the verdict.
+  const recorded = h.verdictEvidenceId && view.evidence.find((e) => e.id === h.verdictEvidenceId);
+  if (recorded) return recorded;
   const verdict = h.verdict ?? '';
   // Whole tokens only: "p = 0.2" is not quoted by "p = 0.23", nor "B" by "CB-B-0917".
   const quotes = (s: string) => new RegExp(`(?<![\\w-])${reEscape(s)}(?![\\w-]|\\.\\d)`).test(verdict);

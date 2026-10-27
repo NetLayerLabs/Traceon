@@ -50,7 +50,7 @@ function nemotronTitle(s: Status) {
 
 /** Nemotron VL needs a raster image; draw SVG/other images onto a canvas and export PNG. */
 async function toPngDataUrl(src: string): Promise<string> {
-  if (src.startsWith('data:image/') && !src.startsWith('data:image/svg')) return src;
+  if (/^data:image\/(png|jpe?g|webp);/.test(src)) return src;
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.src = src;

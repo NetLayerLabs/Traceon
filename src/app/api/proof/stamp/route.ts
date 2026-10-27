@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { buildCaseView, loadEvents } from '@/lib/caseView';
 import { readStamp, stampRoot, verifySignature } from '@/lib/stamp';
+import { readJson } from '@/lib/http';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 // POST {id}: sign and timestamp the ledger root of a finished run or case.
 export async function POST(req: Request) {
-  const body = ((await req.json().catch(() => null)) ?? {}) as { id?: string };
+  const raw = await readJson<{ id?: string }>(req);
+  if (raw instanceof Response) return raw;
+  const body = (raw ?? {}) as { id?: string };
   const events = body.id ? loadEvents(body.id) : null;
   if (!events) return NextResponse.json({ error: 'Unknown investigation' }, { status: 404 });
   const view = buildCaseView(events);

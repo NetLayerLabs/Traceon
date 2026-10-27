@@ -40,20 +40,20 @@ export function caseFacts(view: CaseView): CaseFact[] {
     for (const a of h.adjusted ?? [])
       facts.push({ cite: byLabel(`${h.id} | ${a.controlFor}`), text: `${h.title} (${h.hotGroup}) holding ${a.controlLabel} fixed: ${a.aliased ? 'aliased, cannot be separated' : `${a.pLabel}, common odds ratio ${a.commonOddsRatio.toFixed(2)}`}` });
     facts.push({
-      cite: byLabel(`${h.id} screen`) ?? last(h.evidenceIds),
+      cite: h.verdictEvidenceId ?? byLabel(`${h.id} screen`) ?? last(h.evidenceIds),
       text: `${h.id} "${h.title}" (${h.claim}): status ${h.status}${h.hotGroup ? `, hottest group ${h.hotGroup}` : ''}${h.rawTest ? `, raw ${h.rawTest.pLabel}` : ''}${h.rawRR ? `, relative risk ${h.rawRR.rr.toFixed(1)} (95% CI ${h.rawRR.lo.toFixed(1)} to ${h.rawRR.hi.toFixed(1)})` : ''}${h.adjusted?.length ? `; controlling for other factors: ${h.adjusted.map((a) => `${a.controlLabel} ${a.aliased ? 'aliased' : a.pLabel}`).join(', ')}` : ''}. ${h.verdict ?? ''}`,
     });
   }
   for (const c of view.action?.causes ?? []) {
     const screen = view.evidence.find((e) => e.label === `${c.hypothesisId} screen`)?.id ?? null;
-    facts.push({ cite: screen, text: `Confirmed cause ${c.column} = ${c.group}: ${c.units} units, ${c.failures} failures, rate ${c.ratePer10k.toFixed(1)}/10k (95% CI ${c.rateCI.lo.toFixed(1)} to ${c.rateCI.hi.toFixed(1)}) against ${c.baseRatePer10k.toFixed(1)}/10k elsewhere, relative risk ${c.rr.rr.toFixed(1)}, explains ${(c.coverage * 100).toFixed(1)}% of incidents. Remedy ${c.remedy}, cost $${c.costUsd}.` });
+    facts.push({ cite: screen, text: `Confirmed cause ${c.column.replace(/^f_/, '').replace(/_/g, ' ')} = ${c.group}: ${c.units} units, ${c.failures} failures, rate ${c.ratePer10k.toFixed(1)}/10k (95% CI ${c.rateCI.lo.toFixed(1)} to ${c.rateCI.hi.toFixed(1)}) against ${c.baseRatePer10k.toFixed(1)}/10k elsewhere, relative risk ${c.rr.rr.toFixed(1)}, explains ${(c.coverage * 100).toFixed(1)}% of incidents. Remedy ${c.remedy}, cost $${c.costUsd}.` });
     for (const f of c.falsifiers) facts.push({ cite: view.evidence.find((e) => e.label === 'Falsification baseline')?.id ?? null, text: `Would falsify ${c.group}: ${f.label}. ${f.rule} (now ${f.current ?? 'n/a'}, threshold ${f.threshold ?? 'n/a'} ${f.unit})` });
   }
   if (view.action)
     facts.push({ cite: view.evidence.find((e) => e.label === 'Combined coverage')?.id ?? null, text: `Action plan${view.gate && !view.gate.pass ? ' (not authorised: the evidence gate blocked action)' : ''}: act on ${view.action.affectedUnits} units instead of recalling ${view.action.blanketUnits}; surgical cost $${view.action.surgicalCostUsd} vs blanket $${view.action.blanketCostUsd}, saving $${view.action.savingsUsd}. Projected incidents in 30 days without action: ${view.action.projectedIncidents30d} (90% range ${view.action.projectedRange.lo} to ${view.action.projectedRange.hi}).` });
   if (view.gate) facts.push({ cite: null, text: `Evidence gate ${view.gate.pass ? 'passed' : 'blocked action'}: ${view.gate.criteria.map((c) => `${c.label} ${c.na ? 'N/A' : c.pass ? 'pass' : 'fail'} (${c.detail})`).join('; ')}` });
   const rt = view.evidence.find((e) => e.label === 'Red-team review')?.id ?? null;
-  for (const o of view.redteam?.objections ?? []) facts.push({ cite: rt, text: `Objection "${o.objection}": ${o.result} (${o.survived ? 'answered' : 'not answered'})` });
+  for (const o of view.redteam?.objections ?? []) facts.push({ cite: rt, text: `Objection "${o.objection}": ${o.result} (${o.check === 'untestable' ? 'open question, not tested' : o.survived ? 'answered' : 'not answered'})` });
   if (view.timeline) facts.push({ cite: view.evidence.find((e) => e.label === 'Early-warning replay')?.id ?? null, text: `Early warning: first claim ${view.timeline.firstClaimDate}; alert would have fired on ${view.timeline.alertDate ?? 'never'} after ${view.timeline.claimsAtAlert} claims; ${view.timeline.claimsAfterAlert} claims came after that.` });
   for (const e of view.evidence) facts.push({ cite: e.id, text: `${e.label}: ${e.summary}` });
   return facts;

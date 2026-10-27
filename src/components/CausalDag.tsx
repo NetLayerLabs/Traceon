@@ -171,7 +171,9 @@ export function CausalDag({ state, onSelect }: { state: InvState; onSelect: (s: 
                 ? state.action.causes.map((c) => `${c.supplier ? `${c.supplier} ` : ''}${CAUSE_PREFIX[c.column] ?? ''}${c.group}`).join('  +  ')
                 : confirmedAll.map((c) => c.hotGroup).join('  +  ')
               : noCause
-                ? 'Complaints match baseline noise'
+                ? state.gate?.criteria.find((c) => c.id === 'noise')?.pass === false
+                  ? 'No single actionable cause'
+                  : 'Complaints match baseline noise'
                 : 'Not yet established'}
           </text>
           <text x={root.x + 14} y={root.y + 62} className={confirmed ? 't-faint' : 't-muted'} fontSize="10">

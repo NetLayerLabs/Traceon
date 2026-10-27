@@ -88,6 +88,18 @@ export function startRun(scenarioId: string, vision: VisionFinding | null): Run 
 }
 
 /**
+ * The finished run (still in the registry) or shared case whose ledger root
+ * matches: what this server itself recorded for that investigation.
+ */
+export function findRecorded(ledgerRoot: string): { scenarioId: string; events: InvestigationEvent[] } | null {
+  const run = [...state.recent.values()].reverse().find((r) => r.finishedAt !== null && r.events.some((e) => e.type === 'ledger' && e.root === ledgerRoot));
+  if (run) return run;
+  // A run that has left memory is still on disk if it was shared: cases are saved finished runs.
+  const saved = getCase(caseIdFor(ledgerRoot));
+  return saved?.ledgerRoot === ledgerRoot ? saved : null;
+}
+
+/**
  * Server-side evidence gate for actions: a remediation is allowed only for a
  * completed run (still in the registry, or shared as a case) whose ledger root
  * matches, whose gate passed, and which confirmed every requested cause. The UI
@@ -96,9 +108,7 @@ export function startRun(scenarioId: string, vision: VisionFinding | null): Run 
 export function authorizeRemediation(ledgerRoot: string, causes: { column: string; group: string; remedy: string }[]): { ok: true; scenarioId: string } | { ok: false; reason: string } {
   const run = [...state.recent.values()].reverse().find((r) => r.events.some((e) => e.type === 'ledger' && e.root === ledgerRoot));
   if (run && run.finishedAt === null) return { ok: false, reason: 'The investigation is still running' };
-  // A run that has left memory can still be acted on if it was shared: cases are saved finished runs.
-  const saved = run ? null : getCase(caseIdFor(ledgerRoot));
-  const found = run ?? (saved?.ledgerRoot === ledgerRoot ? saved : null);
+  const found = findRecorded(ledgerRoot);
   if (!found) return { ok: false, reason: 'Unknown ledger root: run the investigation again before acting' };
   const gate = found.events.find((e): e is Extract<InvestigationEvent, { type: 'gate' }> => e.type === 'gate');
   if (!gate?.pass) return { ok: false, reason: 'The evidence gate did not pass for this investigation' };

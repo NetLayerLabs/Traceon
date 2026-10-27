@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { LIMITS, listDatasets, parseCsv, profile, saveDataset, validateMapping } from '@/lib/datasets';
 import type { DatasetMapping } from '@/lib/datasets';
+import { readJson } from '@/lib/http';
 import { activeRun } from '@/lib/runRegistry';
 
 export const runtime = 'nodejs';
@@ -27,7 +28,8 @@ export async function POST(req: Request) {
 }
 
 async function handle(req: Request) {
-  const body = (await req.json().catch(() => null)) as { name?: string; csv?: string; mapping?: DatasetMapping } | null;
+  const body = await readJson<{ name?: string; csv?: string; mapping?: DatasetMapping }>(req, LIMITS.maxBytes * 1.2);
+  if (body instanceof Response) return body;
   if (!body?.csv || typeof body.csv !== 'string') return NextResponse.json({ error: 'csv text is required' }, { status: 400 });
   if (body.csv.length > LIMITS.maxBytes) return NextResponse.json({ error: `File is larger than ${LIMITS.maxBytes / 1e6} MB` }, { status: 413 });
   let table: string[][];

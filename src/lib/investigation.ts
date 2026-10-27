@@ -715,7 +715,7 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
           residualMinP = Math.min(residualMinP, test.p);
           if (test.p < alpha) residual.push({ dim: d, test, hot: hottest(test).group, pLabel });
         }
-        log(residual.length ? `Unexplained structure remains: ${residual.map((r) => `${r.dim.column}=${r.hot} (${r.pLabel})`).join(', ')}` : 'Remaining incidents look like baseline noise', residual.length ? 'warn' : 'good');
+        log(residual.length ? `Unexplained structure remains: ${residual.map((r) => `${colName(r.dim)}=${r.hot} (${r.pLabel})`).join(', ')}` : 'Remaining incidents look like baseline noise', residual.length ? 'warn' : 'good');
         return { text: 'residual', carryover: carry() };
       },
     },

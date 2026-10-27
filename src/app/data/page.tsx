@@ -142,7 +142,7 @@ export default function DataPage() {
 
         {!prof ? (
           <>
-            <input ref={fileInput} type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
+            <input ref={fileInput} type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0])} className="visually-hidden" tabIndex={-1} />
             {/* A focusable button, so the file chooser opens from the keyboard too (Enter or Space). */}
             <div
               className={`drop ${over ? 'over' : ''}`}
@@ -158,7 +158,7 @@ export default function DataPage() {
             >
               <div id="drop-label" style={{ font: '500 20px/1.3 var(--serif)' }}>{busy ? 'Reading…' : 'Drop a CSV here, or click to choose one'}</div>
               <div id="drop-note" className="faint" style={{ fontSize: 12, marginTop: 6 }}>
-                Up to 400,000 rows and 25 MB. The file is stored on this server, where every statistic is computed. The AI model sees column names, test results and up to 25 failure records (serial and symptom text). Every upload is listed on this page for all visitors.
+                Up to 400,000 rows and 25 MB. The file is stored on this server, where every statistic is computed. The AI model is sent the record count and date range, the factor names and their values, the test results, and each confirmed cause’s most common symptom word; never serials or record text. Every upload is listed on this page, and by GET /api/datasets, for every visitor.
               </div>
             </div>
             <div className="samples">

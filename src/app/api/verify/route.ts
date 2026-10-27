@@ -3,16 +3,25 @@ import { verifyLedger } from '@/lib/actions';
 import { buildCaseView, loadEvents } from '@/lib/caseView';
 import { resolveScenario } from '@/lib/enterpriseData';
 import type { EvidenceItem } from '@/lib/investigation';
+import { readJson } from '@/lib/http';
+import { findRecorded } from '@/lib/runRegistry';
 
 export const runtime = 'nodejs';
 
+// A proof bundle carries every exhibit's payload; uploaded datasets make it larger.
+const VERIFY_BODY = 10_000_000;
+
 // POST {id}: replay the evidence the server recorded for a run or shared case,
 // and compare the rebuilt chain with the root it published.
-// POST {evidence, scenario}: replay an exported proof bundle. Its queries are
-// re-run read-only (non-SELECT SQL is refused), and the result says whether
-// the rebuilt root matches the bundle's own chain.
+// POST {evidence, scenario, ledgerRoot?}: replay an exported proof bundle of a
+// run or case this server recorded (found by its ledger root, or by the last
+// exhibit's chain hash). Only queries the server recorded for that run are
+// re-run; any other SQL in the bundle is reported as a mismatch, never executed.
+// The result says whether the rebuilt root matches the bundle's own chain.
 export async function POST(req: Request) {
-  const body = ((await req.json().catch(() => null)) ?? {}) as { id?: string; evidence?: EvidenceItem[]; scenario?: string };
+  const raw = await readJson<{ id?: string; evidence?: EvidenceItem[]; scenario?: string }>(req, VERIFY_BODY);
+  if (raw instanceof Response) return raw;
+  const body = (raw ?? {}) as { id?: string; evidence?: EvidenceItem[]; scenario?: string; ledgerRoot?: string };
   try {
     if (body.id) {
       const events = loadEvents(String(body.id));
@@ -33,7 +42,10 @@ export async function POST(req: Request) {
     } catch (err) {
       return NextResponse.json({ error: (err as Error).message }, { status: 400 });
     }
-    return NextResponse.json(await verifyLedger(body.evidence, scenarioId));
+    const root = typeof body.ledgerRoot === 'string' ? body.ledgerRoot : String(body.evidence.at(-1)?.chainHash ?? '');
+    const recorded = root ? findRecorded(root) : null;
+    if (!recorded) return NextResponse.json({ error: 'This server has no record of that investigation; only runs and shared cases it holds can be replayed' }, { status: 404 });
+    return NextResponse.json(await verifyLedger(body.evidence, scenarioId, buildCaseView(recorded.events).evidence));
   } catch {
     // Inputs are checked above; anything that still fails is ours, and its internals stay here.
     return NextResponse.json({ error: 'The proof could not be replayed' }, { status: 500 });

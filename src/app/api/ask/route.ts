@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { askCase } from '@/lib/ask';
 import { buildCaseView, loadEvents } from '@/lib/caseView';
+import { readJson } from '@/lib/http';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 // POST {id, question}: id is a run id or a saved case id.
 export async function POST(req: Request) {
-  const body = ((await req.json().catch(() => null)) ?? {}) as { id?: string; question?: string };
+  const raw = await readJson<{ id?: string; question?: string }>(req);
+  if (raw instanceof Response) return raw;
+  const body = (raw ?? {}) as { id?: string; question?: string };
   const question = String(body.question ?? '').trim().slice(0, 500);
   if (!body.id || !question) return NextResponse.json({ error: 'id and question are required' }, { status: 400 });
   const events = loadEvents(body.id);

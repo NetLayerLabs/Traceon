@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { analyze, CASES, liveSnapshot, loadSnapshot, recallFollowUp } from '@/lib/realRecall';
 import type { Snapshot } from '@/lib/realRecall';
+import { readJson } from '@/lib/http';
 
 const withFollowUp = (snap: Snapshot) => {
   const bt = analyze(snap);
@@ -30,7 +31,9 @@ export async function GET(req: Request) {
 
 // POST {make, model, years} runs the same test live against api.nhtsa.gov.
 export async function POST(req: Request) {
-  const body = ((await req.json().catch(() => null)) ?? {}) as { make?: string; model?: string; years?: number[] };
+  const raw = await readJson<{ make?: string; model?: string; years?: number[] }>(req);
+  if (raw instanceof Response) return raw;
+  const body = (raw ?? {}) as { make?: string; model?: string; years?: number[] };
   const make = String(body.make ?? '').trim().toUpperCase();
   const model = String(body.model ?? '').trim().toUpperCase();
   const years = (Array.isArray(body.years) ? body.years : []).map(Number).filter((y) => y >= 1995 && y <= 2030).slice(0, 6);
