@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-26T23:32:33.309Z",
+ "generatedAt": "2026-10-27T01:29:06.224Z",
  "reference": {
   "company": "VoltRide (simulated)",
   "product": "VR-48 48V e-bike battery pack",
@@ -32,7 +32,7 @@
     "rawP": "p = 0.44",
     "adjustedP": null,
     "rr": 1.1439664140288304,
-    "verdict": "Ruled out. Failure rate is flat across firmware (5.7/10k to 7.6/10k, p = 0.44)."
+    "verdict": "Ruled out. No significant association across firmware (5.7/10k to 7.6/10k, p = 0.44)."
    },
    {
     "id": "H-CARRIER",
@@ -42,7 +42,7 @@
     "rawP": "p = 0.33",
     "adjustedP": null,
     "rr": 1.1654891047377165,
-    "verdict": "Ruled out. Failure rate is flat across carrier (5.6/10k to 7.7/10k, p = 0.33)."
+    "verdict": "Ruled out. No significant association across carrier (5.6/10k to 7.7/10k, p = 0.33)."
    },
    {
     "id": "H-HEAT",
@@ -159,7 +159,7 @@
     {
      "label": "Red-team objections answered",
      "pass": true,
-     "detail": "6/6 answered with evidence"
+     "detail": "6/6 testable objections answered with evidence"
     },
     {
      "label": "Scope mapped to exact units",
@@ -454,7 +454,7 @@
     "proofHash": "3fe301cfb4a8f37deb719a72821399788e46126cc9c2c1fad7dc0f09d1720f64"
    }
   ],
-  "offlineLedgerRoot": "8f694a74fa37d4c0abd1c8d95cdae004598bea941cfbdd2fc161dc29ab78b60f"
+  "offlineLedgerRoot": "d7b6a08c0d27633042872e3b31d343b1198ee48a5f30ae94fe276d11e8eaec7d"
  },
  "bolt": {
   "vehicle": "CHEVROLET BOLT EV",
@@ -591,7 +591,7 @@
    {
     "title": "age_band",
     "status": "CONFOUNDED",
-    "verdict": "Ruled out as a confounder. 7y+ only looks guilty because it shares units with HGST HUH721212ALN604; holding f_model fixed, the effect disappears (p = 0.16)."
+    "verdict": "Ruled out as a confounder. 7y+ only looks guilty because it shares units with HGST HUH721212ALN604; holding model fixed, the effect disappears (p = 0.16)."
    }
   ]
  }

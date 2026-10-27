@@ -1,22 +1,67 @@
 {
  "note": "Written by scripts/capture.mjs from the recorded runs; null until captured.",
- "live": null,
- "nightshift": {
-  "url": "localhost · this Mac · /app",
-  "at": "2026-10-26 23:58 UTC",
-  "seconds": 18.5,
+ "live": {
+  "url": "traceon.netlayerlabs.com/app",
+  "at": "2026-10-27 01:30 UTC",
+  "seconds": 27.2,
   "queries": 46,
-  "onZetaris": 0,
-  "root": "02c87748f782ae24b7b592c59a1883e21b5246df2b5e2ad700c30de74408d7cf",
+  "onZetaris": 46,
+  "root": "fc315e0cc5c877c830ad819e0ffd1ec9c889df459173814713d72fc2440494f5",
   "chain": [
    "466a81b815453b5f1650b4238a420081a44fd5eff9c1b8f059a50f8079c60543",
    "2cf0d910904d945452761f1ebc5363042c50fddb889d9f6c81ce8403449020fb",
    "4a27c8220c8197b4c45e01531e8b3b838843ec3d57a47028ec1c6cb48aff03db",
-   "35737e059c36af954260ee318dd8a12b6e6db4c4f3cb3610d36ca3342d61e952",
-   "2db8c2b1add36eb11102bcb82cedb0e1c9f25bd5c581739327b10f4793d829d0",
-   "0dd95463b607bd4e283512212ac72eb8463d07cf9174ca603c7bc7bf0bb304c0",
-   "71e565e4e32ed6ad0b43c880989531ec676c3d8142caaacb8b8c0020280d96e5",
-   "49eb83acf36f69d46f01f565a48d07ae2f14da556c98ebe56c6fcd19db5749b6"
+   "8c04d7078c9731e8a71c06f74007821986a804b29676abf4c6df9279ac60d1f9",
+   "bc8c5d2aa575527ee87e4b439abe6cf8432509659b39e45c3479d6110e7946d6",
+   "c9b408c503a5bbd06b3c97fa55adb68d21193d2ac229575756867ae5016c2a3c",
+   "6f8ada24f8170c09b7490685e3be6670ba6ef0efc622d0fe4305aa8f4b1e16a1",
+   "6d4de03b16039c1504b44e8ee43e27d3205bc797528cf8d86ef0d19e8dce4cb6"
+  ],
+  "planVia": "NVIDIA NIM · nemotron-3.5-lightning-30b-a3b",
+  "redteamVia": "NVIDIA NIM · nemotron-3.5-lightning-30b-a3b",
+  "explanationVia": "NVIDIA NIM · nemotron-3.5-super-vl-120b-a12b",
+  "explanationCached": false,
+  "fallbackFrom": null,
+  "guard": {
+   "checked": 13,
+   "verified": 13
+  },
+  "objections": [
+   {
+    "objection": "The 1668x relative risk is mathematically fragile; a single additional failure in the reference group would reduce the RR to ~800x, and two additional failures would drop it below 400x, calling into question the stability of the signal.",
+    "result": "CB-B-0917: p < 1e-300 after testing 7 hypotheses; Bonferroni alpha 1.4e-3"
+   },
+   {
+    "objection": "The verdict attributes 93% of incidents to this batch, yet the raw failure rate (841/10k) suggests most units in the batch survived; the proportion could be an artifact of a very small reference group rather than a batch-specific defect.",
+    "result": "CB-B-0917: p < 1e-300 after testing 7 hypotheses; Bonferroni alpha 1.4e-3"
+   },
+   {
+    "objection": "Geographic confounding is plausible; if the batch was deployed predominantly in one region with harsher operating conditions or different duty cycles, the effect may not be intrinsic to the batch itself.",
+    "result": "Within each warehouse CB-B-0917 still fails far more often (CMH p < 1e-300). Regional reporting habits cannot explain it."
+   }
+  ],
+  "verdict": [
+   "CB-B-0917"
+  ],
+  "parity": true,
+  "zetarisMode": "ZETARIS_CLOUD"
+ },
+ "nightshift": {
+  "url": "localhost · this Mac · /app",
+  "at": "2026-10-27 01:31 UTC",
+  "seconds": 23.8,
+  "queries": 46,
+  "onZetaris": 0,
+  "root": "7899f737214ae9089ab19820944e40f492af7ba8ee882acf5799ae8cb4f7a157",
+  "chain": [
+   "466a81b815453b5f1650b4238a420081a44fd5eff9c1b8f059a50f8079c60543",
+   "2cf0d910904d945452761f1ebc5363042c50fddb889d9f6c81ce8403449020fb",
+   "4a27c8220c8197b4c45e01531e8b3b838843ec3d57a47028ec1c6cb48aff03db",
+   "8c04d7078c9731e8a71c06f74007821986a804b29676abf4c6df9279ac60d1f9",
+   "bc8c5d2aa575527ee87e4b439abe6cf8432509659b39e45c3479d6110e7946d6",
+   "7277981efaeef3bb21b1760758e79b53976992e1808593a27b7e77ab8d26941e",
+   "247ec16e38f73a3059d4ced0e50f47d0d9a0fdd47e8af25a2530517396759762",
+   "c8de5794a13ed5d511a0f31c03beedf3a0b7f825d1b6e06ddcc9432531eaf607"
   ],
   "planVia": "Meterless Nightshift · nvidia/nemotron-3.5-lightning-30b-a3b",
   "redteamVia": "Meterless Nightshift · nvidia/nemotron-3.5-lightning-30b-a3b",
@@ -29,15 +74,15 @@
   },
   "objections": [
    {
-    "objection": "The 1668x relative risk may be an artifact of extreme exposure-time imbalance between CB-B-0917 and other SKUs.",
-    "result": "CB-B-0917 units: 15.9 days in field on average vs 45.1 for others. Less exposure yet more failures, so wear-out bias works against the finding."
-   },
-   {
-    "objection": "A single unmeasured confounder (e.g., a specific user demographic or storage condition) could drive the entire signal.",
+    "objection": "The 1668x RR may be inflated by unmeasured usage patterns (e.g., charge cycles, depth of discharge) that correlate with the defect.",
     "result": "Cannot be tested with the federated data available; logged as an open question for the quality team."
    },
    {
-    "objection": "The effect vanishes or weakens when analyzing the finest available time granularity (e.g., weekly or daily incident rates).",
+    "objection": "Geographic clustering could reflect regional reporting bias or logistics differences rather than a physical defect.",
+    "result": "Within each warehouse CB-B-0917 still fails far more often (CMH p < 1e-300). Regional reporting habits cannot explain it."
+   },
+   {
+    "objection": "The result may not hold at the batch level; other CB-B-0917 batches from the same supplier could be unaffected.",
     "result": "Other batches from the same supplier fail at baseline (p = 0.24). The defect is specific to CB-B-0917."
    }
   ],

@@ -10,7 +10,7 @@ import live from "../../data/live.json";
 export const R = real as unknown as typeof real;
 /** Figures from the recorded runs: the live site on Zetaris, and the Mac run through Nightshift (null until captured). */
 export interface LiveRun { url: string; at: string; seconds: number; queries: number; onZetaris: number; parity: boolean; root: string; chain: string[]; explanationVia: string; planVia: string; redteamVia: string; guard: { checked: number; verified: number }; objections: { objection: string; result: string }[] }
-export interface NightshiftRun { at: string; url: string; models: string[]; planVia: string; explanationVia: string; redteamVia: string; seconds: number; guard: { checked: number; verified: number }; request: { model: string; ms: number; tokens: number | null } }
+export interface NightshiftRun { url: string; at: string; seconds: number; queries: number; onZetaris: number; root: string; chain: string[]; planVia: string; redteamVia: string; explanationVia: string; explanationCached: boolean; fallbackFrom: string | null; guard: { checked: number; verified: number }; objections: { objection: string; result: string }[]; verdict: string[] }
 export const L = live as unknown as { live: LiveRun | null; nightshift: NightshiftRun | null };
 
 /** Scene-local frame and word cues: rel("word", n) is when the nth "word" is spoken, scene-local. */
