@@ -1,0 +1,48 @@
+{
+ "note": "Written by scripts/capture.mjs from the recorded runs; null until captured.",
+ "live": null,
+ "nightshift": {
+  "url": "localhost · this Mac · /app",
+  "at": "2026-10-26 23:58 UTC",
+  "seconds": 18.5,
+  "queries": 46,
+  "onZetaris": 0,
+  "root": "02c87748f782ae24b7b592c59a1883e21b5246df2b5e2ad700c30de74408d7cf",
+  "chain": [
+   "466a81b815453b5f1650b4238a420081a44fd5eff9c1b8f059a50f8079c60543",
+   "2cf0d910904d945452761f1ebc5363042c50fddb889d9f6c81ce8403449020fb",
+   "4a27c8220c8197b4c45e01531e8b3b838843ec3d57a47028ec1c6cb48aff03db",
+   "35737e059c36af954260ee318dd8a12b6e6db4c4f3cb3610d36ca3342d61e952",
+   "2db8c2b1add36eb11102bcb82cedb0e1c9f25bd5c581739327b10f4793d829d0",
+   "0dd95463b607bd4e283512212ac72eb8463d07cf9174ca603c7bc7bf0bb304c0",
+   "71e565e4e32ed6ad0b43c880989531ec676c3d8142caaacb8b8c0020280d96e5",
+   "49eb83acf36f69d46f01f565a48d07ae2f14da556c98ebe56c6fcd19db5749b6"
+  ],
+  "planVia": "Meterless Nightshift · nvidia/nemotron-3.5-lightning-30b-a3b",
+  "redteamVia": "Meterless Nightshift · nvidia/nemotron-3.5-lightning-30b-a3b",
+  "explanationVia": "Meterless Nightshift · nvidia/nemotron-3-ultra-550b-a55b",
+  "explanationCached": false,
+  "fallbackFrom": null,
+  "guard": {
+   "checked": 20,
+   "verified": 20
+  },
+  "objections": [
+   {
+    "objection": "The 1668x relative risk may be an artifact of extreme exposure-time imbalance between CB-B-0917 and other SKUs.",
+    "result": "CB-B-0917 units: 15.9 days in field on average vs 45.1 for others. Less exposure yet more failures, so wear-out bias works against the finding."
+   },
+   {
+    "objection": "A single unmeasured confounder (e.g., a specific user demographic or storage condition) could drive the entire signal.",
+    "result": "Cannot be tested with the federated data available; logged as an open question for the quality team."
+   },
+   {
+    "objection": "The effect vanishes or weakens when analyzing the finest available time granularity (e.g., weekly or daily incident rates).",
+    "result": "Other batches from the same supplier fail at baseline (p = 0.24). The defect is specific to CB-B-0917."
+   }
+  ],
+  "verdict": [
+   "CB-B-0917"
+  ]
+ }
+}

@@ -1,0 +1,190 @@
+{
+  "title": "Traceon: prove the cause before you recall",
+  "model": "eleven_multilingual_v2",
+  "voices": {
+    "narrator": {
+      "name": "Daniel",
+      "id": "onwK4e9ZLuTAKqWW03F9",
+      "settings": {
+        "stability": 0.55,
+        "similarity_boost": 0.8,
+        "style": 0.2,
+        "use_speaker_boost": true,
+        "speed": 1.05
+      }
+    },
+    "owner": {
+      "name": "River",
+      "id": "SAz9YHcvj6GT2YYXdXww",
+      "settings": {
+        "stability": 0.5,
+        "similarity_boost": 0.8,
+        "style": 0.3,
+        "use_speaker_boost": true
+      }
+    }
+  },
+  "scenes": [
+    {
+      "id": "open",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "October twenty-first, twenty twenty. Three in the morning. A family wakes to smoke alarms. Their Chevy Bolt is burning in the garage."
+        },
+        {
+          "voice": "narrator",
+          "text": "Two weeks after they report it, GM recalls the car, with a software fix. Eight months on, another owner writes:"
+        },
+        {
+          "voice": "owner",
+          "text": "This is the second recall in less than a year for the same battery-related issue."
+        }
+      ]
+    },
+    {
+      "id": "problem",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Every fire leaves a trail, split across claims, reviews, federal reports and factory records. And the first suspect is often wrong. Fix the wrong thing, and the fires go on. Recall everything, and you pay for all of it."
+        }
+      ]
+    },
+    {
+      "id": "zetaris",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "The answer sits in five systems that never meet. Zetaris puts one SQL layer over all of them, so every test is a real query that anyone can read, and run again."
+        }
+      ]
+    },
+    {
+      "id": "turn",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "This is Traceon. An AI agent that proves the cause, before you recall.",
+          "say": "This is Trace-on. An AI agent that proves the cause, before you recall."
+        }
+      ]
+    },
+    {
+      "id": "converge",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "It starts with the first signs. Meterless H-MEM keeps every weak signal, and pulls one hundred thirty-one of them into one incident: overheating connectors, in six cities.",
+          "say": "It starts with the first signs. Meterless aitch-mem keeps every weak signal, and pulls one hundred thirty-one of them into one incident: overheating connectors, in six cities."
+        }
+      ]
+    },
+    {
+      "id": "screen",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Nemotron plans seven suspects. Each one becomes a query on Zetaris: forty-six in about fifteen seconds, every result hashed. The model never computes a statistic. The code does."
+        }
+      ]
+    },
+    {
+      "id": "why",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "On raw numbers, heat looks guilty. Hold the cell batch fixed, and the heat effect vanishes. So do the plant, the BMS board and the supplier. One cause survives every test: a single cell batch, failing at sixteen hundred times the normal rate.",
+          "say": "On raw numbers, heat looks guilty. Hold the cell batch fixed, and the heat effect vanishes. So do the plant, the B M S board and the supplier. One cause survives every test: a single cell batch, failing at sixteen hundred times the normal rate."
+        }
+      ]
+    },
+    {
+      "id": "prove",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Then it tries to prove itself wrong. Nemotron raises objections. Each one is answered by a test, or logged as an open question. Seven criteria must pass, or Traceon blocks its own action.",
+          "say": "Then it tries to prove itself wrong. Nemotron raises objections. Each one is answered by a test, or logged as an open question. Seven criteria must pass, or Trace-on blocks its own action."
+        }
+      ]
+    },
+    {
+      "id": "act",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Only then can a named person approve. Traceon holds one thousand three hundred eighty units, not one hundred eighty thousand. Here, that saves four point four seven million dollars.",
+          "say": "Only then can a named person approve. Trace-on holds one thousand three hundred eighty units, not one hundred eighty thousand. Here, that saves four point four seven million dollars."
+        }
+      ]
+    },
+    {
+      "id": "nightshift",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Every model call runs through Meterless Nightshift, on this Mac, routed to Nemotron: Lightning plans and attacks, Ultra explains. Then Traceon checks every figure the model wrote.",
+          "say": "Every model call runs through Meterless Nightshift, on this Mac, routed to Nemotron: Lightning plans and attacks, Ultra explains. Then Trace-on checks every figure the model wrote."
+        }
+      ]
+    },
+    {
+      "id": "real",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Is it only a simulation? No. On real NHTSA complaints, the same screen fires on October thirtieth, the day that family filed, two weeks before the recall. After the software fix, fire reports went on. After the battery replacement, they stopped.",
+          "say": "Is it only a simulation? No. On real nitsa complaints, the same screen fires on October thirtieth, the day that family filed, two weeks before the recall. After the software fix, fire reports went on. After the battery replacement, they stopped."
+        },
+        {
+          "voice": "narrator",
+          "text": "And on three hundred fifty-five thousand real hard drives, it finds the failing cohort, and refuses to recall a whole model."
+        }
+      ]
+    },
+    {
+      "id": "proof",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Every number links to its SQL and its rows. Every step is hashed, signed and timestamped. One click replays it all, and rebuilds the same root."
+        }
+      ]
+    },
+    {
+      "id": "different",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "What makes Traceon different? It proves before it acts: three hundred and four blind cases, all correct, zero wrong actions. It shows its work. And it holds up on real data.",
+          "say": "What makes Trace-on different? It proves before it acts: three hundred and four blind cases, all correct, zero wrong actions. It shows its work. And it holds up on real data."
+        }
+      ]
+    },
+    {
+      "id": "close",
+      "seconds": 1,
+      "lines": [
+        {
+          "voice": "narrator",
+          "text": "Traceon. Prove the cause before you recall. Open the case at traceon dot netlayerlabs dot com, and try to break the verdict.",
+          "say": "Trace-on. Prove the cause before you recall. Open the case at trace-on dot net layer labs dot com, and try to break the verdict."
+        }
+      ]
+    }
+  ]
+}

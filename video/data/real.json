@@ -1,0 +1,598 @@
+{
+ "generatedAt": "2026-10-26T23:32:33.309Z",
+ "reference": {
+  "company": "VoltRide (simulated)",
+  "product": "VR-48 48V e-bike battery pack",
+  "signals": {
+   "matched": 131,
+   "total": 135,
+   "cities": {
+    "Denver, CO": 13,
+    "Austin, TX": 41,
+    "Newark, NJ": 8,
+    "Chicago, IL": 15,
+    "Phoenix, AZ": 41,
+    "Seattle, WA": 13
+   },
+   "channels": {
+    "warranty": 125,
+    "Reddit r/ebikes": 4,
+    "Facebook group": 2
+   },
+   "signature": "VR-48 pack hot overheat connector pin scorch burning smoke swelling charging",
+   "firstSeen": "2026-09-03",
+   "lastSeen": "2026-10-24"
+  },
+  "hypotheses": [
+   {
+    "id": "H-FW",
+    "title": "Firmware overcharge bug",
+    "status": "NO_ASSOCIATION",
+    "group": "v3.3",
+    "rawP": "p = 0.44",
+    "adjustedP": null,
+    "rr": 1.1439664140288304,
+    "verdict": "Ruled out. Failure rate is flat across firmware (5.7/10k to 7.6/10k, p = 0.44)."
+   },
+   {
+    "id": "H-CARRIER",
+    "title": "Carrier transit shock",
+    "status": "NO_ASSOCIATION",
+    "group": "UPS",
+    "rawP": "p = 0.33",
+    "adjustedP": null,
+    "rr": 1.1654891047377165,
+    "verdict": "Ruled out. Failure rate is flat across carrier (5.6/10k to 7.7/10k, p = 0.33)."
+   },
+   {
+    "id": "H-HEAT",
+    "title": "Sun Belt heat exposure",
+    "status": "CONFOUNDED",
+    "group": "SUNBELT",
+    "rawP": "p = 1.6e-6",
+    "adjustedP": "p = 0.23",
+    "rr": 2.368230925574444,
+    "verdict": "Ruled out as a confounder. SUNBELT only looks guilty because it shares units with CB-B-0917; holding cell_batch fixed, the effect disappears (p = 0.23)."
+   },
+   {
+    "id": "H-PLANT",
+    "title": "Plant assembly defect",
+    "status": "CONFOUNDED",
+    "group": "P2",
+    "rawP": "p = 3.7e-42",
+    "adjustedP": "p = 0.27",
+    "rr": 27.425028752156415,
+    "verdict": "Ruled out as a confounder. P2 only looks guilty because it shares units with CB-B-0917; holding cell_batch fixed, the effect disappears (p = 0.27)."
+   },
+   {
+    "id": "H-BMS",
+    "title": "BMS board supplier",
+    "status": "CONFOUNDED",
+    "group": "BMS-Orion",
+    "rawP": "p = 5.1e-25",
+    "adjustedP": "p = 0.97",
+    "rr": 24.177722264352944,
+    "verdict": "Ruled out as a confounder. BMS-Orion only looks guilty because it shares units with CB-B-0917; holding cell_batch fixed, the effect disappears (p = 0.97)."
+   },
+   {
+    "id": "H-SUPPLIER",
+    "title": "Cell supplier quality",
+    "status": "CONFOUNDED",
+    "group": "Supplier B",
+    "rawP": "p = 3.7e-42",
+    "adjustedP": "p = 0.27",
+    "rr": 27.425028752156415,
+    "verdict": "Ruled out as a confounder. Supplier B only looks guilty because it shares units with CB-B-0917; holding cell_batch fixed, the effect disappears (p = 0.27)."
+   },
+   {
+    "id": "H-BATCH",
+    "title": "Defective cell batch",
+    "status": "CONFIRMED",
+    "group": "CB-B-0917",
+    "rawP": "p < 1e-300",
+    "adjustedP": null,
+    "rr": 1668.270531400966,
+    "verdict": "Confirmed. CB-B-0917 fails at 841/10k vs 0.5/10k elsewhere (RR 1668x, 95% CI 848-3280). It holds up after adjusting for every other factor and accounts for 93% of incidents."
+   }
+  ],
+  "cause": {
+   "column": "cell_batch",
+   "group": "CB-B-0917",
+   "rr": 1668.270531400966,
+   "rrLo": 848.4589944022655,
+   "rrHi": 3280.213403714998,
+   "coverage": 0.928,
+   "units": 1380,
+   "failures": 116,
+   "ratePer10k": 840.5797101449275,
+   "baseRatePer10k": 0.5038629492777964,
+   "lot": {
+    "lot_id": "L-409",
+    "plant_id": "P2",
+    "build_start": "2026-10-02",
+    "build_end": "2026-10-04",
+    "unit_count": 1380,
+    "serial_start": 88400,
+    "serial_end": 89779
+   },
+   "signature": {
+    "family": "connector",
+    "share": 0.7327586206896551,
+    "claims": 116
+   }
+  },
+  "plan": {
+   "affectedUnits": 1380,
+   "blanketUnits": 180000,
+   "savingsUsd": 4465500,
+   "costUsd": 34500,
+   "blanketCostUsd": 4500000
+  },
+  "gate": {
+   "pass": true,
+   "criteria": [
+    {
+     "label": "Association beats multiple-testing bar",
+     "pass": true,
+     "detail": "CB-B-0917: p < 1e-300 (Bonferroni alpha 1.4e-3)"
+    },
+    {
+     "label": "Survives adjustment for every other suspect",
+     "pass": true,
+     "detail": "CB-B-0917: H-HEAT p < 1e-300, H-PLANT p < 1e-300, H-BMS p < 1e-300, H-SUPPLIER p < 1e-300"
+    },
+    {
+     "label": "Effect consistent in every subgroup",
+     "pass": true,
+     "detail": "5/5 stratifications consistent"
+    },
+    {
+     "label": "Nothing unexplained remains",
+     "pass": true,
+     "detail": "Causes explain 92.8% of claims; the rest is spread evenly across all 7 factors"
+    },
+    {
+     "label": "Consistent failure signature",
+     "pass": true,
+     "detail": "CB-B-0917: 85/116 \"connector\""
+    },
+    {
+     "label": "Red-team objections answered",
+     "pass": true,
+     "detail": "6/6 answered with evidence"
+    },
+    {
+     "label": "Scope mapped to exact units",
+     "pass": true,
+     "detail": "CB-B-0917: 1 lot(s)"
+    }
+   ]
+  },
+  "redteam": [
+   {
+    "objection": "Hot climates could be cooking these packs instead.",
+    "survived": true,
+    "result": "CB-B-0917 still significant controlling for H-HEAT (p < 1e-300), H-PLANT (p < 1e-300), H-BMS (p < 1e-300), H-SUPPLIER (p < 1e-300)"
+   },
+   {
+    "objection": "Some regions may simply complain more, inflating claims.",
+    "survived": true,
+    "result": "Within each warehouse CB-B-0917 still fails far more often (CMH p < 1e-300). Regional reporting habits cannot explain it."
+   },
+   {
+    "objection": "Older units fail more; maybe these units have just been in use longer.",
+    "survived": true,
+    "result": "CB-B-0917 units: 15.9 days in field on average vs 45.1 for others. Less exposure yet more failures, so wear-out bias works against the finding."
+   },
+   {
+    "objection": "With this many groups tested, one will look bad by chance.",
+    "survived": true,
+    "result": "CB-B-0917: p < 1e-300 after testing 7 hypotheses; Bonferroni alpha 1.4e-3"
+   },
+   {
+    "objection": "Maybe the problem is broader and we are about to under-recall.",
+    "survived": true,
+    "result": "Other batches from the same supplier fail at baseline (p = 0.24). The defect is specific to CB-B-0917."
+   },
+   {
+    "objection": "An average can hide subgroups where the effect reverses.",
+    "survived": true,
+    "result": "CB-B-0917: firmware consistent, carrier consistent, climate_zone consistent, bms_supplier consistent, warehouse_id consistent"
+   }
+  ],
+  "markovianSteps": 13,
+  "exhibits": 56,
+  "sqlQueries": 46,
+  "sampleSql": [
+   {
+    "id": "E-08",
+    "label": "H-FW screen",
+    "summary": "firmware: chi2=1.6, df=2, p = 0.44",
+    "sql": "SELECT firmware AS grp, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY firmware",
+    "rows": [
+     {
+      "grp": "v3.3",
+      "units": 53832,
+      "failures": 41
+     },
+     {
+      "grp": "v3.2",
+      "units": 53935,
+      "failures": 31
+     },
+     {
+      "grp": "v3.4",
+      "units": 72233,
+      "failures": 53
+     }
+    ],
+    "silos": [
+     "unit_fact",
+     "Telemetry (firmware)"
+    ],
+    "proofHash": "531c204c5d062ba57983cee6c739b70b801f54b15b1e256bcd34c6f9d249733c"
+   },
+   {
+    "id": "E-09",
+    "label": "H-CARRIER screen",
+    "summary": "carrier: chi2=2.2, df=2, p = 0.33",
+    "sql": "SELECT carrier AS grp, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY carrier",
+    "rows": [
+     {
+      "grp": "UPS",
+      "units": 59968,
+      "failures": 46
+     },
+     {
+      "grp": "FedEx",
+      "units": 60206,
+      "failures": 34
+     },
+     {
+      "grp": "DHL",
+      "units": 59826,
+      "failures": 45
+     }
+    ],
+    "silos": [
+     "unit_fact",
+     "WMS (shipments)"
+    ],
+    "proofHash": "1130021fa0a68b85dd10498ccd67b9dcf35e85a16ed8fb6bfe56231042b3f0a9"
+   },
+   {
+    "id": "E-10",
+    "label": "H-HEAT screen",
+    "summary": "climate_zone: chi2=23.0, df=1, p = 1.6e-6",
+    "sql": "SELECT climate_zone AS grp, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY climate_zone",
+    "rows": [
+     {
+      "grp": "TEMPERATE",
+      "units": 104337,
+      "failures": 46
+     },
+     {
+      "grp": "SUNBELT",
+      "units": 75663,
+      "failures": 79
+     }
+    ],
+    "silos": [
+     "unit_fact",
+     "WMS (warehouses)"
+    ],
+    "proofHash": "d2732372fde574551d25ee496b667c03fd3deb4dd1431600f60a9e4e5a430353"
+   },
+   {
+    "id": "E-11",
+    "label": "H-PLANT screen",
+    "summary": "plant_id: chi2=190.8, df=2, p = 3.7e-42",
+    "sql": "SELECT plant_id AS grp, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY plant_id",
+    "rows": [
+     {
+      "grp": "P1",
+      "units": 60902,
+      "failures": 5
+     },
+     {
+      "grp": "P2",
+      "units": 62604,
+      "failures": 117
+     },
+     {
+      "grp": "P3",
+      "units": 56494,
+      "failures": 3
+     }
+    ],
+    "silos": [
+     "unit_fact",
+     "ERP (production lots)"
+    ],
+    "proofHash": "4ef76bbc0033f804dc75de15468f9f10cba76f0c990d4cf181bbd52ed6753132"
+   },
+   {
+    "id": "E-12",
+    "label": "H-BMS screen",
+    "summary": "bms_supplier: chi2=106.7, df=1, p = 5.1e-25",
+    "sql": "SELECT bms_supplier AS grp, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY bms_supplier",
+    "rows": [
+     {
+      "grp": "BMS-Orion",
+      "units": 89668,
+      "failures": 120
+     },
+     {
+      "grp": "BMS-Kestrel",
+      "units": 90332,
+      "failures": 5
+     }
+    ],
+    "silos": [
+     "unit_fact",
+     "Supplier BOM"
+    ],
+    "proofHash": "687a896f9ba29bd6d2068ef06ef2a8646ea62bd4016265df0a3a33d0d64474c0"
+   },
+   {
+    "id": "E-13",
+    "label": "H-SUPPLIER screen",
+    "summary": "cell_supplier: chi2=190.8, df=2, p = 3.7e-42",
+    "sql": "SELECT cell_supplier AS grp, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY cell_supplier",
+    "rows": [
+     {
+      "grp": "Supplier A",
+      "units": 60902,
+      "failures": 5
+     },
+     {
+      "grp": "Supplier B",
+      "units": 62604,
+      "failures": 117
+     },
+     {
+      "grp": "Supplier C",
+      "units": 56494,
+      "failures": 3
+     }
+    ],
+    "silos": [
+     "unit_fact",
+     "Supplier BOM"
+    ],
+    "proofHash": "e63e21c76f271a405fbe0bea5fd390247a2a8d83c8419240b8e6cc83831cb0df"
+   },
+   {
+    "id": "E-14",
+    "label": "H-BATCH screen",
+    "summary": "cell_batch: chi2=13930.9, df=59, p < 1e-300",
+    "sql": "SELECT cell_batch AS grp, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY cell_batch",
+    "rows": [
+     {
+      "grp": "CB-A-0800",
+      "units": 3026,
+      "failures": 1
+     },
+     {
+      "grp": "CB-B-0803",
+      "units": 3044,
+      "failures": 0
+     },
+     {
+      "grp": "CB-C-0806",
+      "units": 3078,
+      "failures": 0
+     },
+     {
+      "grp": "CB-A-0809",
+      "units": 3059,
+      "failures": 1
+     },
+     {
+      "grp": "CB-B-0812",
+      "units": 3175,
+      "failures": 0
+     },
+     {
+      "grp": "CB-C-0815",
+      "units": 3134,
+      "failures": 0
+     }
+    ],
+    "silos": [
+     "unit_fact",
+     "Supplier BOM x ERP"
+    ],
+    "proofHash": "632039dd82b7daf10f2bdc1d5d535e4e358c92e2895a700998ed8d2cd92263d7"
+   },
+   {
+    "id": "E-15",
+    "label": "H-HEAT | H-PLANT",
+    "summary": "CMH climate_zone = 'SUNBELT' controlling for plant_id = 'P2': p = 3.9e-6",
+    "sql": "SELECT climate_zone AS exposure, plant_id AS stratum, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY climate_zone, plant_id",
+    "rows": [
+     {
+      "exposure": "TEMPERATE",
+      "stratum": "P1",
+      "units": 35505,
+      "failures": 4
+     },
+     {
+      "exposure": "SUNBELT",
+      "stratum": "P1",
+      "units": 25397,
+      "failures": 1
+     },
+     {
+      "exposure": "TEMPERATE",
+      "stratum": "P2",
+      "units": 36032,
+      "failures": 39
+     },
+     {
+      "exposure": "SUNBELT",
+      "stratum": "P2",
+      "units": 26572,
+      "failures": 78
+     },
+     {
+      "exposure": "TEMPERATE",
+      "stratum": "P3",
+      "units": 32800,
+      "failures": 3
+     },
+     {
+      "exposure": "SUNBELT",
+      "stratum": "P3",
+      "units": 23694,
+      "failures": 0
+     }
+    ],
+    "silos": [
+     "unit_fact"
+    ],
+    "proofHash": "3fe301cfb4a8f37deb719a72821399788e46126cc9c2c1fad7dc0f09d1720f64"
+   }
+  ],
+  "offlineLedgerRoot": "8f694a74fa37d4c0abd1c8d95cdae004598bea941cfbdd2fc161dc29ab78b60f"
+ },
+ "bolt": {
+  "vehicle": "CHEVROLET BOLT EV",
+  "source": "api.nhtsa.gov complaintsByVehicle and recallsByVehicle",
+  "fetchedAt": "2026-10-25",
+  "alert": {
+   "date": "2020-10-30",
+   "cases": 3,
+   "prr": 32.9,
+   "chi2": 54.3
+  },
+  "recall": {
+   "campaign": "20V701000",
+   "date": "2020-11-13",
+   "component": "ELECTRICAL SYSTEM:PROPULSION SYSTEM:TRACTION BATTERY",
+   "summary": "General Motors LLC (GM) is recalling all 2017-2018 and certain 2019 Chevrolet Bolt EV vehicles.  The high voltage battery could catch fire when charged to full or nearly full capacity."
+  },
+  "leadDays": 14,
+  "verdict": "early",
+  "fireComplaints": 10,
+  "quarters": {
+   "2020 Q3": 1,
+   "2020 Q4": 2,
+   "2021 Q1": 0,
+   "2021 Q2": 2,
+   "2021 Q3": 5,
+   "2021 Q4": 0,
+   "2022 Q1": 0,
+   "2022 Q2": 0
+  },
+  "followUp": [
+   {
+    "campaign": "20V701000",
+    "date": "2020-11-13",
+    "verdict": "did-not-hold",
+    "before": 3,
+    "after": 6,
+    "afterComplaints": 83,
+    "p": 0.91015625,
+    "next": {
+     "campaign": "21V560000",
+     "date": "2021-07-23"
+    },
+    "reason": "6 fire complaints in the year from 90 days after the recall, against 3 in the year before (no significant drop, p = 0.91); another fire recall of the same component followed on 2021-07-23 (21V560000)."
+   },
+   {
+    "campaign": "21V560000",
+    "date": "2021-07-23",
+    "verdict": "held",
+    "before": 5,
+    "after": 0,
+    "afterComplaints": 50,
+    "p": 0.03125,
+    "next": null,
+    "reason": "0 fire complaints in the year from 90 days after the recall, against 5 in the year before (significant drop, p = 0.031), while owners kept filing other complaints (50)."
+   }
+  ],
+  "recalls": [
+   {
+    "campaign": "21V560000",
+    "date": "23/07/2021",
+    "summary": "General Motors LLC (GM) is recalling certain 2017-2019 Chevrolet Bolt EV vehicles previously recalled under NHTSA recall number 20V-701.  The high voltage battery could catch fire when charged to full or nearly full capacity."
+   },
+   {
+    "campaign": "20V701000",
+    "date": "13/11/2020",
+    "summary": "General Motors LLC (GM) is recalling all 2017-2018 and certain 2019 Chevrolet Bolt EV vehicles.  The high voltage battery could catch fire when charged to full or nearly full capacity."
+   }
+  ],
+  "quotes": [
+   {
+    "odi": "11372429",
+    "filed": "10/30/2020",
+    "incident": "10/21/2020",
+    "fire": true,
+    "text": "IN THE EARLY MORNING HOURS OF OCTOBER 21ST, AROUND 3AM, WE WERE WOKEN UP BY SMOKE/FIRE ALARMS. WE STARTED RUNNING AROUND OUR HOME TO IDENTIFY THE CAUSE OF THE ALARM. AFTER ABOUT 5 MINUTES OF SEARCHING INSIDE THE HOME AND FINDING NOTHING, WE REALIZED THAT THERE WAS SOME SMELL OF SMOKE COMING FROM THE GARAGE AND WHEN THE MUDROOM DOOR WHICH LEADS TO THE GARAGE WAS OPENED, WE FOUND THAT THE CHEVY BOLT WAS ON FIRE AND THERE WAS LOT OF SMOKE IN THE GARAGE. THE CHEVY BOLT WAS PARKED/STATIONARY IN DOOR 3 SECTION OF THE GARAGE AND OUR OTHER CAR WAS PARKED IN DOOR 1 SECTION OF THE GARAGE. THE DOOR 2 SECTION OF THE GARAGE WAS EMPTY AT THE TIME OF THE INCIDENT. WITH CHEVY BOLT ON FIRE, WE SAW THAT THE DOOR 3 SECTION OF THE GARAGE WAS ENGULFED IN FLAMES AND FILLED WITH SMOKE. WE TRIED TO USE THE FIRE EXTINGUISHER TO PUT-OFF THE FIRE BUT COULD NOT CONTAIN THE SPREAD OF THE FIRE. THE CHEVY BOLT WAS KEPT FOR CHARGING OVERNIGHT , AS HAS BEEN THE GENERAL PRACTICE THAT WE HAVE BEEN FOLLOWING FOR AROUND 2 YEARS. WE CALLED 911 AS SOON AS WE SAW THE GARAGE IN FLAMES AND FIRE ENGINES ARRIVED WITHIN 15 MINUTES BUT THE FIRE HAD SPREAD WIDELY AND CAUSED RAMPANT DAMAGES TO THE ENTIRE GARAGE INCLUDING THE OTHER CAR, BEDROOM ON THE TOP OF THE GARAGE IN THE SECOND FLOOR AND THE BEDROOM ADJOINING THE GARAGE IN THE FIRST FLOOR. WHILE ALL THE OCCUPANTS OF THE HOME GOT OUT WITHIN AROUND 8 MINUTES OF HEARING THE FIRE ALARM, THE FIRE AND HEAT/SMOKE SPREAD QUICKLY TO WASHER/DRYER SECTION, EAT IN DINING, KITCHEN, FAMILY ROOM AND FORMAL DINING ROOM. THE OTHER SECTIONS OF THE HOME INCLUDING THE FOYER, OFFICE ROOM, SUN ROOM AND ALL OF THE BEDROOMS UPSTAIRS WERE QUICKLY FILLED BY SMOKE AND SOOT. THE HEAT INSIDE THE HOME WAS SO MUCH THAT ONE CAN LITERALLY SEE THE FRAMING STUDS. THE TOWNSHIP FIRE AND POLICE DEPARTMENT ARRIVED PROMPTLY ON THE SCENE AND HAVE BEEN DILIGENTLY FOLLOWING UP ON THE INVESTIGATION."
+   },
+   {
+    "odi": "11426342",
+    "filed": "07/25/2021",
+    "incident": "11/01/2020",
+    "fire": true,
+    "text": "I currently lease a 2019 Chevrolet Bolt which is part of the recall announced today by GM. This is the second recall in less than a year for the same battery-related issue. It was supposed to have been fixed with a software update that I had completed in March. This software was supposed to identify defective batteries but it has not been successful as evidenced by the mounting number of fires that have happened after the “fix”. As such, we are now under a recall a second time.  As a result of their own manufacturing issue, we are now limited to how we charge our vehicles, where we park and even the mileage range that we paid for, while GM attempts another fix.  GM stated that they will again be using software to identify defective cells in our batteries and only the ones that are deternined to be defective will have those cells or battery packs replaced. As you can imagine, I no longer trust GM to be able to successfully identify whether or not my battery is defective.   This is a serious safety issue. My family, my property and even people I park next to while out in public are at risk. GM must be forced to either replace the entire battery pack in every vehicle affected by this recall or replace them with newer models containing safer batteries. They must also provide loaner vehicles, or details on reimbursement for rental cars, to those who need them due to the fact that their vehicle is virtually unusable until GM provides a complete, effective solution."
+   }
+  ]
+ },
+ "backblaze": {
+  "drives": 355689,
+  "failures": 1517,
+  "worstModel": "HGST HUH721212ALN604",
+  "worst": {
+   "units": 9694,
+   "failures": 180,
+   "per10k": 185.7
+  },
+  "fleet": {
+   "units": 355689,
+   "failures": 1517,
+   "per10k": 42.6
+  },
+  "worstInSac2": {
+   "units": 7557,
+   "failures": 171,
+   "per10k": 226.3
+  },
+  "worstElsewhere": {
+   "units": 2137,
+   "failures": 9,
+   "per10k": 42.1
+  },
+  "othersInSac2": {
+   "units": 66169,
+   "failures": 373,
+   "per10k": 56.4
+  },
+  "othersElsewhere": {
+   "units": 279826,
+   "failures": 964,
+   "per10k": 34.4
+  },
+  "rawP": "p = 2.9e-205",
+  "gatePass": false,
+  "verdicts": [
+   {
+    "title": "model",
+    "status": "CONFOUNDED",
+    "verdict": "Not material on its own. With sac2 excluded, HGST HUH721212ALN604 fails at 42/10k vs 34/10k for the rest (RR 1.2, below the 2x bar): its excess is concentrated where sac2 is."
+   },
+   {
+    "title": "datacenter",
+    "status": "CONFOUNDED",
+    "verdict": "Not material on its own. With HGST HUH721212ALN604 excluded, sac2 fails at 56/10k vs 34/10k for the rest (RR 1.6, below the 2x bar): its excess is concentrated where HGST HUH721212ALN604 is."
+   },
+   {
+    "title": "age_band",
+    "status": "CONFOUNDED",
+    "verdict": "Ruled out as a confounder. 7y+ only looks guilty because it shares units with HGST HUH721212ALN604; holding f_model fixed, the effect disappears (p = 0.16)."
+   }
+  ]
+ }
+}

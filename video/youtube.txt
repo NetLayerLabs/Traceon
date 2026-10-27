@@ -1,0 +1,35 @@
+TITLE
+Traceon: prove the cause before you recall (Open Agent Hackathon 2026, Track 02)
+
+DESCRIPTION
+Traceon is an AI agent for product-safety teams. When products start catching fire, it finds the root cause, proves why every other explanation is wrong, and only then lets a named person act on the exact units at risk.
+
+Every test is a SQL query on Zetaris. Meterless H-MEM converges the weak signals; Meterless Nightshift is the AI provider, routing to NVIDIA Nemotron. The model plans, attacks and explains; it never computes a statistic. Every step is hashed into a proof chain anyone can replay.
+
+Everything in this film is real: the live app at traceon.netlayerlabs.com (Zetaris live, with a hash-parity check), a run on a Mac through Meterless Nightshift, public NHTSA complaints and recalls for the Chevrolet Bolt EV, and Backblaze Drive Stats for Q2 2026. The VoltRide reference case is a simulated company and is labelled as such.
+
+Try it: https://traceon.netlayerlabs.com
+Code: https://github.com/NetLayerLabs/Traceon
+Judge it offline in one command: ./sample.sh
+
+Sources
+NHTSA complaints and recalls (api.nhtsa.gov): complaints 11372429 and 11426342, recalls 20V701000 and 21V560000
+Backblaze Drive Stats: https://www.backblaze.com/cloud-storage/resources/hard-drive-test-data
+
+Built for the Open Agent Hackathon 2026 (GenAI.works), Track 02: The Agent That Can Explain Why, by NetLayer Labs. With Zetaris, Meterless, NVIDIA Nemotron and Bright Data.
+
+CHAPTERS
+0:00 A real fire, and a fix that did not hold
+0:25 The problem: the evidence is split
+0:43 Why Zetaris
+0:56 Traceon
+1:04 Meterless H-MEM converges the signals
+1:17 Every test is a query on Zetaris
+1:33 Explain why: the confounders unmasked
+1:54 The red team and the evidence gate
+2:07 A named person approves
+2:21 One real request through Meterless Nightshift
+2:34 Real data: the Bolt EV and 355,689 drives
+3:03 Under the hood: a proof anyone can replay
+3:15 What makes Traceon different
+3:29 Try it

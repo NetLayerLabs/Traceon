@@ -14,3 +14,9 @@ exports
 .next-audit
 sample-output
 .next-sample
+# Demo film (Remotion): sources are committed, generated media is not
+video/node_modules/
+video/out/
+video/.cache/
+video/public/footage/
+video/public/stills/

@@ -1,0 +1,45 @@
+{
+ "nightshift_local": {
+  "file": "footage/nightshift_local.mp4",
+  "width": 3200,
+  "height": 1800,
+  "durationFrames": 1764,
+  "marks": {
+   "nightshift_local.run": 117,
+   "nightshift_local.done": 1271,
+   "nightshift_local.explain": 1455,
+   "nightshift_local.trace": 1669
+  },
+  "deviceScale": 2,
+  "viewport": {
+   "w": 1600,
+   "h": 900
+  },
+  "rects": {
+   "chips": {
+    "x": 883,
+    "y": 22,
+    "w": 441,
+    "h": 11
+   },
+   "explain": {
+    "x": 360,
+    "y": 96,
+    "w": 384,
+    "h": 688
+   },
+   "redteam": {
+    "x": 772,
+    "y": 96,
+    "w": 535,
+    "h": 688
+   },
+   "trace": {
+    "x": 360,
+    "y": 571,
+    "w": 839,
+    "h": 283
+   }
+  }
+ }
+}

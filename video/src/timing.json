@@ -1,0 +1,3056 @@
+{
+ "fps": 30,
+ "totalFrames": 6894,
+ "bpm": 122,
+ "beats": [
+  14,
+  28,
+  43,
+  58,
+  73,
+  87,
+  102,
+  117,
+  132,
+  146,
+  161,
+  176,
+  191,
+  205,
+  220,
+  235,
+  250,
+  264,
+  279,
+  294,
+  309,
+  323,
+  338,
+  353,
+  368,
+  382,
+  397,
+  412,
+  427,
+  441,
+  456,
+  471,
+  486,
+  500,
+  515,
+  530,
+  545,
+  559,
+  574,
+  589,
+  604,
+  618,
+  633,
+  648,
+  663,
+  677,
+  692,
+  707,
+  722,
+  736,
+  751,
+  766,
+  781,
+  795,
+  810,
+  825,
+  840,
+  854,
+  869,
+  884,
+  899,
+  914,
+  928,
+  943,
+  958,
+  973,
+  987,
+  1002,
+  1017,
+  1032,
+  1046,
+  1061,
+  1076,
+  1091,
+  1105,
+  1120,
+  1135,
+  1150,
+  1164,
+  1179,
+  1194,
+  1209,
+  1223,
+  1238,
+  1253,
+  1268,
+  1282,
+  1297,
+  1312,
+  1327,
+  1341,
+  1356,
+  1371,
+  1386,
+  1400,
+  1415,
+  1430,
+  1445,
+  1459,
+  1474,
+  1489,
+  1504,
+  1518,
+  1533,
+  1548,
+  1563,
+  1577,
+  1592,
+  1607,
+  1622,
+  1636,
+  1651,
+  1666,
+  1681,
+  1695,
+  1710,
+  1725,
+  1740,
+  1754,
+  1769,
+  1784,
+  1799,
+  1813,
+  1828,
+  1843,
+  1858,
+  1873,
+  1887,
+  1902,
+  1917,
+  1932,
+  1946,
+  1961,
+  1976,
+  1991,
+  2005,
+  2020,
+  2035,
+  2050,
+  2064,
+  2079,
+  2094,
+  2109,
+  2123,
+  2138,
+  2153,
+  2168,
+  2182,
+  2197,
+  2212,
+  2227,
+  2241,
+  2256,
+  2271,
+  2286,
+  2300,
+  2315,
+  2330,
+  2345,
+  2359,
+  2374,
+  2389,
+  2404,
+  2418,
+  2433,
+  2448,
+  2463,
+  2477,
+  2492,
+  2507,
+  2522,
+  2536,
+  2551,
+  2566,
+  2581,
+  2595,
+  2610,
+  2625,
+  2640,
+  2654,
+  2669,
+  2684,
+  2699,
+  2713,
+  2728,
+  2743,
+  2758,
+  2773,
+  2787,
+  2802,
+  2817,
+  2832,
+  2846,
+  2861,
+  2876,
+  2891,
+  2905,
+  2920,
+  2935,
+  2950,
+  2964,
+  2979,
+  2994,
+  3009,
+  3023,
+  3038,
+  3053,
+  3068,
+  3082,
+  3097,
+  3112,
+  3127,
+  3141,
+  3156,
+  3171,
+  3186,
+  3200,
+  3215,
+  3230,
+  3245,
+  3259,
+  3274,
+  3289,
+  3304,
+  3318,
+  3333,
+  3348,
+  3363,
+  3377,
+  3392,
+  3407,
+  3422,
+  3436,
+  3451,
+  3466,
+  3481,
+  3495,
+  3510,
+  3525,
+  3540,
+  3554,
+  3569,
+  3584,
+  3599,
+  3613,
+  3628,
+  3643,
+  3658,
+  3673,
+  3687,
+  3702,
+  3717,
+  3732,
+  3746,
+  3761,
+  3776,
+  3791,
+  3805,
+  3820,
+  3835,
+  3850,
+  3864,
+  3879,
+  3894,
+  3909,
+  3923,
+  3938,
+  3953,
+  3968,
+  3982,
+  3997,
+  4012,
+  4027,
+  4041,
+  4056,
+  4071,
+  4086,
+  4100,
+  4115,
+  4130,
+  4145,
+  4159,
+  4174,
+  4189,
+  4204,
+  4218,
+  4233,
+  4248,
+  4263,
+  4277,
+  4292,
+  4307,
+  4322,
+  4336,
+  4351,
+  4366,
+  4381,
+  4395,
+  4410,
+  4425,
+  4440,
+  4454,
+  4469,
+  4484,
+  4499,
+  4514,
+  4528,
+  4543,
+  4558,
+  4573,
+  4587,
+  4602,
+  4617,
+  4632,
+  4646,
+  4661,
+  4676,
+  4691,
+  4705,
+  4720,
+  4735,
+  4750,
+  4764,
+  4779,
+  4794,
+  4809,
+  4823,
+  4838,
+  4853,
+  4868,
+  4882,
+  4897,
+  4912,
+  4927,
+  4941,
+  4956,
+  4971,
+  4986,
+  5000,
+  5015,
+  5030,
+  5045,
+  5059,
+  5074,
+  5089,
+  5104,
+  5118,
+  5133,
+  5148,
+  5163,
+  5177,
+  5192,
+  5207,
+  5222,
+  5236,
+  5251,
+  5266,
+  5281,
+  5295,
+  5310,
+  5325,
+  5340,
+  5354,
+  5369,
+  5384,
+  5399,
+  5414,
+  5428,
+  5443,
+  5458,
+  5473,
+  5487,
+  5502,
+  5517,
+  5532,
+  5546,
+  5561,
+  5576,
+  5591,
+  5605,
+  5620,
+  5635,
+  5650,
+  5664,
+  5679,
+  5694,
+  5709,
+  5723,
+  5738,
+  5753,
+  5768,
+  5782,
+  5797,
+  5812,
+  5827,
+  5841,
+  5856,
+  5871,
+  5886,
+  5900,
+  5915,
+  5930,
+  5945,
+  5959,
+  5974,
+  5989,
+  6004,
+  6018,
+  6033,
+  6048,
+  6063,
+  6077,
+  6092,
+  6107,
+  6122,
+  6136,
+  6151,
+  6166,
+  6181,
+  6195,
+  6210,
+  6225,
+  6240,
+  6254,
+  6269,
+  6284,
+  6299,
+  6314,
+  6328,
+  6343,
+  6358,
+  6373,
+  6387,
+  6402,
+  6417,
+  6432,
+  6446,
+  6461,
+  6476,
+  6491,
+  6505,
+  6520,
+  6535,
+  6550,
+  6564,
+  6579,
+  6594,
+  6609,
+  6623,
+  6638,
+  6653,
+  6668,
+  6682,
+  6697,
+  6712,
+  6727,
+  6741,
+  6756,
+  6771,
+  6786,
+  6800,
+  6815,
+  6830,
+  6845,
+  6859,
+  6874,
+  6889
+ ],
+ "music": {
+  "file": "audio/music.mp3",
+  "source": "elevenlabs-music-parts"
+ },
+ "scenes": [
+  {
+   "id": "open",
+   "from": 0,
+   "durationInFrames": 770,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "October twenty-first, twenty twenty. Three in the morning. A family wakes to smoke alarms. Their Chevy Bolt is burning in the garage.",
+     "file": "audio/vo/open_0.mp3",
+     "startFrame": 12,
+     "durationFrames": 314,
+     "words": [
+      {
+       "word": "October",
+       "start": 12,
+       "end": 27
+      },
+      {
+       "word": "twenty-first,",
+       "start": 28,
+       "end": 58
+      },
+      {
+       "word": "twenty",
+       "start": 65,
+       "end": 75
+      },
+      {
+       "word": "twenty.",
+       "start": 76,
+       "end": 94
+      },
+      {
+       "word": "Three",
+       "start": 105,
+       "end": 113
+      },
+      {
+       "word": "in",
+       "start": 114,
+       "end": 116
+      },
+      {
+       "word": "the",
+       "start": 117,
+       "end": 119
+      },
+      {
+       "word": "morning.",
+       "start": 121,
+       "end": 137
+      },
+      {
+       "word": "A",
+       "start": 152,
+       "end": 154
+      },
+      {
+       "word": "family",
+       "start": 158,
+       "end": 169
+      },
+      {
+       "word": "wakes",
+       "start": 170,
+       "end": 180
+      },
+      {
+       "word": "to",
+       "start": 182,
+       "end": 184
+      },
+      {
+       "word": "smoke",
+       "start": 187,
+       "end": 197
+      },
+      {
+       "word": "alarms.",
+       "start": 198,
+       "end": 224
+      },
+      {
+       "word": "Their",
+       "start": 235,
+       "end": 241
+      },
+      {
+       "word": "Chevy",
+       "start": 243,
+       "end": 252
+      },
+      {
+       "word": "Bolt",
+       "start": 254,
+       "end": 263
+      },
+      {
+       "word": "is",
+       "start": 268,
+       "end": 274
+      },
+      {
+       "word": "burning",
+       "start": 276,
+       "end": 287
+      },
+      {
+       "word": "in",
+       "start": 289,
+       "end": 290
+      },
+      {
+       "word": "the",
+       "start": 291,
+       "end": 293
+      },
+      {
+       "word": "garage.",
+       "start": 294,
+       "end": 325
+      }
+     ]
+    },
+    {
+     "voice": "narrator",
+     "text": "Two weeks after they report it, GM recalls the car, with a software fix. Eight months on, another owner writes:",
+     "file": "audio/vo/open_1.mp3",
+     "startFrame": 341,
+     "durationFrames": 250,
+     "words": [
+      {
+       "word": "Two",
+       "start": 341,
+       "end": 348
+      },
+      {
+       "word": "weeks",
+       "start": 350,
+       "end": 358
+      },
+      {
+       "word": "after",
+       "start": 359,
+       "end": 365
+      },
+      {
+       "word": "they",
+       "start": 366,
+       "end": 370
+      },
+      {
+       "word": "report",
+       "start": 371,
+       "end": 382
+      },
+      {
+       "word": "it,",
+       "start": 383,
+       "end": 390
+      },
+      {
+       "word": "GM",
+       "start": 400,
+       "end": 413
+      },
+      {
+       "word": "recalls",
+       "start": 416,
+       "end": 428
+      },
+      {
+       "word": "the",
+       "start": 430,
+       "end": 432
+      },
+      {
+       "word": "car,",
+       "start": 433,
+       "end": 448
+      },
+      {
+       "word": "with",
+       "start": 453,
+       "end": 458
+      },
+      {
+       "word": "a",
+       "start": 459,
+       "end": 460
+      },
+      {
+       "word": "software",
+       "start": 462,
+       "end": 478
+      },
+      {
+       "word": "fix.",
+       "start": 480,
+       "end": 496
+      },
+      {
+       "word": "Eight",
+       "start": 510,
+       "end": 517
+      },
+      {
+       "word": "months",
+       "start": 519,
+       "end": 527
+      },
+      {
+       "word": "on,",
+       "start": 529,
+       "end": 538
+      },
+      {
+       "word": "another",
+       "start": 546,
+       "end": 557
+      },
+      {
+       "word": "owner",
+       "start": 559,
+       "end": 567
+      },
+      {
+       "word": "writes:",
+       "start": 568,
+       "end": 590
+      }
+     ]
+    },
+    {
+     "voice": "owner",
+     "text": "This is the second recall in less than a year for the same battery-related issue.",
+     "file": "audio/vo/open_2.mp3",
+     "startFrame": 606,
+     "durationFrames": 134,
+     "words": [
+      {
+       "word": "This",
+       "start": 606,
+       "end": 613
+      },
+      {
+       "word": "is",
+       "start": 614,
+       "end": 616
+      },
+      {
+       "word": "the",
+       "start": 618,
+       "end": 620
+      },
+      {
+       "word": "second",
+       "start": 622,
+       "end": 631
+      },
+      {
+       "word": "recall",
+       "start": 633,
+       "end": 645
+      },
+      {
+       "word": "in",
+       "start": 646,
+       "end": 648
+      },
+      {
+       "word": "less",
+       "start": 650,
+       "end": 656
+      },
+      {
+       "word": "than",
+       "start": 657,
+       "end": 661
+      },
+      {
+       "word": "a",
+       "start": 662,
+       "end": 662
+      },
+      {
+       "word": "year",
+       "start": 665,
+       "end": 673
+      },
+      {
+       "word": "for",
+       "start": 675,
+       "end": 678
+      },
+      {
+       "word": "the",
+       "start": 680,
+       "end": 682
+      },
+      {
+       "word": "same",
+       "start": 683,
+       "end": 691
+      },
+      {
+       "word": "battery-related",
+       "start": 692,
+       "end": 717
+      },
+      {
+       "word": "issue.",
+       "start": 718,
+       "end": 740
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "problem",
+   "from": 770,
+   "durationInFrames": 541,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Every fire leaves a trail, split across claims, reviews, federal reports and factory records. And the first suspect is often wrong. Fix the wrong thing, and the fires go on. Recall everything, and you pay for all of it.",
+     "file": "audio/vo/problem_0.mp3",
+     "startFrame": 782,
+     "durationFrames": 513,
+     "words": [
+      {
+       "word": "Every",
+       "start": 782,
+       "end": 791
+      },
+      {
+       "word": "fire",
+       "start": 793,
+       "end": 804
+      },
+      {
+       "word": "leaves",
+       "start": 805,
+       "end": 813
+      },
+      {
+       "word": "a",
+       "start": 814,
+       "end": 815
+      },
+      {
+       "word": "trail,",
+       "start": 816,
+       "end": 834
+      },
+      {
+       "word": "split",
+       "start": 843,
+       "end": 851
+      },
+      {
+       "word": "across",
+       "start": 852,
+       "end": 861
+      },
+      {
+       "word": "claims,",
+       "start": 863,
+       "end": 883
+      },
+      {
+       "word": "reviews,",
+       "start": 888,
+       "end": 911
+      },
+      {
+       "word": "federal",
+       "start": 918,
+       "end": 929
+      },
+      {
+       "word": "reports",
+       "start": 931,
+       "end": 945
+      },
+      {
+       "word": "and",
+       "start": 951,
+       "end": 956
+      },
+      {
+       "word": "factory",
+       "start": 959,
+       "end": 972
+      },
+      {
+       "word": "records.",
+       "start": 974,
+       "end": 994
+      },
+      {
+       "word": "And",
+       "start": 1007,
+       "end": 1011
+      },
+      {
+       "word": "the",
+       "start": 1012,
+       "end": 1014
+      },
+      {
+       "word": "first",
+       "start": 1016,
+       "end": 1024
+      },
+      {
+       "word": "suspect",
+       "start": 1026,
+       "end": 1041
+      },
+      {
+       "word": "is",
+       "start": 1051,
+       "end": 1056
+      },
+      {
+       "word": "often",
+       "start": 1058,
+       "end": 1067
+      },
+      {
+       "word": "wrong.",
+       "start": 1069,
+       "end": 1083
+      },
+      {
+       "word": "Fix",
+       "start": 1095,
+       "end": 1102
+      },
+      {
+       "word": "the",
+       "start": 1105,
+       "end": 1107
+      },
+      {
+       "word": "wrong",
+       "start": 1108,
+       "end": 1115
+      },
+      {
+       "word": "thing,",
+       "start": 1117,
+       "end": 1130
+      },
+      {
+       "word": "and",
+       "start": 1139,
+       "end": 1143
+      },
+      {
+       "word": "the",
+       "start": 1145,
+       "end": 1147
+      },
+      {
+       "word": "fires",
+       "start": 1148,
+       "end": 1161
+      },
+      {
+       "word": "go",
+       "start": 1163,
+       "end": 1167
+      },
+      {
+       "word": "on.",
+       "start": 1170,
+       "end": 1182
+      },
+      {
+       "word": "Recall",
+       "start": 1193,
+       "end": 1206
+      },
+      {
+       "word": "everything,",
+       "start": 1209,
+       "end": 1231
+      },
+      {
+       "word": "and",
+       "start": 1236,
+       "end": 1240
+      },
+      {
+       "word": "you",
+       "start": 1242,
+       "end": 1245
+      },
+      {
+       "word": "pay",
+       "start": 1247,
+       "end": 1256
+      },
+      {
+       "word": "for",
+       "start": 1265,
+       "end": 1270
+      },
+      {
+       "word": "all",
+       "start": 1272,
+       "end": 1278
+      },
+      {
+       "word": "of",
+       "start": 1279,
+       "end": 1280
+      },
+      {
+       "word": "it.",
+       "start": 1282,
+       "end": 1295
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "zetaris",
+   "from": 1311,
+   "durationInFrames": 380,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "The answer sits in five systems that never meet. Zetaris puts one SQL layer over all of them, so every test is a real query that anyone can read, and run again.",
+     "file": "audio/vo/zetaris_0.mp3",
+     "startFrame": 1323,
+     "durationFrames": 353,
+     "words": [
+      {
+       "word": "The",
+       "start": 1323,
+       "end": 1328
+      },
+      {
+       "word": "answer",
+       "start": 1330,
+       "end": 1339
+      },
+      {
+       "word": "sits",
+       "start": 1340,
+       "end": 1347
+      },
+      {
+       "word": "in",
+       "start": 1349,
+       "end": 1351
+      },
+      {
+       "word": "five",
+       "start": 1354,
+       "end": 1364
+      },
+      {
+       "word": "systems",
+       "start": 1365,
+       "end": 1380
+      },
+      {
+       "word": "that",
+       "start": 1386,
+       "end": 1392
+      },
+      {
+       "word": "never",
+       "start": 1394,
+       "end": 1400
+      },
+      {
+       "word": "meet.",
+       "start": 1401,
+       "end": 1412
+      },
+      {
+       "word": "Zetaris",
+       "start": 1432,
+       "end": 1446
+      },
+      {
+       "word": "puts",
+       "start": 1448,
+       "end": 1454
+      },
+      {
+       "word": "one",
+       "start": 1456,
+       "end": 1464
+      },
+      {
+       "word": "SQL",
+       "start": 1468,
+       "end": 1480
+      },
+      {
+       "word": "layer",
+       "start": 1482,
+       "end": 1490
+      },
+      {
+       "word": "over",
+       "start": 1492,
+       "end": 1498
+      },
+      {
+       "word": "all",
+       "start": 1500,
+       "end": 1504
+      },
+      {
+       "word": "of",
+       "start": 1506,
+       "end": 1507
+      },
+      {
+       "word": "them,",
+       "start": 1509,
+       "end": 1519
+      },
+      {
+       "word": "so",
+       "start": 1528,
+       "end": 1532
+      },
+      {
+       "word": "every",
+       "start": 1535,
+       "end": 1542
+      },
+      {
+       "word": "test",
+       "start": 1544,
+       "end": 1553
+      },
+      {
+       "word": "is",
+       "start": 1555,
+       "end": 1558
+      },
+      {
+       "word": "a",
+       "start": 1560,
+       "end": 1561
+      },
+      {
+       "word": "real",
+       "start": 1564,
+       "end": 1572
+      },
+      {
+       "word": "query",
+       "start": 1575,
+       "end": 1589
+      },
+      {
+       "word": "that",
+       "start": 1597,
+       "end": 1602
+      },
+      {
+       "word": "anyone",
+       "start": 1604,
+       "end": 1615
+      },
+      {
+       "word": "can",
+       "start": 1616,
+       "end": 1620
+      },
+      {
+       "word": "read,",
+       "start": 1623,
+       "end": 1635
+      },
+      {
+       "word": "and",
+       "start": 1643,
+       "end": 1647
+      },
+      {
+       "word": "run",
+       "start": 1649,
+       "end": 1654
+      },
+      {
+       "word": "again.",
+       "start": 1655,
+       "end": 1675
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "turn",
+   "from": 1691,
+   "durationInFrames": 236,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "This is Traceon. An AI agent that proves the cause, before you recall.",
+     "file": "audio/vo/turn_0.mp3",
+     "startFrame": 1703,
+     "durationFrames": 189,
+     "words": [
+      {
+       "word": "This",
+       "start": 1703,
+       "end": 1712
+      },
+      {
+       "word": "is",
+       "start": 1716,
+       "end": 1721
+      },
+      {
+       "word": "Traceon.",
+       "start": 1724,
+       "end": 1749
+      },
+      {
+       "word": "An",
+       "start": 1758,
+       "end": 1762
+      },
+      {
+       "word": "AI",
+       "start": 1765,
+       "end": 1779
+      },
+      {
+       "word": "agent",
+       "start": 1781,
+       "end": 1796
+      },
+      {
+       "word": "that",
+       "start": 1804,
+       "end": 1809
+      },
+      {
+       "word": "proves",
+       "start": 1811,
+       "end": 1821
+      },
+      {
+       "word": "the",
+       "start": 1822,
+       "end": 1825
+      },
+      {
+       "word": "cause,",
+       "start": 1826,
+       "end": 1843
+      },
+      {
+       "word": "before",
+       "start": 1846,
+       "end": 1858
+      },
+      {
+       "word": "you",
+       "start": 1859,
+       "end": 1862
+      },
+      {
+       "word": "recall.",
+       "start": 1865,
+       "end": 1891
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "converge",
+   "from": 1927,
+   "durationInFrames": 406,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "It starts with the first signs. Meterless H-MEM keeps every weak signal, and pulls one hundred thirty-one of them into one incident: overheating connectors, in six cities.",
+     "file": "audio/vo/converge_0.mp3",
+     "startFrame": 1939,
+     "durationFrames": 378,
+     "words": [
+      {
+       "word": "It",
+       "start": 1939,
+       "end": 1944
+      },
+      {
+       "word": "starts",
+       "start": 1946,
+       "end": 1960
+      },
+      {
+       "word": "with",
+       "start": 1962,
+       "end": 1967
+      },
+      {
+       "word": "the",
+       "start": 1968,
+       "end": 1970
+      },
+      {
+       "word": "first",
+       "start": 1972,
+       "end": 1979
+      },
+      {
+       "word": "signs.",
+       "start": 1981,
+       "end": 1999
+      },
+      {
+       "word": "Meterless",
+       "start": 2010,
+       "end": 2023
+      },
+      {
+       "word": "H-MEM",
+       "start": 2025,
+       "end": 2041
+      },
+      {
+       "word": "keeps",
+       "start": 2049,
+       "end": 2059
+      },
+      {
+       "word": "every",
+       "start": 2063,
+       "end": 2072
+      },
+      {
+       "word": "weak",
+       "start": 2074,
+       "end": 2080
+      },
+      {
+       "word": "signal,",
+       "start": 2082,
+       "end": 2099
+      },
+      {
+       "word": "and",
+       "start": 2106,
+       "end": 2110
+      },
+      {
+       "word": "pulls",
+       "start": 2112,
+       "end": 2124
+      },
+      {
+       "word": "one",
+       "start": 2127,
+       "end": 2133
+      },
+      {
+       "word": "hundred",
+       "start": 2134,
+       "end": 2143
+      },
+      {
+       "word": "thirty-one",
+       "start": 2145,
+       "end": 2159
+      },
+      {
+       "word": "of",
+       "start": 2160,
+       "end": 2162
+      },
+      {
+       "word": "them",
+       "start": 2163,
+       "end": 2168
+      },
+      {
+       "word": "into",
+       "start": 2178,
+       "end": 2185
+      },
+      {
+       "word": "one",
+       "start": 2189,
+       "end": 2195
+      },
+      {
+       "word": "incident:",
+       "start": 2197,
+       "end": 2219
+      },
+      {
+       "word": "overheating",
+       "start": 2229,
+       "end": 2248
+      },
+      {
+       "word": "connectors,",
+       "start": 2250,
+       "end": 2271
+      },
+      {
+       "word": "in",
+       "start": 2277,
+       "end": 2282
+      },
+      {
+       "word": "six",
+       "start": 2285,
+       "end": 2291
+      },
+      {
+       "word": "cities.",
+       "start": 2293,
+       "end": 2317
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "screen",
+   "from": 2333,
+   "durationInFrames": 463,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Nemotron plans seven suspects. Each one becomes a query on Zetaris: forty-six in about fifteen seconds, every result hashed. The model never computes a statistic. The code does.",
+     "file": "audio/vo/screen_0.mp3",
+     "startFrame": 2345,
+     "durationFrames": 435,
+     "words": [
+      {
+       "word": "Nemotron",
+       "start": 2345,
+       "end": 2363
+      },
+      {
+       "word": "plans",
+       "start": 2365,
+       "end": 2380
+      },
+      {
+       "word": "seven",
+       "start": 2384,
+       "end": 2394
+      },
+      {
+       "word": "suspects.",
+       "start": 2397,
+       "end": 2423
+      },
+      {
+       "word": "Each",
+       "start": 2432,
+       "end": 2438
+      },
+      {
+       "word": "one",
+       "start": 2440,
+       "end": 2447
+      },
+      {
+       "word": "becomes",
+       "start": 2448,
+       "end": 2460
+      },
+      {
+       "word": "a",
+       "start": 2461,
+       "end": 2462
+      },
+      {
+       "word": "query",
+       "start": 2464,
+       "end": 2476
+      },
+      {
+       "word": "on",
+       "start": 2478,
+       "end": 2483
+      },
+      {
+       "word": "Zetaris:",
+       "start": 2485,
+       "end": 2508
+      },
+      {
+       "word": "forty-six",
+       "start": 2521,
+       "end": 2543
+      },
+      {
+       "word": "in",
+       "start": 2548,
+       "end": 2552
+      },
+      {
+       "word": "about",
+       "start": 2553,
+       "end": 2560
+      },
+      {
+       "word": "fifteen",
+       "start": 2562,
+       "end": 2575
+      },
+      {
+       "word": "seconds,",
+       "start": 2577,
+       "end": 2595
+      },
+      {
+       "word": "every",
+       "start": 2604,
+       "end": 2612
+      },
+      {
+       "word": "result",
+       "start": 2614,
+       "end": 2628
+      },
+      {
+       "word": "hashed.",
+       "start": 2635,
+       "end": 2652
+      },
+      {
+       "word": "The",
+       "start": 2664,
+       "end": 2668
+      },
+      {
+       "word": "model",
+       "start": 2669,
+       "end": 2678
+      },
+      {
+       "word": "never",
+       "start": 2680,
+       "end": 2687
+      },
+      {
+       "word": "computes",
+       "start": 2688,
+       "end": 2701
+      },
+      {
+       "word": "a",
+       "start": 2702,
+       "end": 2703
+      },
+      {
+       "word": "statistic.",
+       "start": 2704,
+       "end": 2727
+      },
+      {
+       "word": "The",
+       "start": 2741,
+       "end": 2745
+      },
+      {
+       "word": "code",
+       "start": 2746,
+       "end": 2755
+      },
+      {
+       "word": "does.",
+       "start": 2757,
+       "end": 2780
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "why",
+   "from": 2796,
+   "durationInFrames": 629,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "On raw numbers, heat looks guilty. Hold the cell batch fixed, and the heat effect vanishes. So do the plant, the BMS board and the supplier. One cause survives every test: a single cell batch, failing at sixteen hundred times the normal rate.",
+     "file": "audio/vo/why_0.mp3",
+     "startFrame": 2808,
+     "durationFrames": 594,
+     "words": [
+      {
+       "word": "On",
+       "start": 2808,
+       "end": 2813
+      },
+      {
+       "word": "raw",
+       "start": 2815,
+       "end": 2821
+      },
+      {
+       "word": "numbers,",
+       "start": 2823,
+       "end": 2844
+      },
+      {
+       "word": "heat",
+       "start": 2853,
+       "end": 2861
+      },
+      {
+       "word": "looks",
+       "start": 2867,
+       "end": 2874
+      },
+      {
+       "word": "guilty.",
+       "start": 2876,
+       "end": 2893
+      },
+      {
+       "word": "Hold",
+       "start": 2906,
+       "end": 2913
+      },
+      {
+       "word": "the",
+       "start": 2914,
+       "end": 2916
+      },
+      {
+       "word": "cell",
+       "start": 2918,
+       "end": 2923
+      },
+      {
+       "word": "batch",
+       "start": 2925,
+       "end": 2932
+      },
+      {
+       "word": "fixed,",
+       "start": 2934,
+       "end": 2949
+      },
+      {
+       "word": "and",
+       "start": 2961,
+       "end": 2966
+      },
+      {
+       "word": "the",
+       "start": 2967,
+       "end": 2969
+      },
+      {
+       "word": "heat",
+       "start": 2971,
+       "end": 2977
+      },
+      {
+       "word": "effect",
+       "start": 2979,
+       "end": 2990
+      },
+      {
+       "word": "vanishes.",
+       "start": 2995,
+       "end": 3019
+      },
+      {
+       "word": "So",
+       "start": 3039,
+       "end": 3044
+      },
+      {
+       "word": "do",
+       "start": 3046,
+       "end": 3049
+      },
+      {
+       "word": "the",
+       "start": 3051,
+       "end": 3053
+      },
+      {
+       "word": "plant,",
+       "start": 3054,
+       "end": 3069
+      },
+      {
+       "word": "the",
+       "start": 3078,
+       "end": 3081
+      },
+      {
+       "word": "BMS",
+       "start": 3082,
+       "end": 3096
+      },
+      {
+       "word": "board",
+       "start": 3098,
+       "end": 3108
+      },
+      {
+       "word": "and",
+       "start": 3117,
+       "end": 3124
+      },
+      {
+       "word": "the",
+       "start": 3125,
+       "end": 3127
+      },
+      {
+       "word": "supplier.",
+       "start": 3128,
+       "end": 3149
+      },
+      {
+       "word": "One",
+       "start": 3168,
+       "end": 3175
+      },
+      {
+       "word": "cause",
+       "start": 3177,
+       "end": 3189
+      },
+      {
+       "word": "survives",
+       "start": 3192,
+       "end": 3210
+      },
+      {
+       "word": "every",
+       "start": 3214,
+       "end": 3225
+      },
+      {
+       "word": "test:",
+       "start": 3227,
+       "end": 3242
+      },
+      {
+       "word": "a",
+       "start": 3255,
+       "end": 3257
+      },
+      {
+       "word": "single",
+       "start": 3259,
+       "end": 3270
+      },
+      {
+       "word": "cell",
+       "start": 3271,
+       "end": 3278
+      },
+      {
+       "word": "batch,",
+       "start": 3280,
+       "end": 3293
+      },
+      {
+       "word": "failing",
+       "start": 3302,
+       "end": 3315
+      },
+      {
+       "word": "at",
+       "start": 3318,
+       "end": 3322
+      },
+      {
+       "word": "sixteen",
+       "start": 3325,
+       "end": 3340
+      },
+      {
+       "word": "hundred",
+       "start": 3342,
+       "end": 3351
+      },
+      {
+       "word": "times",
+       "start": 3352,
+       "end": 3363
+      },
+      {
+       "word": "the",
+       "start": 3365,
+       "end": 3368
+      },
+      {
+       "word": "normal",
+       "start": 3370,
+       "end": 3380
+      },
+      {
+       "word": "rate.",
+       "start": 3382,
+       "end": 3401
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "prove",
+   "from": 3425,
+   "durationInFrames": 525,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Then it tries to prove itself wrong. Nemotron raises objections. Each one is answered by a test, or logged as an open question. Seven criteria must pass, or Traceon blocks its own action.",
+     "file": "audio/vo/prove_0.mp3",
+     "startFrame": 3437,
+     "durationFrames": 498,
+     "words": [
+      {
+       "word": "Then",
+       "start": 3437,
+       "end": 3446
+      },
+      {
+       "word": "it",
+       "start": 3455,
+       "end": 3459
+      },
+      {
+       "word": "tries",
+       "start": 3461,
+       "end": 3474
+      },
+      {
+       "word": "to",
+       "start": 3478,
+       "end": 3481
+      },
+      {
+       "word": "prove",
+       "start": 3483,
+       "end": 3491
+      },
+      {
+       "word": "itself",
+       "start": 3492,
+       "end": 3503
+      },
+      {
+       "word": "wrong.",
+       "start": 3505,
+       "end": 3522
+      },
+      {
+       "word": "Nemotron",
+       "start": 3541,
+       "end": 3559
+      },
+      {
+       "word": "raises",
+       "start": 3568,
+       "end": 3583
+      },
+      {
+       "word": "objections.",
+       "start": 3586,
+       "end": 3613
+      },
+      {
+       "word": "Each",
+       "start": 3625,
+       "end": 3631
+      },
+      {
+       "word": "one",
+       "start": 3633,
+       "end": 3641
+      },
+      {
+       "word": "is",
+       "start": 3643,
+       "end": 3647
+      },
+      {
+       "word": "answered",
+       "start": 3649,
+       "end": 3660
+      },
+      {
+       "word": "by",
+       "start": 3661,
+       "end": 3665
+      },
+      {
+       "word": "a",
+       "start": 3667,
+       "end": 3668
+      },
+      {
+       "word": "test,",
+       "start": 3669,
+       "end": 3685
+      },
+      {
+       "word": "or",
+       "start": 3692,
+       "end": 3696
+      },
+      {
+       "word": "logged",
+       "start": 3699,
+       "end": 3708
+      },
+      {
+       "word": "as",
+       "start": 3712,
+       "end": 3717
+      },
+      {
+       "word": "an",
+       "start": 3718,
+       "end": 3720
+      },
+      {
+       "word": "open",
+       "start": 3722,
+       "end": 3731
+      },
+      {
+       "word": "question.",
+       "start": 3733,
+       "end": 3753
+      },
+      {
+       "word": "Seven",
+       "start": 3772,
+       "end": 3781
+      },
+      {
+       "word": "criteria",
+       "start": 3784,
+       "end": 3804
+      },
+      {
+       "word": "must",
+       "start": 3809,
+       "end": 3816
+      },
+      {
+       "word": "pass,",
+       "start": 3818,
+       "end": 3835
+      },
+      {
+       "word": "or",
+       "start": 3844,
+       "end": 3848
+      },
+      {
+       "word": "Traceon",
+       "start": 3850,
+       "end": 3867
+      },
+      {
+       "word": "blocks",
+       "start": 3884,
+       "end": 3895
+      },
+      {
+       "word": "its",
+       "start": 3897,
+       "end": 3902
+      },
+      {
+       "word": "own",
+       "start": 3904,
+       "end": 3909
+      },
+      {
+       "word": "action.",
+       "start": 3911,
+       "end": 3934
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "act",
+   "from": 3950,
+   "durationInFrames": 415,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Only then can a named person approve. Traceon holds one thousand three hundred eighty units, not one hundred eighty thousand. Here, that saves four point four seven million dollars.",
+     "file": "audio/vo/act_0.mp3",
+     "startFrame": 3962,
+     "durationFrames": 388,
+     "words": [
+      {
+       "word": "Only",
+       "start": 3962,
+       "end": 3970
+      },
+      {
+       "word": "then",
+       "start": 3972,
+       "end": 3980
+      },
+      {
+       "word": "can",
+       "start": 3983,
+       "end": 3988
+      },
+      {
+       "word": "a",
+       "start": 3990,
+       "end": 3990
+      },
+      {
+       "word": "named",
+       "start": 3992,
+       "end": 4001
+      },
+      {
+       "word": "person",
+       "start": 4003,
+       "end": 4015
+      },
+      {
+       "word": "approve.",
+       "start": 4017,
+       "end": 4039
+      },
+      {
+       "word": "Traceon",
+       "start": 4058,
+       "end": 4076
+      },
+      {
+       "word": "holds",
+       "start": 4078,
+       "end": 4088
+      },
+      {
+       "word": "one",
+       "start": 4090,
+       "end": 4096
+      },
+      {
+       "word": "thousand",
+       "start": 4098,
+       "end": 4112
+      },
+      {
+       "word": "three",
+       "start": 4114,
+       "end": 4121
+      },
+      {
+       "word": "hundred",
+       "start": 4122,
+       "end": 4132
+      },
+      {
+       "word": "eighty",
+       "start": 4134,
+       "end": 4143
+      },
+      {
+       "word": "units,",
+       "start": 4146,
+       "end": 4162
+      },
+      {
+       "word": "not",
+       "start": 4169,
+       "end": 4174
+      },
+      {
+       "word": "one",
+       "start": 4176,
+       "end": 4180
+      },
+      {
+       "word": "hundred",
+       "start": 4181,
+       "end": 4190
+      },
+      {
+       "word": "eighty",
+       "start": 4192,
+       "end": 4201
+      },
+      {
+       "word": "thousand.",
+       "start": 4202,
+       "end": 4220
+      },
+      {
+       "word": "Here,",
+       "start": 4237,
+       "end": 4251
+      },
+      {
+       "word": "that",
+       "start": 4259,
+       "end": 4265
+      },
+      {
+       "word": "saves",
+       "start": 4267,
+       "end": 4277
+      },
+      {
+       "word": "four",
+       "start": 4279,
+       "end": 4286
+      },
+      {
+       "word": "point",
+       "start": 4288,
+       "end": 4294
+      },
+      {
+       "word": "four",
+       "start": 4296,
+       "end": 4302
+      },
+      {
+       "word": "seven",
+       "start": 4304,
+       "end": 4312
+      },
+      {
+       "word": "million",
+       "start": 4314,
+       "end": 4324
+      },
+      {
+       "word": "dollars.",
+       "start": 4326,
+       "end": 4349
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "nightshift",
+   "from": 4365,
+   "durationInFrames": 415,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Every model call runs through Meterless Nightshift, on this Mac, routed to Nemotron: Lightning plans and attacks, Ultra explains. Then Traceon checks every figure the model wrote.",
+     "file": "audio/vo/nightshift_0.mp3",
+     "startFrame": 4377,
+     "durationFrames": 388,
+     "words": [
+      {
+       "word": "Every",
+       "start": 4377,
+       "end": 4385
+      },
+      {
+       "word": "model",
+       "start": 4387,
+       "end": 4394
+      },
+      {
+       "word": "call",
+       "start": 4396,
+       "end": 4403
+      },
+      {
+       "word": "runs",
+       "start": 4405,
+       "end": 4413
+      },
+      {
+       "word": "through",
+       "start": 4414,
+       "end": 4422
+      },
+      {
+       "word": "Meterless",
+       "start": 4424,
+       "end": 4436
+      },
+      {
+       "word": "Nightshift,",
+       "start": 4438,
+       "end": 4460
+      },
+      {
+       "word": "on",
+       "start": 4467,
+       "end": 4471
+      },
+      {
+       "word": "this",
+       "start": 4473,
+       "end": 4478
+      },
+      {
+       "word": "Mac,",
+       "start": 4480,
+       "end": 4492
+      },
+      {
+       "word": "routed",
+       "start": 4500,
+       "end": 4510
+      },
+      {
+       "word": "to",
+       "start": 4512,
+       "end": 4515
+      },
+      {
+       "word": "Nemotron:",
+       "start": 4517,
+       "end": 4539
+      },
+      {
+       "word": "Lightning",
+       "start": 4553,
+       "end": 4565
+      },
+      {
+       "word": "plans",
+       "start": 4567,
+       "end": 4579
+      },
+      {
+       "word": "and",
+       "start": 4581,
+       "end": 4585
+      },
+      {
+       "word": "attacks,",
+       "start": 4587,
+       "end": 4608
+      },
+      {
+       "word": "Ultra",
+       "start": 4613,
+       "end": 4624
+      },
+      {
+       "word": "explains.",
+       "start": 4626,
+       "end": 4649
+      },
+      {
+       "word": "Then",
+       "start": 4666,
+       "end": 4673
+      },
+      {
+       "word": "Traceon",
+       "start": 4674,
+       "end": 4692
+      },
+      {
+       "word": "checks",
+       "start": 4694,
+       "end": 4705
+      },
+      {
+       "word": "every",
+       "start": 4708,
+       "end": 4719
+      },
+      {
+       "word": "figure",
+       "start": 4721,
+       "end": 4729
+      },
+      {
+       "word": "the",
+       "start": 4731,
+       "end": 4733
+      },
+      {
+       "word": "model",
+       "start": 4734,
+       "end": 4742
+      },
+      {
+       "word": "wrote.",
+       "start": 4744,
+       "end": 4764
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "real",
+   "from": 4780,
+   "durationInFrames": 865,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Is it only a simulation? No. On real NHTSA complaints, the same screen fires on October thirtieth, the day that family filed, two weeks before the recall. After the software fix, fire reports went on. After the battery replacement, they stopped.",
+     "file": "audio/vo/real_0.mp3",
+     "startFrame": 4792,
+     "durationFrames": 569,
+     "words": [
+      {
+       "word": "Is",
+       "start": 4792,
+       "end": 4797
+      },
+      {
+       "word": "it",
+       "start": 4798,
+       "end": 4801
+      },
+      {
+       "word": "only",
+       "start": 4803,
+       "end": 4811
+      },
+      {
+       "word": "a",
+       "start": 4813,
+       "end": 4813
+      },
+      {
+       "word": "simulation?",
+       "start": 4815,
+       "end": 4842
+      },
+      {
+       "word": "No.",
+       "start": 4853,
+       "end": 4867
+      },
+      {
+       "word": "On",
+       "start": 4881,
+       "end": 4886
+      },
+      {
+       "word": "real",
+       "start": 4888,
+       "end": 4894
+      },
+      {
+       "word": "NHTSA",
+       "start": 4896,
+       "end": 4905
+      },
+      {
+       "word": "complaints,",
+       "start": 4906,
+       "end": 4927
+      },
+      {
+       "word": "the",
+       "start": 4934,
+       "end": 4938
+      },
+      {
+       "word": "same",
+       "start": 4940,
+       "end": 4948
+      },
+      {
+       "word": "screen",
+       "start": 4950,
+       "end": 4963
+      },
+      {
+       "word": "fires",
+       "start": 4972,
+       "end": 4985
+      },
+      {
+       "word": "on",
+       "start": 4987,
+       "end": 4989
+      },
+      {
+       "word": "October",
+       "start": 4991,
+       "end": 5004
+      },
+      {
+       "word": "thirtieth,",
+       "start": 5006,
+       "end": 5025
+      },
+      {
+       "word": "the",
+       "start": 5033,
+       "end": 5036
+      },
+      {
+       "word": "day",
+       "start": 5038,
+       "end": 5042
+      },
+      {
+       "word": "that",
+       "start": 5043,
+       "end": 5047
+      },
+      {
+       "word": "family",
+       "start": 5049,
+       "end": 5059
+      },
+      {
+       "word": "filed,",
+       "start": 5061,
+       "end": 5077
+      },
+      {
+       "word": "two",
+       "start": 5086,
+       "end": 5093
+      },
+      {
+       "word": "weeks",
+       "start": 5095,
+       "end": 5105
+      },
+      {
+       "word": "before",
+       "start": 5110,
+       "end": 5120
+      },
+      {
+       "word": "the",
+       "start": 5121,
+       "end": 5123
+      },
+      {
+       "word": "recall.",
+       "start": 5125,
+       "end": 5145
+      },
+      {
+       "word": "After",
+       "start": 5162,
+       "end": 5170
+      },
+      {
+       "word": "the",
+       "start": 5171,
+       "end": 5173
+      },
+      {
+       "word": "software",
+       "start": 5175,
+       "end": 5188
+      },
+      {
+       "word": "fix,",
+       "start": 5189,
+       "end": 5202
+      },
+      {
+       "word": "fire",
+       "start": 5211,
+       "end": 5221
+      },
+      {
+       "word": "reports",
+       "start": 5223,
+       "end": 5237
+      },
+      {
+       "word": "went",
+       "start": 5243,
+       "end": 5250
+      },
+      {
+       "word": "on.",
+       "start": 5252,
+       "end": 5263
+      },
+      {
+       "word": "After",
+       "start": 5278,
+       "end": 5286
+      },
+      {
+       "word": "the",
+       "start": 5287,
+       "end": 5289
+      },
+      {
+       "word": "battery",
+       "start": 5290,
+       "end": 5299
+      },
+      {
+       "word": "replacement,",
+       "start": 5302,
+       "end": 5323
+      },
+      {
+       "word": "they",
+       "start": 5332,
+       "end": 5337
+      },
+      {
+       "word": "stopped.",
+       "start": 5339,
+       "end": 5360
+      }
+     ]
+    },
+    {
+     "voice": "narrator",
+     "text": "And on three hundred fifty-five thousand real hard drives, it finds the failing cohort, and refuses to recall a whole model.",
+     "file": "audio/vo/real_1.mp3",
+     "startFrame": 5376,
+     "durationFrames": 246,
+     "words": [
+      {
+       "word": "And",
+       "start": 5376,
+       "end": 5381
+      },
+      {
+       "word": "on",
+       "start": 5383,
+       "end": 5385
+      },
+      {
+       "word": "three",
+       "start": 5387,
+       "end": 5393
+      },
+      {
+       "word": "hundred",
+       "start": 5395,
+       "end": 5402
+      },
+      {
+       "word": "fifty-five",
+       "start": 5404,
+       "end": 5421
+      },
+      {
+       "word": "thousand",
+       "start": 5423,
+       "end": 5435
+      },
+      {
+       "word": "real",
+       "start": 5438,
+       "end": 5446
+      },
+      {
+       "word": "hard",
+       "start": 5448,
+       "end": 5455
+      },
+      {
+       "word": "drives,",
+       "start": 5457,
+       "end": 5474
+      },
+      {
+       "word": "it",
+       "start": 5483,
+       "end": 5487
+      },
+      {
+       "word": "finds",
+       "start": 5489,
+       "end": 5499
+      },
+      {
+       "word": "the",
+       "start": 5500,
+       "end": 5502
+      },
+      {
+       "word": "failing",
+       "start": 5504,
+       "end": 5514
+      },
+      {
+       "word": "cohort,",
+       "start": 5516,
+       "end": 5534
+      },
+      {
+       "word": "and",
+       "start": 5543,
+       "end": 5547
+      },
+      {
+       "word": "refuses",
+       "start": 5549,
+       "end": 5563
+      },
+      {
+       "word": "to",
+       "start": 5564,
+       "end": 5567
+      },
+      {
+       "word": "recall",
+       "start": 5569,
+       "end": 5581
+      },
+      {
+       "word": "a",
+       "start": 5587,
+       "end": 5591
+      },
+      {
+       "word": "whole",
+       "start": 5593,
+       "end": 5601
+      },
+      {
+       "word": "model.",
+       "start": 5603,
+       "end": 5621
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "proof",
+   "from": 5645,
+   "durationInFrames": 350,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Every number links to its SQL and its rows. Every step is hashed, signed and timestamped. One click replays it all, and rebuilds the same root.",
+     "file": "audio/vo/proof_0.mp3",
+     "startFrame": 5657,
+     "durationFrames": 322,
+     "words": [
+      {
+       "word": "Every",
+       "start": 5657,
+       "end": 5666
+      },
+      {
+       "word": "number",
+       "start": 5668,
+       "end": 5677
+      },
+      {
+       "word": "links",
+       "start": 5679,
+       "end": 5687
+      },
+      {
+       "word": "to",
+       "start": 5688,
+       "end": 5690
+      },
+      {
+       "word": "its",
+       "start": 5692,
+       "end": 5695
+      },
+      {
+       "word": "SQL",
+       "start": 5697,
+       "end": 5713
+      },
+      {
+       "word": "and",
+       "start": 5720,
+       "end": 5725
+      },
+      {
+       "word": "its",
+       "start": 5727,
+       "end": 5730
+      },
+      {
+       "word": "rows.",
+       "start": 5732,
+       "end": 5747
+      },
+      {
+       "word": "Every",
+       "start": 5754,
+       "end": 5763
+      },
+      {
+       "word": "step",
+       "start": 5764,
+       "end": 5772
+      },
+      {
+       "word": "is",
+       "start": 5775,
+       "end": 5780
+      },
+      {
+       "word": "hashed,",
+       "start": 5782,
+       "end": 5796
+      },
+      {
+       "word": "signed",
+       "start": 5803,
+       "end": 5818
+      },
+      {
+       "word": "and",
+       "start": 5821,
+       "end": 5826
+      },
+      {
+       "word": "timestamped.",
+       "start": 5828,
+       "end": 5853
+      },
+      {
+       "word": "One",
+       "start": 5868,
+       "end": 5875
+      },
+      {
+       "word": "click",
+       "start": 5876,
+       "end": 5884
+      },
+      {
+       "word": "replays",
+       "start": 5886,
+       "end": 5900
+      },
+      {
+       "word": "it",
+       "start": 5901,
+       "end": 5903
+      },
+      {
+       "word": "all,",
+       "start": 5905,
+       "end": 5916
+      },
+      {
+       "word": "and",
+       "start": 5922,
+       "end": 5926
+      },
+      {
+       "word": "rebuilds",
+       "start": 5928,
+       "end": 5945
+      },
+      {
+       "word": "the",
+       "start": 5946,
+       "end": 5948
+      },
+      {
+       "word": "same",
+       "start": 5950,
+       "end": 5959
+      },
+      {
+       "word": "root.",
+       "start": 5960,
+       "end": 5979
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "different",
+   "from": 5995,
+   "durationInFrames": 424,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "What makes Traceon different? It proves before it acts: three hundred and four blind cases, all correct, zero wrong actions. It shows its work. And it holds up on real data.",
+     "file": "audio/vo/different_0.mp3",
+     "startFrame": 6007,
+     "durationFrames": 396,
+     "words": [
+      {
+       "word": "What",
+       "start": 6007,
+       "end": 6014
+      },
+      {
+       "word": "makes",
+       "start": 6016,
+       "end": 6024
+      },
+      {
+       "word": "Traceon",
+       "start": 6026,
+       "end": 6040
+      },
+      {
+       "word": "different?",
+       "start": 6043,
+       "end": 6061
+      },
+      {
+       "word": "It",
+       "start": 6070,
+       "end": 6074
+      },
+      {
+       "word": "proves",
+       "start": 6076,
+       "end": 6087
+      },
+      {
+       "word": "before",
+       "start": 6089,
+       "end": 6098
+      },
+      {
+       "word": "it",
+       "start": 6099,
+       "end": 6101
+      },
+      {
+       "word": "acts:",
+       "start": 6103,
+       "end": 6118
+      },
+      {
+       "word": "three",
+       "start": 6124,
+       "end": 6133
+      },
+      {
+       "word": "hundred",
+       "start": 6134,
+       "end": 6144
+      },
+      {
+       "word": "and",
+       "start": 6145,
+       "end": 6147
+      },
+      {
+       "word": "four",
+       "start": 6149,
+       "end": 6155
+      },
+      {
+       "word": "blind",
+       "start": 6157,
+       "end": 6167
+      },
+      {
+       "word": "cases,",
+       "start": 6169,
+       "end": 6189
+      },
+      {
+       "word": "all",
+       "start": 6192,
+       "end": 6198
+      },
+      {
+       "word": "correct,",
+       "start": 6200,
+       "end": 6219
+      },
+      {
+       "word": "zero",
+       "start": 6228,
+       "end": 6241
+      },
+      {
+       "word": "wrong",
+       "start": 6243,
+       "end": 6250
+      },
+      {
+       "word": "actions.",
+       "start": 6253,
+       "end": 6275
+      },
+      {
+       "word": "It",
+       "start": 6282,
+       "end": 6286
+      },
+      {
+       "word": "shows",
+       "start": 6288,
+       "end": 6298
+      },
+      {
+       "word": "its",
+       "start": 6300,
+       "end": 6303
+      },
+      {
+       "word": "work.",
+       "start": 6305,
+       "end": 6320
+      },
+      {
+       "word": "And",
+       "start": 6332,
+       "end": 6336
+      },
+      {
+       "word": "it",
+       "start": 6338,
+       "end": 6340
+      },
+      {
+       "word": "holds",
+       "start": 6342,
+       "end": 6350
+      },
+      {
+       "word": "up",
+       "start": 6352,
+       "end": 6356
+      },
+      {
+       "word": "on",
+       "start": 6365,
+       "end": 6370
+      },
+      {
+       "word": "real",
+       "start": 6373,
+       "end": 6381
+      },
+      {
+       "word": "data.",
+       "start": 6383,
+       "end": 6403
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "close",
+   "from": 6419,
+   "durationInFrames": 475,
+   "lines": [
+    {
+     "voice": "narrator",
+     "text": "Traceon. Prove the cause before you recall. Open the case at traceon dot netlayerlabs dot com, and try to break the verdict.",
+     "file": "audio/vo/close_0.mp3",
+     "startFrame": 6431,
+     "durationFrames": 314,
+     "words": [
+      {
+       "word": "Traceon.",
+       "start": 6431,
+       "end": 6459
+      },
+      {
+       "word": "Prove",
+       "start": 6472,
+       "end": 6483
+      },
+      {
+       "word": "the",
+       "start": 6484,
+       "end": 6486
+      },
+      {
+       "word": "cause",
+       "start": 6487,
+       "end": 6500
+      },
+      {
+       "word": "before",
+       "start": 6501,
+       "end": 6511
+      },
+      {
+       "word": "you",
+       "start": 6513,
+       "end": 6515
+      },
+      {
+       "word": "recall.",
+       "start": 6518,
+       "end": 6539
+      },
+      {
+       "word": "Open",
+       "start": 6553,
+       "end": 6563
+      },
+      {
+       "word": "the",
+       "start": 6565,
+       "end": 6567
+      },
+      {
+       "word": "case",
+       "start": 6568,
+       "end": 6580
+      },
+      {
+       "word": "at",
+       "start": 6581,
+       "end": 6585
+      },
+      {
+       "word": "traceon.netlayerlabs.com,",
+       "start": 6586,
+       "end": 6675
+      },
+      {
+       "word": "and",
+       "start": 6684,
+       "end": 6689
+      },
+      {
+       "word": "try",
+       "start": 6690,
+       "end": 6698
+      },
+      {
+       "word": "to",
+       "start": 6700,
+       "end": 6702
+      },
+      {
+       "word": "break",
+       "start": 6704,
+       "end": 6712
+      },
+      {
+       "word": "the",
+       "start": 6714,
+       "end": 6717
+      },
+      {
+       "word": "verdict.",
+       "start": 6718,
+       "end": 6744
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
