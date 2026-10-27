@@ -31,17 +31,30 @@ export interface StoredDataset {
   mapping: DatasetMapping;
 }
 
-export const LIMITS = { maxRows: 400_000, maxFactors: 12, maxGroups: 500, maxBytes: 25_000_000, maxDatasets: 50, inMemory: 4 } as const;
+export const LIMITS = { maxRows: 400_000, maxFactors: 12, maxGroups: 500, maxBytes: 25_000_000, maxDatasets: 50, inMemory: 2 } as const;
+
+/**
+ * The bundled samples exactly as the /data page sends them (default mapping,
+ * $25 a unit), and the Backblaze mapping of README Example 3. When the server
+ * is full, the oldest other upload makes room; these are never removed.
+ */
+export const SAMPLE_IDS: ReadonlySet<string> = new Set(['custom-c98e9bfa56fc', 'custom-8c62547c3ba8', 'custom-b5d9aefb1621']);
 
 const dir = () => path.join(process.env.METERLESS_STORAGE_DIR || (process.env.VERCEL ? '/tmp/meterless-data' : path.join(process.cwd(), '.meterless-data')), 'datasets');
 const store = singleton('datasets', () => new Map<string, StoredDataset>());
 
-/** RFC 4180-style CSV parser: quoted fields, escaped quotes, CRLF. */
+/**
+ * RFC 4180-style CSV parser: quoted fields, escaped quotes, CRLF. A quote only
+ * opens a quoted field at the start of the field; anywhere else it is a plain
+ * character (an inch mark: 5" display). A quote never closed is an error.
+ */
 export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = '';
   let quoted = false;
+  let line = 1;
+  let quoteLine = 0;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (quoted) {
@@ -50,19 +63,26 @@ export function parseCsv(text: string): string[][] {
           field += '"';
           i++;
         } else quoted = false;
-      } else field += ch;
-    } else if (ch === '"') quoted = true;
-    else if (ch === ',') {
+      } else {
+        if (ch === '\n') line++;
+        field += ch;
+      }
+    } else if (ch === '"' && field === '') {
+      quoted = true;
+      quoteLine = line;
+    } else if (ch === ',') {
       row.push(field);
       field = '';
     } else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && text[i + 1] === '\n') i++;
+      line++;
       row.push(field);
       if (row.some((f) => f !== '')) rows.push(row);
       row = [];
       field = '';
     } else field += ch;
   }
+  if (quoted) throw new Error(`Unclosed quote starting on line ${quoteLine}`);
   if (field !== '' || row.length) {
     row.push(field);
     if (row.some((f) => f !== '')) rows.push(row);
@@ -89,6 +109,10 @@ const slug = (s: string) =>
 
 /** Safe SQL column name for an uploaded factor. */
 export const factorColumn = (name: string) => `f_${slug(name)}`;
+
+const isDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+/** Dates drive the early-warning replay; they are used only if at least this share of failures has a valid one. */
+const DATES_USABLE = 0.8;
 
 export function validateMapping(columns: string[], rows: string[][], m: DatasetMapping): string | null {
   const has = (c?: string) => !c || columns.includes(c);
@@ -128,17 +152,26 @@ export function validateMapping(columns: string[], rows: string[][], m: DatasetM
       seen.add(r[sc]);
     }
   }
+  if (m.date) {
+    // Refused here rather than dropped later: without usable dates the early-warning replay silently disappears.
+    const dc = columns.indexOf(m.date);
+    const failedRows = rows.filter((r) => fails.has((r[oc] ?? '').trim().toLowerCase()));
+    const bad = failedRows.filter((r) => !isDate((r[dc] ?? '').slice(0, 10)));
+    if ((failedRows.length - bad.length) / failedRows.length < DATES_USABLE)
+      return `Failure date: ${bad.length.toLocaleString('en-US')} of ${failedRows.length.toLocaleString('en-US')} failures have no YYYY-MM-DD date (for example ${JSON.stringify(String(bad[0][dc] ?? '').slice(0, 20))}); convert them, or set the date column to none`;
+  }
   return null;
 }
 
-export function saveDataset(name: string, columns: string[], rows: string[][], mapping: DatasetMapping): StoredDataset {
+/** `keep`: ids that must not be removed to make room (the dataset an investigation is running on). */
+export function saveDataset(name: string, columns: string[], rows: string[][], mapping: DatasetMapping, keep: string[] = []): StoredDataset {
   // Content address over every row: the same upload gets the same id, and any change gets a new one.
   const h = crypto.createHash('sha256').update(JSON.stringify([columns, mapping]));
   for (const r of rows) h.update(JSON.stringify(r));
   const id = `custom-${h.digest('hex').slice(0, 12)}`;
   const existing = getDataset(id);
   if (existing) return existing;
-  if (listDatasets().length >= LIMITS.maxDatasets) throw new Error(`This server already holds ${LIMITS.maxDatasets} datasets`);
+  makeRoom(new Set([...SAMPLE_IDS, ...keep]));
   const ds: StoredDataset = { id, name: name.slice(0, 80) || 'Uploaded data', createdAt: new Date().toISOString(), columns, rows, mapping };
   remember(ds);
   try {
@@ -152,6 +185,21 @@ export function saveDataset(name: string, columns: string[], rows: string[][], m
 }
 
 const meta = (d: StoredDataset) => ({ id: d.id, name: d.name, createdAt: d.createdAt, rows: d.rows.length, factors: d.mapping.factors });
+
+/** At the cap, remove the oldest uploads (never one in `keep`) so a new one fits: uploads never lock up. */
+function makeRoom(keep: Set<string>) {
+  const all = listDatasets(); // newest first
+  let excess = all.length - LIMITS.maxDatasets + 1;
+  for (const d of all.filter((x) => !keep.has(x.id)).reverse()) {
+    if (excess-- <= 0) break;
+    store.delete(d.id);
+    try {
+      for (const f of [`${d.id}.json`, `${d.id}.meta.json`]) fs.rmSync(path.join(dir(), f), { force: true });
+    } catch {
+      // Read-only storage: nothing was written there to remove.
+    }
+  }
+}
 
 /** Keep only a few full datasets in memory; the rest stay on disk. */
 function remember(ds: StoredDataset) {
@@ -205,10 +253,9 @@ export function buildCustomMesh(ds: StoredDataset, scenario: Scenario): Enterpri
   const fc = idx(m.daysInField);
   const fails = new Set(m.failValues.map((v) => v.trim().toLowerCase()));
   const factorIdx = m.factors.map((f) => ({ name: f, col: factorColumn(f), i: idx(f) }));
-  const isDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
   const failedRows = ds.rows.filter((r) => fails.has((r[oc] ?? '').trim().toLowerCase()));
   // Dates drive the early-warning replay; use them only if most failures have a valid one.
-  const datesUsable = dc >= 0 && failedRows.length > 0 && failedRows.filter((r) => isDate((r[dc] ?? '').slice(0, 10))).length / failedRows.length >= 0.8;
+  const datesUsable = dc >= 0 && failedRows.length > 0 && failedRows.filter((r) => isDate((r[dc] ?? '').slice(0, 10))).length / failedRows.length >= DATES_USABLE;
   const dates = datesUsable ? ds.rows.map((r) => (r[dc] ?? '').slice(0, 10)).filter(isDate).sort() : [];
   // Without usable dates, the upload day stands in, so the same dataset always gives the same tables.
   const asOf = dates[dates.length - 1] ?? ds.createdAt.slice(0, 10);

@@ -38,7 +38,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'make, model and one to six model years are required' }, { status: 400 });
   }
   try {
-    return NextResponse.json(withFollowUp(await liveSnapshot(make, model, years)));
+    const snap = await liveSnapshot(make, model, years);
+    // No complaints at all is not a result ("signal fired: never"): say what NHTSA has.
+    if (!snap.complaints.length)
+      return NextResponse.json({ error: `NHTSA has no complaints for ${make} ${model} in ${years.join(', ')}. Check the spelling; NHTSA lists some models under variant names (a cab or seating version).` }, { status: 422 });
+    return NextResponse.json(withFollowUp(snap));
   } catch (err) {
     return NextResponse.json({ error: `NHTSA lookup failed: ${(err as Error).message}` }, { status: 502 });
   }

@@ -2,7 +2,7 @@
 // Bring your own data: upload a CSV (one row per unit), say which column
 // records a failure and which columns are suspects, and investigate it with
 // the same agent, tests and evidence gate as the demo.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { SiteHeader } from '@/components/AppNav';
 
 interface Profile {
@@ -19,14 +19,19 @@ interface Listed {
   factors: string[];
 }
 
-/** Bundled datasets, each with the mapping that fits it. The first is real. */
+/**
+ * Bundled datasets, each with the mapping that fits it. The first is real.
+ * The server never evicts them: their ids at the default cost are pinned in
+ * SAMPLE_IDS (datasets.ts), so a change to a mapping needs a new id there.
+ */
 const SAMPLES = [
   {
     id: 'backblaze',
     file: '/samples/backblaze-drives-q2-2026.csv',
     label: 'Real data: Backblaze hard drives, Q2 2026',
-    note: 'Every drive in Backblaze’s fleet for one quarter (public Drive Stats data): which models failed, against maker, capacity, data centre and age.',
-    mapping: { outcome: 'failed', failValues: ['yes'], factors: ['model', 'manufacturer', 'capacity_tb', 'datacenter', 'age_band'], serial: 'serial', date: 'failure_date', symptom: '', daysInField: 'days_in_field' },
+    note: 'Every drive in Backblaze’s fleet for one quarter (public Drive Stats data): which models failed, against data centre and age.',
+    // The suspects of README Example 3, as ./sample.sh runs it.
+    mapping: { outcome: 'failed', failValues: ['yes'], factors: ['model', 'datacenter', 'age_band'], serial: 'serial', date: 'failure_date', symptom: '', daysInField: 'days_in_field' },
   },
   {
     id: 'charger',
@@ -51,11 +56,13 @@ export default function DataPage() {
   const [opt, setOpt] = useState({ serial: '', date: '', symptom: '', daysInField: '' });
   const [unitCost, setUnitCost] = useState('25');
   const [listed, setListed] = useState<Listed[]>([]);
+  const [cap, setCap] = useState(50);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/datasets')
       .then((r) => r.json())
-      .then((d) => setListed(d.datasets ?? []))
+      .then((d) => (setListed(d.datasets ?? []), d.limits?.maxDatasets && setCap(d.limits.maxDatasets)))
       .catch(() => {});
   }, []);
 
@@ -135,17 +142,25 @@ export default function DataPage() {
 
         {!prof ? (
           <>
-            <label
+            <input ref={fileInput} type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
+            {/* A focusable button, so the file chooser opens from the keyboard too (Enter or Space). */}
+            <div
               className={`drop ${over ? 'over' : ''}`}
+              role="button"
+              tabIndex={0}
+              aria-labelledby="drop-label"
+              aria-describedby="drop-note"
+              onClick={() => fileInput.current?.click()}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), fileInput.current?.click())}
               onDragOver={(e) => (e.preventDefault(), setOver(true))}
               onDragLeave={() => setOver(false)}
               onDrop={(e) => (e.preventDefault(), setOver(false), onFile(e.dataTransfer.files[0]))}
-              style={{ display: 'block' }}
             >
-              <input type="file" accept=".csv,text/csv" onChange={(e) => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
-              <div style={{ font: '500 20px/1.3 var(--serif)' }}>{busy ? 'Reading…' : 'Drop a CSV here, or click to choose one'}</div>
-              <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>Up to 400,000 rows and 25 MB. The file stays on this server; nothing is sent to the model except the statistics.</div>
-            </label>
+              <div id="drop-label" style={{ font: '500 20px/1.3 var(--serif)' }}>{busy ? 'Reading…' : 'Drop a CSV here, or click to choose one'}</div>
+              <div id="drop-note" className="faint" style={{ fontSize: 12, marginTop: 6 }}>
+                Up to 400,000 rows and 25 MB. The file is stored on this server, where every statistic is computed. The AI model sees column names, test results and up to 25 failure records (serial and symptom text). Every upload is listed on this page for all visitors.
+              </div>
+            </div>
             <div className="samples">
               {SAMPLES.map((smp) => (
                 <div key={smp.id} className="sample-row">
@@ -288,6 +303,9 @@ export default function DataPage() {
         {listed.length > 0 && (
           <div className="card" style={{ marginTop: 26 }}>
             <h3>Datasets on this server</h3>
+            <div className="faint" style={{ fontSize: 12, marginBottom: 8 }}>
+              The server keeps {cap} uploads; past that, each new one replaces the oldest. The two samples always stay.
+            </div>
             <div className="table-wrap">
               <table>
                 <thead>
