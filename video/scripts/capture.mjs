@@ -11,6 +11,7 @@
 //   app's own placeholder role), on a local server with its own storage. No approval ever
 //   touches the production site.
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import { launch, sleep } from "./cdp.mjs";
 
@@ -129,6 +130,44 @@ async function open(base, route, settle = 7000) {
   if (await js(`/Application error|Something went wrong|This page could not be found/.test(document.body.innerText.slice(0, 600))`)) log("WARN: page shows an error?", route);
 }
 
+// The Nightshift app's own window, recorded alongside (screencapture -l: no focus change, no
+// clicks). Its status bar counts every request the runtime serves, so the film can show the
+// same run from Nightshift's side. scripts/mac/nswindow.swift finds the window.
+const NSWIN = join(ROOT, ".cache/nswindow");
+function nightshiftWindowId() {
+  if (!existsSync(NSWIN)) execFileSync("swiftc", ["-O", join(ROOT, "scripts/mac/nswindow.swift"), "-o", NSWIN]);
+  return execFileSync(NSWIN).toString().trim() || null;
+}
+async function recWindow(name) {
+  const id = nightshiftWindowId();
+  if (!id) { log("WARN Nightshift window not found; skipping", name); return async () => []; }
+  const dir = join(FRAMES, name);
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  const frames = [];
+  let on = true;
+  const loop = (async () => {
+    while (on) {
+      const file = join(dir, `f${String(frames.length).padStart(5, "0")}.png`);
+      const t = Date.now() / 1000;
+      await new Promise((r) => { const p = spawn("screencapture", ["-x", "-o", "-l", id, file]); p.on("exit", r); p.on("error", r); });
+      if (existsSync(file)) frames.push({ file, t });
+      await sleep(100);
+    }
+  })();
+  meta[name] = { deviceScale: 2, window: id, rects: {} };
+  mark(`${name}:start`);
+  return async () => {
+    on = false;
+    await loop;
+    if (frames.length) frames.push({ file: frames[frames.length - 1].file, t: Date.now() / 1000 });
+    writeFileSync(join(dir, "frames.json"), JSON.stringify(frames));
+    mark(`${name}:end`);
+    log(`${name}: ${frames.length} window frames`);
+    return frames;
+  };
+}
+
 // The run id comes back as the X-Run-Id header of POST /api/investigate.
 let lastRunId = null;
 async function events(base) {
@@ -221,6 +260,7 @@ CLIPS.proof_live = async () => {
 /** This Mac: the top bar (Nightshift online), a full run, then the model cards labelled by Nightshift. */
 CLIPS.nightshift_local = async () => {
   await open(LOCAL, "/app", 8000);
+  const stopWindow = await recWindow("nightshift_app");
   await rec("nightshift_local");
   await rect("nightshift_local", "chips", `document.querySelector('.topbar .chips')`);
   await sleep(2400);
@@ -240,6 +280,7 @@ CLIPS.nightshift_local = async () => {
   await rect("nightshift_local", "trace", card("Agent trace"));
   await sleep(3000);
   await endRec("nightshift_local");
+  await stopWindow();
   const ev = await events(LOCAL);
   liveData.nightshift = summarize(ev, "localhost · this Mac · /app", seconds);
   log("nightshift", JSON.stringify({ ...liveData.nightshift, chain: liveData.nightshift.chain.length }));
