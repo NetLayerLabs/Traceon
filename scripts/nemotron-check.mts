@@ -1,6 +1,7 @@
-// Live Nemotron check: vision on a photo, then one full investigation against
-// the real models. Reports latency, which steps were live vs fallback, and
-// whether the explanation passed the number guard.
+// Live Nemotron check on NVIDIA NIM: vision on a photo, then one full
+// investigation against the real models. Reports latency, which steps were
+// live vs fallback and who answered, and whether the explanation passed the
+// number guard. Nightshift and the reply cache are off, so every call is new.
 // Usage: npm run nemotron:check -- [path/to/photo.png|jpg] [scenario]
 import fs from 'node:fs';
 import os from 'node:os';
@@ -13,6 +14,8 @@ for (const f of ['.env.local', '.env']) {
     if (m && m[2] && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
   }
 }
+process.env.NEMOTRON_CACHE = 'off';
+process.env.AI_PROVIDER = 'nim';
 process.env.METERLESS_STORAGE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'traceon-nim-'));
 const { nemotronLive, NEMOTRON_MODEL, NEMOTRON_FAST_MODEL } = await import('../src/lib/nemotron.ts');
 const { analyzeDefectPhoto } = await import('../src/lib/vision.ts');
@@ -22,14 +25,14 @@ if (!nemotronLive()) {
   console.log('NVIDIA_API_KEY is not set in .env.local');
   process.exit(1);
 }
-console.log(`models: ${NEMOTRON_MODEL} (vision + explanation), ${NEMOTRON_FAST_MODEL} (planning + red team)\n`);
+console.log(`NVIDIA NIM models: ${NEMOTRON_MODEL} (vision + explanation), ${NEMOTRON_FAST_MODEL} (planning + red team)\n`);
 
 const photo = process.argv[2] ?? 'public/samples/ntsb-787-li-ion-battery.jpg';
 const ext = path.extname(photo).slice(1).replace('jpg', 'jpeg');
 const dataUrl = `data:image/${ext};base64,${fs.readFileSync(photo).toString('base64')}`;
 let t = Date.now();
 const vision = await analyzeDefectPhoto(dataUrl, 'VoltRide VR-48 48V E-Bike Battery Pack');
-console.log(`VISION ${vision.live ? 'LIVE' : 'FALLBACK'} ${Date.now() - t}ms`);
+console.log(`VISION ${vision.live ? 'LIVE' : 'FALLBACK'} ${Date.now() - t}ms via ${vision.model}`);
 console.log(`  ${vision.physicalFailureMode} | ${vision.suspectedComponent} | severity ${vision.severityScore} | mfg defect: ${vision.isManufacturingDefectLikely}`);
 console.log(`  bbox ${JSON.stringify(vision.bbox)}`);
 if (!vision.live) console.log(`  reason: ${vision.reasoning}`);
@@ -49,8 +52,9 @@ await runInvestigation(
   { scenarioId: process.argv[3] ?? 'reference', vision, pacingMs: 0 }
 );
 const one = (type: string) => events.filter((e) => e.type === type).at(-1);
+const via = (e: any) => (e?.via ? ` (${e.via})` : '');
 console.log(`\nINVESTIGATION ${Date.now() - t}ms`);
-console.log(`  plan: ${one('plan').source} | red team: ${one('redteam')?.source ?? 'n/a'} | explanation: ${one('narrative').source}`);
+console.log(`  plan: ${one('plan').source}${via(one('plan'))} | red team: ${one('redteam')?.source ?? 'n/a'}${via(one('redteam'))} | explanation: ${one('narrative').source}${via(one('narrative'))}`);
 console.log(`  plan order: ${one('plan').hypotheses.map((h: any) => h.id).join(' > ')}`);
 console.log(`  plan reasoning: ${one('plan').reasoning.slice(0, 200)}`);
 console.log(`  untestable: ${JSON.stringify(one('plan').untestable)}`);

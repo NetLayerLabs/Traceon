@@ -6,9 +6,10 @@
 //   - NVIDIA NIM with Nemotron 3.5, called directly with the NIM-specific
 //     `chat_template_kwargs` (thinking on or off).
 // AI_PROVIDER=auto (the default) uses Nightshift when it is configured and
-// falls back to NIM, labelled, if Nightshift cannot answer. With neither,
-// callers get live=false and fall back to deterministic templates; the UI
-// labels those outputs.
+// falls back to NIM, labelled, if Nightshift cannot answer; AI_PROVIDER=
+// nightshift or nim uses that provider alone. With neither, callers get
+// live=false and fall back to deterministic templates; the UI labels those
+// outputs.
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -47,7 +48,10 @@ const JOB_OVERRIDE: Record<Job, string | undefined> = {
 };
 const NIGHTSHIFT_APP = process.env.NIGHTSHIFT_APP || 'traceon';
 
-/** The runtime's bearer token: NIGHTSHIFT_TOKEN, or the proxy-token file it writes. */
+/**
+ * The runtime's bearer token: NIGHTSHIFT_TOKEN, or the file NIGHTSHIFT_TOKEN_FILE
+ * names (runtime-token in the Mac app's state folder, proxy-token for the Linux daemon).
+ */
 function nightshiftToken(): string | null {
   const direct = process.env.NIGHTSHIFT_TOKEN?.trim();
   if (direct && direct !== 'rt-local') return direct;
@@ -67,7 +71,8 @@ export function aiProviders(): AiProvider[] {
   const ns = nightshiftToken() ? (['nightshift'] as const) : [];
   const nim = nimConfigured() ? (['nim'] as const) : [];
   if (mode === 'nim') return [...nim];
-  if (mode === 'nightshift') return [...ns, ...nim];
+  // Nightshift alone: no NIM fallback, so the photo (no vision lane there) gets the labelled reference analysis.
+  if (mode === 'nightshift') return [...ns];
   return [...ns, ...nim];
 }
 
@@ -135,8 +140,10 @@ export interface NemotronReply {
   error?: string;
 }
 
-// Reply cache: identical requests (same model, messages and settings) return
-// the stored reply, so re-running a demo doesn't wait on the model again.
+// Reply cache: identical requests (same provider, model, messages and
+// settings) return the stored reply, marked cached, so re-running a demo
+// doesn't wait on the model again. A Nightshift entry also records the model
+// that answered, since a meterless/* route picks its own model.
 // Disable with NEMOTRON_CACHE=off.
 const CACHE_DIR = path.join(process.cwd(), '.nim-cache');
 const cacheOn = () => process.env.NEMOTRON_CACHE !== 'off';
@@ -145,7 +152,9 @@ function cacheKey(body: unknown) {
   return crypto.createHash('sha256').update(JSON.stringify(body)).digest('hex');
 }
 
-function readCache(key: string): { text: string; reasoning: string; retriedWithoutThinking?: boolean } | null {
+type CachedReply = { text: string; reasoning: string; model?: string; retriedWithoutThinking?: boolean };
+
+function readCache(key: string): CachedReply | null {
   if (!cacheOn()) return null;
   try {
     return JSON.parse(fs.readFileSync(path.join(CACHE_DIR, `${key}.json`), 'utf-8'));
@@ -154,7 +163,7 @@ function readCache(key: string): { text: string; reasoning: string; retriedWitho
   }
 }
 
-function writeCache(key: string, value: { text: string; reasoning: string; retriedWithoutThinking?: boolean }) {
+function writeCache(key: string, value: CachedReply) {
   if (!cacheOn()) return;
   try {
     fs.mkdirSync(CACHE_DIR, { recursive: true });
@@ -184,12 +193,7 @@ async function request(body: Record<string, unknown>, timeoutMs: number, abort?:
   }
   if (!res.ok) throw new Error(`NIM ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
-  const choice = data.choices?.[0] ?? {};
-  const msg = choice.message ?? {};
-  let text: string = msg.content ?? '';
-  let reasoning: string = msg.reasoning_content ?? msg.reasoning ?? '';
-  ({ text, reasoning } = splitThink(text, reasoning));
-  return { text: dedupeRepeat(text), reasoning, finishReason: String(choice.finish_reason ?? '') };
+  return readChoice(data.choices?.[0], (body.chat_template_kwargs as { enable_thinking?: boolean } | undefined)?.enable_thinking === true);
 }
 /**
  * Some templates inline the trace as <think>...</think>; Nemotron Ultra via
@@ -200,6 +204,23 @@ function splitThink(text: string, reasoning: string): { text: string; reasoning:
   if (end < 0) return { text, reasoning };
   const trace = text.slice(0, end).replace('<think>', '').trim();
   return { text: text.slice(end + '</think>'.length).trim(), reasoning: reasoning || trace };
+}
+
+type Choice = { message?: { content?: unknown; reasoning_content?: string; reasoning?: string }; finish_reason?: string };
+
+/**
+ * The answer and the reasoning in one reply. A thinking reply that ran out of
+ * tokens before its closing </think>, with no separate reasoning field, is all
+ * reasoning: it is never returned as the answer.
+ */
+function readChoice(choice: Choice | undefined, thinking: boolean) {
+  const msg = choice?.message ?? {};
+  const content = typeof msg.content === 'string' ? msg.content : '';
+  const field = msg.reasoning_content ?? msg.reasoning ?? '';
+  const finishReason = String(choice?.finish_reason ?? '');
+  if (thinking && finishReason === 'length' && !field && !content.includes('</think>')) return { text: '', reasoning: content.replace('<think>', '').trim(), finishReason };
+  const { text, reasoning } = splitThink(content, field);
+  return { text: dedupeRepeat(text), reasoning, finishReason };
 }
 
 /** Models occasionally emit their whole answer twice; keep one copy. */
@@ -237,7 +258,7 @@ export async function nemotronChat(opts: ChatOpts): Promise<NemotronReply> {
   if (!providers.length) return { live: false, model: opts.model ?? NEMOTRON_MODEL, text: '', reasoning: '', latencyMs: 0, error: NO_PROVIDER };
   let last: NemotronReply | null = null;
   for (const p of providers) {
-    const r = p === 'nightshift' ? await nightshiftChat(opts) : await nimChat(opts);
+    const r = p === 'nightshift' ? await nightshiftChat(opts, providers.includes('nim')) : await nimChat(opts);
     const out = { ...r, provider: p, via: aiVia({ provider: p, model: r.model, standIn: r.standIn }) };
     if (out.live && out.text.trim()) return last ? { ...out, fallbackFrom: `Meterless Nightshift: ${last.error ?? 'empty reply'}` } : out;
     last = out;
@@ -277,22 +298,27 @@ export function pickNightshiftModel(job: Job, listed: string[]): string {
   return NIGHTSHIFT_ROUTES[job];
 }
 
-// Nightshift's model list, refreshed at most once a minute.
-const modelList = { at: 0, ids: [] as string[] };
-async function nightshiftModelIds(token: string): Promise<string[]> {
-  if (Date.now() - modelList.at < 60_000) return modelList.ids;
-  try {
-    const r = await fetch(`${NIGHTSHIFT_URL}/models`, { headers: nightshiftHeaders(token), signal: AbortSignal.timeout(3_000) });
-    modelList.ids = r.ok ? (((await r.json()) as { data?: { id: string }[] }).data ?? []).map((m) => m.id) : [];
-  } catch {
-    modelList.ids = [];
+// Nightshift's model list, refreshed at most once a minute. A failed lookup
+// keeps the last good list, so one slow answer cannot move every job off
+// Nemotron, and is tried again after 5 s.
+const modelList = { at: 0, ids: [] as string[], failure: '' };
+async function nightshiftModelIds(token: string): Promise<{ ids: string[]; ok: boolean; failure: string }> {
+  if (Date.now() - modelList.at >= (modelList.failure ? 5_000 : 60_000)) {
+    try {
+      const r = await fetch(`${NIGHTSHIFT_URL}/models`, { headers: nightshiftHeaders(token), signal: AbortSignal.timeout(3_000) });
+      const ids = r.ok ? (((await r.json()) as { data?: { id: string }[] }).data ?? []).map((m) => m.id) : [];
+      if (ids.length) modelList.ids = ids;
+      modelList.failure = r.status === 401 || r.status === 403 ? 'unauthorized' : !r.ok ? `HTTP ${r.status}` : ids.length ? '' : 'no models listed';
+    } catch (err) {
+      modelList.failure = (err as Error).message;
+    }
+    modelList.at = Date.now();
   }
-  modelList.at = Date.now();
-  return modelList.ids;
+  return { ids: modelList.ids, ok: !modelList.failure, failure: modelList.failure };
 }
 /** For tests: forget the cached model list. */
 export function resetNightshiftModelCache() {
-  modelList.at = 0;
+  Object.assign(modelList, { at: 0, ids: [], failure: '' });
 }
 
 /** The default route for a call, before any model list is known. */
@@ -300,11 +326,16 @@ export function nightshiftRoute(opts: Pick<ChatOpts, 'user' | 'model'>) {
   return NIGHTSHIFT_ROUTES[nightshiftJob(opts)];
 }
 
-async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
+/** One call to Nightshift. `nimNext`: NIM is tried after it if this call fails. */
+async function nightshiftChat(opts: ChatOpts, nimNext: boolean): Promise<NemotronReply> {
   const token = nightshiftToken()!;
   const job = nightshiftJob(opts);
-  const model = pickNightshiftModel(job, await nightshiftModelIds(token));
+  const list = await nightshiftModelIds(token);
+  const model = pickNightshiftModel(job, list.ids);
   const start = Date.now();
+  // No model list: Nightshift is offline, hung or refusing the token. With NIM
+  // next, go straight to it instead of spending this call's budget here.
+  if (!list.ok && nimNext) return { live: false, model, text: '', reasoning: '', latencyMs: 0, error: `model list unavailable (${list.failure})` };
   // Nemotron through Nightshift: thinking is off for the fast jobs (it can use
   // the whole budget and return nothing), and off for the others too unless
   // NIGHTSHIFT_THINKING=on, because there is no fast-answer race on this path.
@@ -322,11 +353,15 @@ async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
   const maxTokens = nemotron ? Math.max(2_000, opts.maxTokens ?? 2_048) : (opts.maxTokens ?? 2_048);
   const body: Record<string, unknown> = { model, messages, temperature: 0.2, max_tokens: maxTokens, ...(nemotron ? { chat_template_kwargs: { enable_thinking: thinking } } : {}) };
   const key = cacheKey({ nightshift: NIGHTSHIFT_URL, ...body });
-  const hit = readCache(key);
-  if (hit) return { live: true, model, ...hit, latencyMs: Date.now() - start, cached: true };
+  // A stored reply is used only while Nightshift answers, and only if it
+  // records the model that answered, so its label is never a guess.
+  const hit = list.ok ? readCache(key) : null;
+  if (hit?.model) return { live: true, ...hit, model: hit.model, latencyMs: Date.now() - start, cached: true };
   // Meterless suggests long timeouts because a local model may be loading;
-  // the caller's budget still caps it so a run cannot stall.
-  const timeoutMs = Math.min(opts.timeoutMs ?? 60_000, Number(process.env.NEMOTRON_TIMEOUT_MS) || Infinity);
+  // the caller's budget still caps it so a run cannot stall. With NIM next,
+  // Nightshift gets half of it, so the fallback keeps time to answer.
+  const budget = Math.min(opts.timeoutMs ?? 60_000, Number(process.env.NEMOTRON_TIMEOUT_MS) || Infinity);
+  const timeoutMs = nimNext ? Math.min(budget, Math.max(5_000, Math.floor(budget / 2))) : budget;
   try {
     const post = (b: Record<string, unknown>) =>
       fetch(`${NIGHTSHIFT_URL}/chat/completions`, {
@@ -335,31 +370,53 @@ async function nightshiftChat(opts: ChatOpts): Promise<NemotronReply> {
         body: JSON.stringify(b),
         signal: AbortSignal.timeout(Math.max(1_000, timeoutMs - (Date.now() - start))),
       });
-    let res = await post(body).catch((e: Error) => e);
+    let sent = body;
+    let res = await post(sent).catch((e: Error) => e);
     // One retry after a short pause for a cold or busy runtime, inside the same budget.
     if ((res instanceof Error && res.name !== 'TimeoutError') || (!(res instanceof Error) && (res.status >= 500 || res.status === 429))) {
       if (timeoutMs - (Date.now() - start) > 4_000) {
         await new Promise((r) => setTimeout(r, 1_500));
-        res = await post(body).catch((e: Error) => e);
+        res = await post(sent).catch((e: Error) => e);
       }
     }
     if (res instanceof Error) throw res;
     // If Nightshift will not pass Nemotron's thinking switch through, ask without it.
-    if (res.status === 400 && 'chat_template_kwargs' in body) {
-      const { chat_template_kwargs: _drop, ...plain } = body;
-      res = await post(plain);
+    if (res.status === 400 && 'chat_template_kwargs' in sent) {
+      const { chat_template_kwargs: _drop, ...plain } = sent;
+      sent = plain;
+      res = await post(sent);
     }
     if (res.status === 401 || res.status === 403) throw new Error('Nightshift rejected the token (unauthorized)');
     if (!res.ok) throw new Error(`Nightshift ${res.status}: ${(await res.text()).slice(0, 200)}`);
-    const data = await res.json();
-    const msg = data.choices?.[0]?.message ?? {};
-    let text: string = typeof msg.content === 'string' ? msg.content : '';
-    let reasoning: string = msg.reasoning_content ?? msg.reasoning ?? '';
-    ({ text, reasoning } = splitThink(text, reasoning));
-    text = dedupeRepeat(text);
-    if (text.trim() && data.system_fingerprint !== 'nightshift-standin') writeCache(key, { text, reasoning });
+    let data = await res.json();
+    const reply = readChoice(data.choices?.[0], thinking);
+    const reasoning = reply.reasoning;
+    let text = reply.text;
+    let retriedWithoutThinking = false;
+    // Thinking used the whole token budget before answering: what came back is
+    // reasoning. Ask once more with thinking off, inside the same budget.
+    const cutOff = thinking && !text.trim() && reply.finishReason === 'length';
+    if (cutOff && timeoutMs - (Date.now() - start) > 3_000) {
+      const again = await post({ ...sent, messages: [{ role: 'system', content: '/no_think' }, ...messages], ...('chat_template_kwargs' in sent ? { chat_template_kwargs: { enable_thinking: false } } : {}) });
+      if (again.ok) {
+        data = await again.json();
+        text = readChoice(data.choices?.[0], false).text;
+        retriedWithoutThinking = true;
+      }
+    }
     const standIn = data.system_fingerprint === 'nightshift-standin';
-    return { live: true, model: String(data.model ?? model), text, reasoning, latencyMs: Date.now() - start, ...(standIn ? { standIn } : {}) };
+    const answered = String(data.model ?? model);
+    if (text.trim() && !standIn) writeCache(key, { text, reasoning, model: answered, ...(retriedWithoutThinking ? { retriedWithoutThinking } : {}) });
+    return {
+      live: true,
+      model: answered,
+      text,
+      reasoning,
+      latencyMs: Date.now() - start,
+      ...(standIn ? { standIn } : {}),
+      ...(retriedWithoutThinking ? { retriedWithoutThinking } : {}),
+      ...(cutOff && !text.trim() ? { error: 'thinking used the whole token budget' } : {}),
+    };
   } catch (err) {
     return { live: false, model, text: '', reasoning: '', latencyMs: Date.now() - start, error: (err as Error).message };
   }
@@ -375,8 +432,9 @@ async function nimChat(opts: {
   /**
    * Race mode: NIM latency for thinking varies 3-5x minute to minute. When set,
    * a no-thinking request runs in parallel; the thinking answer (with its
-   * reasoning trace) wins if it arrives within this many ms, otherwise the
-   * fast answer is used. Worst case is this deadline, never a hang.
+   * reasoning trace) wins if it arrives within this many ms and no later than
+   * NEMOTRON_THINKING_GRACE_MS (default 4,000) after the fast answer,
+   * otherwise the fast answer is used. Worst case is this deadline, never a hang.
    */
   thinkingDeadlineMs?: number;
 }): Promise<NemotronReply> {
@@ -401,7 +459,11 @@ async function nimChat(opts: {
     const fastBody = { ...body, chat_template_kwargs: { enable_thinking: false } };
     const fast = request(fastBody, timeoutMs).catch((err: Error) => err);
     const slow = request(body, timeoutMs, thinkingAbort.signal).catch((err: Error) => err);
-    const winner = await Promise.race([slow, new Promise<null>((r) => setTimeout(() => r(null), opts.thinkingDeadlineMs))]);
+    // A ready fast answer does not wait out the whole deadline: thinking gets a short grace period.
+    const graceMs = Number(process.env.NEMOTRON_THINKING_GRACE_MS || 4_000);
+    const after = (ms: number) => new Promise<null>((r) => setTimeout(() => r(null), ms));
+    const fastThenGrace = fast.then((f) => (f instanceof Error || !f.text.trim() ? new Promise<null>(() => {}) : after(graceMs)));
+    const winner = await Promise.race([slow, fastThenGrace, after(opts.thinkingDeadlineMs)]);
     if (winner && !(winner instanceof Error) && winner.text.trim()) {
       writeCache(key, { text: winner.text, reasoning: winner.reasoning });
       return { live: true, model, text: winner.text, reasoning: winner.reasoning, latencyMs: Date.now() - start };

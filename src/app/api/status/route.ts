@@ -3,7 +3,7 @@ import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { resolveScenario } from '@/lib/enterpriseData';
 import { readWorldModel, scenarioDir } from '@/lib/meterless';
-import { aiProviders, NEMOTRON_FAST_MODEL, NEMOTRON_MODEL, nemotronLive, NIGHTSHIFT_ROUTES, nightshiftStatus } from '@/lib/nemotron';
+import { aiProviders, NEMOTRON_FAST_MODEL, NEMOTRON_MODEL, nightshiftStatus, pickNightshiftModel } from '@/lib/nemotron';
 import { zetarisMode, zetarisParityCheck } from '@/lib/zetaris';
 
 let parityCache: { at: number; value: Awaited<ReturnType<typeof zetarisParityCheck>> } | null = null;
@@ -25,11 +25,28 @@ export async function GET(req: Request) {
   if (zetarisMode() === 'ZETARIS_CLOUD' && (!parityCache || Date.now() - parityCache.at > 300_000)) {
     parityCache = { at: Date.now(), value: await zetarisParityCheck() };
   }
+  const providers = aiProviders();
+  const nightshift = await nightshiftStatus();
+  // The model each job asks Nightshift for, picked from the list it serves. A
+  // model it does not list (the photo, while Nightshift has no vision lane) is
+  // not served there; NIM answers instead when it is configured.
+  const routes = nightshift.routes.length
+    ? Object.fromEntries(
+        (['vision', 'fast', 'deep'] as const).map((job) => {
+          const id = pickNightshiftModel(job, nightshift.routes);
+          return [job, nightshift.routes.includes(id) ? id : `${id} (not listed${providers.includes('nim') ? '; NIM answers' : ''})`];
+        })
+      )
+    : null;
+  // Nemotron answers on NIM, or through Nightshift when the models it serves for these jobs are Nemotron.
+  const viaNightshift = providers.includes('nightshift') ? [...new Set(Object.values(routes ?? {}).filter((m) => nightshift.routes.includes(m) && /nemotron/i.test(m)))] : [];
   return NextResponse.json({
-    nemotron: { live: nemotronLive(), model: NEMOTRON_MODEL, fastModel: NEMOTRON_FAST_MODEL },
-    ai: { providers: aiProviders(), nightshift: { ...(await nightshiftStatus()), routes: NIGHTSHIFT_ROUTES } },
+    nemotron: { live: providers.includes('nim') || viaNightshift.length > 0, model: NEMOTRON_MODEL, fastModel: NEMOTRON_FAST_MODEL, viaNightshift },
+    ai: { providers, nightshift: { ...nightshift, listed: nightshift.routes, routes } },
     zetaris: { mode: zetarisMode(), host: process.env.ZETARIS_API_URL ? new URL(process.env.ZETARIS_API_URL).host : null, parity: parityCache?.value ?? null },
     meterless: { memories, quarantinedLots: Object.values(world).filter((l) => l.status === 'QUARANTINED').map((l) => l.lotId) },
     brightdata: { live: Boolean(process.env.BRIGHTDATA_API_TOKEN) },
+    // Same rule as POST /api/reset, so the app can hide the button.
+    resetDisabled: process.env.TRACEON_DISABLE_RESET === '1',
   });
 }
