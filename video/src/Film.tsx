@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, Audio, Freeze, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { T, scene, wordAt } from "./timing";
 import { C } from "./theme";
+import { Poster } from "./Poster";
 import { Captions } from "./ui/Captions";
 import { Grain } from "./ui/Grain";
 import { clamp } from "./ui/motion";
@@ -24,6 +25,7 @@ const SCENES: Record<string, React.FC> = {
   open: Open, problem: Problem, zetaris: Zetaris, turn: Turn, converge: Converge, screen: Screen, why: Why,
   prove: Prove, act: Act, nightshift: Nightshift, real: Real, proof: Proof, different: Different, close: Close,
 };
+export const TITLE = 30; // the thumbnail, one second, before the film
 const OVERLAP = 12; // frames each scene starts early, to dissolve over the last
 
 /** Each scene eases in (a short rise, un-blur and settle) over the tail of the previous one, holding its first frame. */
@@ -140,6 +142,11 @@ function effects(): Fx[] {
   return fx.filter((x) => x.at >= 0 && x.at < T.totalFrames);
 }
 
+const TitleCard: React.FC = () => {
+  const f = useCurrentFrame();
+  return <AbsoluteFill style={{ opacity: interpolate(f, [TITLE - 6, TITLE + 10], [1, 0], clamp) }}><Poster /></AbsoluteFill>;
+};
+
 /** Captions sit out where big type already carries the words. */
 const NO_CAPTIONS = new Set(["turn", "different", "close"]);
 
@@ -150,6 +157,12 @@ export const Film: React.FC = () => {
   };
   return (
     <AbsoluteFill style={{ background: C.night }}>
+      {/* The thumbnail opens the film for one second, then dissolves into the cold open. */}
+      <Sequence durationInFrames={TITLE + 12} name="thumbnail">
+        <TitleCard />
+      </Sequence>
+      <Sequence from={TITLE} name="film">
+      <AbsoluteFill>
       {T.scenes.map((s, i) => {
         const S = SCENES[s.id];
         const from = i === 0 ? s.from : s.from - OVERLAP;
@@ -173,6 +186,8 @@ export const Film: React.FC = () => {
           <Audio src={staticFile(`audio/sfx/${x.file}.mp3`)} volume={(f) => x.vol * (x.dur ? interpolate(f, [0, 8, x.dur - 20, x.dur], [0, 1, 1, 0], clamp) : 1)} />
         </Sequence>
       ))}
+      </AbsoluteFill>
+      </Sequence>
     </AbsoluteFill>
   );
 };
