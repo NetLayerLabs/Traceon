@@ -14,6 +14,8 @@ const sqlStr = (v: string) => {
   if (/[\\\u0000-\u001f]/.test(v)) throw new Error('Values with backslashes or control characters cannot be targeted');
   return `'${v.replace(/'/g, "''")}'`;
 };
+// Uploaded factors are stored as f_<name>; notices use the name people know.
+const factor = (column: string) => column.replace(/^f_/, '').replace(/_/g, ' ');
 
 export interface RemediationCause {
   column: string;
@@ -36,7 +38,7 @@ export async function executeRemediation(req: RemediationRequest) {
     if (!REMEDY[c.remedy]) throw new Error(`Unknown remedy ${c.remedy}`);
   }
   const quarantine = req.causes.filter((c) => c.remedy === 'QUARANTINE');
-  const holdId = `QH-${crypto.createHash('sha256').update(scenarioId + req.ledgerRoot + JSON.stringify(req.causes)).digest('hex').slice(0, 8).toUpperCase()}`;
+  let holdId = `QH-${crypto.createHash('sha256').update(scenarioId + req.ledgerRoot + JSON.stringify(req.causes)).digest('hex').slice(0, 8).toUpperCase()}`;
   const now = new Date().toISOString();
 
   // ---- Physical causes: ERP hold on exact serials ----
@@ -56,10 +58,14 @@ export async function executeRemediation(req: RemediationRequest) {
       cur.units++;
       byWarehouse.set(String(r.warehouse_id), cur);
     }
-    const existing = (mirrorExec(scenarioId, 'SELECT COUNT(*) AS n FROM erp_holds WHERE hold_id = ?', [holdId]) as { n: number }[])[0]?.n ?? 0;
-    alreadyQuarantined = existing > 0;
-    if (!alreadyQuarantined) {
-      const holds = units.rows.map((r) => ({
+    // Stock already on hold, from this run or an earlier one with the same cause,
+    // is reported under its existing hold and never held twice.
+    const held = new Map((mirrorExec(scenarioId, 'SELECT serial, hold_id FROM erp_holds WHERE status = ?', ['BLOCKED_STOCK']) as { serial: unknown; hold_id: string }[]).map((r) => [String(r.serial), r.hold_id]));
+    const toHold = units.rows.filter((r) => !held.has(String(r.serial)));
+    alreadyQuarantined = units.rowCount > 0 && toHold.length === 0;
+    if (alreadyQuarantined) holdId = held.get(String(units.rows[0].serial))!;
+    else {
+      const holds = toHold.map((r) => ({
         hold_id: holdId,
         serial: r.serial,
         lot_id: r.lot_id,
@@ -106,9 +112,9 @@ export async function executeRemediation(req: RemediationRequest) {
   const custom = Boolean(mesh.custom);
   const product = custom ? mesh.scenario.label : PRODUCT_NAME;
   const lots = mesh.lots.filter((l) => lotIds.has(l.lot_id));
-  const serialRanges = custom ? `every unit with ${quarantine.map((c) => `${c.column.replace(/^f_/, '').replace(/_/g, ' ')} = ${c.group}`).join(' or ')}` : lots.length <= 4 ? lots.map((l) => `SN-${l.serial_start} through SN-${l.serial_end}`).join('; ') : `${lots.length} lots (${lots.map((l) => l.lot_id).join(', ')})`;
+  const serialRanges = custom ? `every unit with ${quarantine.map((c) => `${factor(c.column)} = ${c.group}`).join(' or ')}` : lots.length <= 4 ? lots.map((l) => `SN-${l.serial_start} through SN-${l.serial_end}`).join('; ') : `${lots.length} lots (${lots.map((l) => l.lot_id).join(', ')})`;
   const failuresHeld = quarantine.length ? mesh.units.filter((u) => u.failed && quarantine.some((c) => String((u as unknown as Record<string, unknown>)[c.column]) === c.group)).length : 0;
-  const causeText = req.causes.map((c) => `${c.column.replace('_', ' ')} ${c.group}`).join(' and ');
+  const causeText = req.causes.map((c) => `${factor(c.column)} ${c.group}`).join(' and ');
 
   const notices: Record<string, string> = {};
   if (quarantine.length) {
@@ -121,7 +127,7 @@ Effective immediately, place the following on hold and remove from sale:
 
 No other ${custom ? '' : `${SKU} `}serials are affected by this hold. Do not pull unaffected stock.
 ${locations.length ? `Units per location:\n${locations.map(([wh, v]) => `  ${wh} (${v.region}): ${v.units} units`).join('\n')}\n` : ''}
-Reason: ${quarantine.map((c) => `${c.column.replace(/^f_/, '').replace(/_/g, ' ')} ${c.group}`).join(', ')} ${custom ? 'is the confirmed cause of the recorded failures' : 'can overheat in use'}.
+Reason: ${quarantine.map((c) => `${factor(c.column)} ${c.group}`).join(', ')} ${custom ? 'is the confirmed cause of the recorded failures' : 'can overheat in use'}.
 Evidence reference (proof root): ${req.ledgerRoot.slice(0, 16)}…`;
   }
   for (const a of otherActions) {
@@ -137,7 +143,7 @@ Evidence reference (proof root): ${req.ledgerRoot.slice(0, 16)}…`
         : `${a.label.toUpperCase()} ORDER — ${product}
 Job: ${a.jobId}    Date: ${now.slice(0, 10)}
 
-${a.label} for ${a.units.toLocaleString('en-US')} units (${a.column.replace('_', ' ')} ${a.group}).
+${a.label} for ${a.units.toLocaleString('en-US')} units (${factor(a.column)} ${a.group}).
 Evidence reference (proof root): ${req.ledgerRoot.slice(0, 16)}…`;
   }
   notices.regulator = `DRAFT — Section 15(b) Report to the U.S. Consumer Product Safety Commission
@@ -148,7 +154,7 @@ Product: ${custom ? product : `${PRODUCT_NAME}, model ${SKU}`}
 Root cause: ${causeText}
 ${quarantine.length ? `Units held: ${unitsHeld.toLocaleString('en-US')} (${serialRanges})\nIncidents known in held population as of ${mesh.asOf ?? AS_OF}: ${failuresHeld}\n` : ''}${otherActions.map((a) => `${a.label}: ${a.units.toLocaleString('en-US')} units (${a.jobId})`).join('\n')}
 Hazard: ${custom ? 'the failure mode recorded in the uploaded data (describe it here)' : 'thermal event in the battery pack (overheating, smoke, swelling, fire)'}
-Corrective action: ${[quarantine.length ? `stop sale and quarantine (${holdId})` : '', ...otherActions.map((a) => `${a.label.toLowerCase()} (${a.jobId})`)].filter(Boolean).join('; ')}; consumer notification to follow.
+Corrective action: ${[quarantine.length ? `stop sale and quarantine (${holdId})` : '', ...otherActions.map((a) => `${a.label.replace(/^[A-Z](?=[a-z])/, (m) => m.toLowerCase())} (${a.jobId})`)].filter(Boolean).join('; ')}; consumer notification to follow.
 Supporting evidence: Traceon proof ledger root ${req.ledgerRoot}`;
 
   return {

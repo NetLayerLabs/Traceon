@@ -5,7 +5,7 @@
 //   - 8D report: the standard automotive/industrial problem-solving format.
 import type { CaseView } from './caseView';
 import { PRODUCT_NAME, SKU, UNIT_COST_USD } from './enterpriseData';
-import type { CauseFinding, EvidenceItem } from './investigation';
+import type { CauseFinding, EvidenceItem, HypothesisNode } from './investigation';
 
 const esc = (s: unknown) =>
   String(s ?? '')
@@ -16,11 +16,42 @@ const esc = (s: unknown) =>
 const n = (x: number) => x.toLocaleString('en-US');
 const usd = (x: number) => `$${Math.round(x).toLocaleString('en-US')}`;
 const rate = (x: number) => `${x.toFixed(x < 10 ? 1 : 0)}/10k`;
+// Small values (an alpha of 0.0014…) print like the rule text does: 1.4e-3.
+const num = (x: number | null | undefined) => (x == null ? 'n/a' : x !== 0 && Math.abs(x) < 0.01 ? x.toExponential(1) : String(x));
+// Uploaded factors are stored as f_<name>; documents use the name people know.
+const factor = (column: string) => column.replace(/^f_/, '').replace(/_/g, ' ');
 
 function exhibit(view: CaseView, label: RegExp | string): EvidenceItem | undefined {
   return view.evidence.find((e) => (typeof label === 'string' ? e.label === label : label.test(e.label)));
 }
 const cite = (e?: EvidenceItem) => (e ? ` <span class="cite">[${e.id}]</span>` : '');
+const reEscape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The exhibit that holds what a ruled-out suspect's verdict says. Exhibits are
+ * numbered in the model's plan order, so their position says nothing; the
+ * suspect's own adjustments say which test decided it.
+ */
+function verdictExhibit(view: CaseView, h: HypothesisNode): EvidenceItem | undefined {
+  const verdict = h.verdict ?? '';
+  // Whole tokens only: "p = 0.2" is not quoted by "p = 0.23", nor "B" by "CB-B-0917".
+  const quotes = (s: string) => new RegExp(`(?<![\\w-])${reEscape(s)}(?![\\w-]|\\.\\d)`).test(verdict);
+  // Not material once the other causes are excluded: the exclusion query.
+  const excluded = exhibit(view, `${h.id} excluding other causes`);
+  if (excluded) return excluded;
+  if (h.status === 'CONFOUNDED') {
+    const adj = h.adjusted ?? [];
+    const groupOf = (label: string) => label.replace(/^[^=]+ = '([\s\S]*)'$/, '$1').replace(/''/g, "'");
+    // A confounder: the adjusted test whose p-value the verdict quotes.
+    // Redundant: the aliased test against the more specific group it names.
+    const pair =
+      adj.find((a) => !a.aliased && quotes(a.pLabel)) ??
+      adj.filter((a) => a.aliased && quotes(groupOf(a.controlLabel))).sort((a, b) => groupOf(b.controlLabel).length - groupOf(a.controlLabel).length)[0];
+    if (pair) return exhibit(view, `${h.id} | ${pair.controlFor}`);
+  }
+  // No association, or not material on its own: the screen holds the rates.
+  return exhibit(view, `${h.id} screen`);
+}
 
 function page(title: string, subtitle: string, view: CaseView, body: string) {
   const issued = new Date().toISOString().slice(0, 10);
@@ -68,13 +99,13 @@ function ruledOut(view: CaseView, c: CauseFinding) {
   const node = view.hypotheses.find((h) => h.id === c.hypothesisId);
   const others = view.hypotheses.filter((h) => h.id !== c.hypothesisId && !view.action?.causes.some((x) => x.hypothesisId === h.id));
   const adj = (node?.adjusted ?? [])
-    .map((a) => `<tr><td>${esc(a.controlLabel)}</td><td class="mono">${esc(a.pLabel)}</td><td class="num">${a.aliased ? 'aliased' : a.commonOddsRatio.toFixed(1)}</td></tr>`)
+    .map((a) => `<tr><td>${esc(a.controlLabel.replace(/^f_/, ''))}</td><td class="mono">${esc(a.pLabel)}</td><td class="num">${a.aliased ? 'aliased' : a.commonOddsRatio.toFixed(1)}</td></tr>`)
     .join('');
   return `<h3>Other explanations tested</h3>
 <table><thead><tr><th>Suspect</th><th>Result</th><th>Why</th></tr></thead><tbody>${others
     .map(
       (h) =>
-        `<tr><td>${esc(h.title)}</td><td class="${h.status === 'CONFOUNDED' ? 'confounder' : ''}">${h.status === 'CONFOUNDED' ? 'Confounder (ruled out)' : h.status === 'NO_ASSOCIATION' ? 'No association' : esc(h.status)}</td><td>${esc(h.verdict ?? '')}${h.evidenceIds.length ? ` <span class="cite">[${h.evidenceIds.slice(-1)[0]}]</span>` : ''}</td></tr>`
+        `<tr><td>${esc(h.title)}</td><td class="${h.status === 'CONFOUNDED' ? 'confounder' : ''}">${h.status === 'CONFOUNDED' ? 'Confounder (ruled out)' : h.status === 'NO_ASSOCIATION' ? 'No association' : esc(h.status)}</td><td>${esc(h.verdict ?? '')}${cite(verdictExhibit(view, h))}</td></tr>`
     )
     .join('')}</tbody></table>
 ${adj ? `<h3>${esc(c.group)} after controlling for each other factor (Cochran–Mantel–Haenszel)</h3><table><thead><tr><th>Controlled for</th><th>Adjusted p</th><th class="num">Common odds ratio</th></tr></thead><tbody>${adj}</tbody></table>` : ''}`;
@@ -86,7 +117,7 @@ function causeFacts(view: CaseView, c: CauseFinding) {
   const coverage = exhibit(view, 'Combined coverage');
   const signature = exhibit(view, `Symptom concordance ${c.group}`);
   return `<table><tbody>
-<tr><th>Cause</th><td>${esc(c.title)}: <b>${esc(c.column.replace(/^f_/, '').replace(/_/g, ' '))} = ${esc(c.group)}</b>${c.supplier ? ` (supplier ${esc(c.supplier)})` : ''}</td></tr>
+<tr><th>Cause</th><td>${esc(c.title)}: <b>${esc(factor(c.column))} = ${esc(c.group)}</b>${c.supplier ? ` (supplier ${esc(c.supplier)})` : ''}</td></tr>
 <tr><th>Units in scope</th><td>${n(c.units)}${c.lots.length ? ` in ${c.lots.length} lot${c.lots.length > 1 ? 's' : ''}: ${c.lots.map((l) => `${esc(l.lot_id)} (SN-${l.serial_start} to SN-${l.serial_end}, built ${l.build_start} to ${l.build_end})`).join('; ')}` : ''}${cite(scope)}</td></tr>
 <tr><th>Failures</th><td>${n(c.failures)} incidents; failure rate ${rate(c.ratePer10k)} (95% CI ${rate(c.rateCI.lo)} to ${rate(c.rateCI.hi)}) against ${rate(c.baseRatePer10k)} for all other units${cite(screen)}</td></tr>
 <tr><th>Relative risk</th><td>${c.rr.rr.toFixed(1)}x (95% CI ${c.rr.lo.toFixed(1)} to ${c.rr.hi.toFixed(1)})</td></tr>
@@ -95,7 +126,23 @@ ${c.concordance.claims ? `<tr><th>Failure signature</th><td>${(c.concordance.sha
 </tbody></table>`;
 }
 
+// Only a live model reading that judges the damage a manufacturing defect is
+// evidence. The offline reference describes the bundled sample photo, not this product.
+function photo(view: CaseView) {
+  const v = view.vision;
+  if (!v) return '';
+  const ex = cite(view.evidence.find((e) => e.kind === 'vision'));
+  if (v.live && v.isManufacturingDefectLikely)
+    return `<h3>Physical evidence</h3><p>${esc(v.visualEvidenceSummary)} (failure mode: ${esc(v.physicalFailureMode)}; component: ${esc(v.suspectedComponent)})${ex}</p>`;
+  return `<h3>Photo analysis (not evidence)</h3><p>${
+    v.live
+      ? `${esc(v.model)} judged that the photo does not show a manufacturing defect (${esc(v.physicalFailureMode)}), so this claim does not rely on it.`
+      : 'No model analysed the photo. The case holds only the offline reference analysis of the bundled sample photo, which is not evidence.'
+  }${ex}</p>`;
+}
+
 export function supplierPacket(view: CaseView): string {
+  if (!view.gate?.pass) throw new Error('No supplier claim: the evidence gate did not pass');
   const causes = (view.action?.causes ?? []).filter((c) => c.remedy === 'QUARANTINE');
   if (!causes.length) throw new Error('No physical cause to dispute with a supplier');
   const body = causes
@@ -107,7 +154,7 @@ export function supplierPacket(view: CaseView): string {
 <p>We hold that the parts identified below were defective when delivered, and that the defect caused the field incidents listed. The finding is statistical and was reached after every other recorded explanation was tested and excluded.</p>
 ${causeFacts(view, c)}
 ${ruledOut(view, c)}
-${view.vision ? `<h3>Physical evidence</h3><p>${esc(view.vision.visualEvidenceSummary)} (failure mode: ${esc(view.vision.physicalFailureMode)}; component: ${esc(view.vision.suspectedComponent)})${cite(view.evidence.find((e) => e.kind === 'vision'))}</p>` : ''}
+${photo(view)}
 <h3>Amount claimed</h3>
 <table><tbody><tr><th>Units quarantined</th><td class="num">${n(c.units)}</td></tr><tr><th>Cost per unit (logistics, replacement, handling)</th><td class="num">${usd(perUnit)}</td></tr><tr><th>Total</th><td class="num"><b>${usd(claim)}</b></td></tr></tbody></table>
 <h3>Requested remedy</h3>
@@ -124,21 +171,44 @@ export function eightD(view: CaseView): string {
   const gate = view.gate;
   const fals = causes.flatMap((c) => c.falsifiers.map((f) => ({ c, f })));
   const timeline = view.timeline;
+  const passed = Boolean(gate?.pass);
+  const failed = (gate?.criteria ?? []).filter((c) => !c.na && !c.pass).map((c) => c.label);
+  // Say who did what in this run: a run without a model has no model to credit.
+  const team = [
+    view.plan?.source === 'nemotron' ? `${view.plan.via ?? 'Nemotron'} ranked the suspects` : 'suspects tested in catalog order, no model',
+    view.narrative ? (view.narrative.source === 'nemotron' ? `${view.narrative.via ?? 'Nemotron'} wrote the explanation` : 'explanation from a labelled template, no model') : null,
+    'deterministic statistics decide',
+  ].filter(Boolean);
+  // D2 is built from the record, never from the model's prose: the screen of
+  // every unit gives the totals, the combined-coverage query what the causes explain.
+  const totals = view.hypotheses.find((h) => h.rawTest)?.rawTest?.groups.reduce((a, g) => ({ units: a.units + g.units, failures: a.failures + g.failures }), { units: 0, failures: 0 });
+  const what = custom ? 'failures' : 'thermal incidents';
+  const problem = totals
+    ? `${n(totals.failures)} ${what} recorded among ${n(totals.units)} units in the field. ${
+        plan
+          ? `${n(plan.incidentsSoFar)} of them (${((plan.incidentsSoFar / Math.max(1, totals.failures)) * 100).toFixed(1)}% of ${what}) involve ${causes.map((c) => `${factor(c.column)} ${c.group}`).join(' or ')}.`
+          : 'No cause was confirmed.'
+      }`
+    : custom
+      ? 'Failures recorded in the uploaded data.'
+      : 'Thermal incidents reported in the field.';
+  const remedyLabel = (c: CauseFinding) => (c.remedy === 'QUARANTINE' ? 'Quarantine' : c.remedy === 'OTA_ROLLBACK' ? 'OTA rollback' : c.remedy.replace('_', ' ').toLowerCase());
   const body = `
 <h2>D1. Team</h2>
-<table><tbody><tr><th>Investigation</th><td>Traceon agent (Nemotron plans and explains; deterministic statistics decide)</td></tr><tr><th>Quality lead</th><td>&nbsp;</td></tr><tr><th>Supplier quality</th><td>&nbsp;</td></tr><tr><th>Field service</th><td>&nbsp;</td></tr></tbody></table>
+<table><tbody><tr><th>Investigation</th><td>Traceon agent (${esc(team.join('; '))})</td></tr><tr><th>Quality lead</th><td>&nbsp;</td></tr><tr><th>Supplier quality</th><td>&nbsp;</td></tr><tr><th>Field service</th><td>&nbsp;</td></tr></tbody></table>
 <h2>D2. Problem description</h2>
-<p>${esc(plan ? `${n(plan.incidentsSoFar)} ${custom ? 'failures' : 'thermal incidents'} explained among ${n(plan.blanketUnits)} units in the field.` : custom ? 'Failures recorded in the uploaded data.' : 'Thermal incidents reported in the field.')} ${esc(view.narrative?.text.split('\n')[0] ?? '')}</p>
+<p>${esc(problem)}${plan ? cite(exhibit(view, 'Combined coverage')) : ''}</p>
 <h2>D3. Containment</h2>
-${plan ? `<p>${causes.map((c) => `${esc(c.remedy === 'QUARANTINE' ? 'Quarantine' : c.remedy.replace('_', ' ').toLowerCase())} of ${n(c.units)} units (${esc(c.column.replace(/_/g, ' '))} ${esc(c.group)})`).join('; ')}, instead of recalling all ${n(plan.blanketUnits)} units. Cost ${usd(plan.surgicalCostUsd)} against ${usd(plan.blanketCostUsd)} for a blanket recall. Without containment, about ${plan.projectedIncidents30d} more incidents are projected in 30 days (90% range ${plan.projectedRange.lo} to ${plan.projectedRange.hi}).</p>` : '<p>No containment: the evidence gate did not pass.</p>'}
+${plan && passed ? `<p>${causes.map((c) => `${esc(remedyLabel(c))} of ${n(c.units)} units (${esc(factor(c.column))} ${esc(c.group)})`).join('; ')}, instead of recalling all ${n(plan.blanketUnits)} units. Cost ${usd(plan.surgicalCostUsd)} against ${usd(plan.blanketCostUsd)} for a blanket recall. Without containment, about ${plan.projectedIncidents30d} more incidents are projected in 30 days (90% range ${plan.projectedRange.lo} to ${plan.projectedRange.hi}).</p>` : '<p>No containment: the evidence gate did not pass.</p>'}
 <h2>D4. Root cause</h2>
+${causes.length && !passed ? `<p>Not confirmed: the evidence gate did not pass${failed.length ? ` (failed: ${esc(failed.join('; '))})` : ''}. The suspects below are shown for review, not as root causes.</p>` : ''}
 ${causes.map((c) => causeFacts(view, c) + ruledOut(view, c)).join('') || '<p>No root cause confirmed.</p>'}
 ${view.redteam ? `<h3>Challenges to the verdict</h3><table><thead><tr><th>Objection</th><th>Answer from the evidence</th></tr></thead><tbody>${view.redteam.objections.map((o) => `<tr><td>${esc(o.objection)}</td><td class="${o.survived ? 'ok' : 'bad'}">${esc(o.result)}</td></tr>`).join('')}</tbody></table>` : ''}
 <h2>D5. Permanent corrective actions</h2>
-${causes.length ? `<ul>${causes.map((c) => `<li>${c.remedy === 'OTA_ROLLBACK' ? `Roll back firmware ${esc(c.group)} and release a fixed version` : c.remedy === 'CARRIER_INSPECTION' ? `Inspect and requalify carrier ${esc(c.group)}` : c.remedy === 'QUARANTINE' ? `Reject the affected material (${esc(c.group)}) and require the supplier's corrective action` : `Customer advisory for ${esc(c.group)}`}</li>`).join('')}</ul>` : '<p>None.</p>'}
+${!causes.length ? '<p>None.</p>' : !passed ? '<p>None: the evidence gate did not pass.</p>' : `<ul>${causes.map((c) => `<li>${c.remedy === 'OTA_ROLLBACK' ? `Roll back firmware ${esc(c.group)} and release a fixed version` : c.remedy === 'CARRIER_INSPECTION' ? `Inspect and requalify carrier ${esc(c.group)}` : c.remedy === 'QUARANTINE' ? `Reject the affected material (${esc(c.group)}) and require the supplier's corrective action` : `Customer advisory for ${esc(c.group)}`}</li>`).join('')}</ul>`}
 <h2>D6. Implement and validate</h2>
-<p>The fix is validated if none of these pre-registered conditions occurs after it is applied:</p>
-<table><thead><tr><th>Condition</th><th>Rule</th><th class="num">Now</th><th class="num">Threshold</th></tr></thead><tbody>${fals.map(({ f }) => `<tr><td>${esc(f.label)}</td><td>${esc(f.rule)}</td><td class="num">${f.current ?? 'n/a'}</td><td class="num">${f.threshold ?? 'n/a'}</td></tr>`).join('')}</tbody></table>
+${passed ? `<p>The fix is validated if none of these pre-registered conditions occurs after it is applied:</p>
+<table><thead><tr><th>Condition</th><th>Rule</th><th class="num">Now</th><th class="num">Threshold</th></tr></thead><tbody>${fals.map(({ f }) => `<tr><td>${esc(f.label)}</td><td>${esc(f.rule)}</td><td class="num">${num(f.current)}</td><td class="num">${num(f.threshold)}</td></tr>`).join('')}</tbody></table>` : '<p>No fix to validate: the evidence gate did not pass.</p>'}
 <h2>D7. Prevent recurrence</h2>
 <p>${timeline?.alertDate ? `A daily screen of this kind would have raised the alert on ${esc(timeline.alertDate)}, after ${timeline.claimsAtAlert} claims; ${timeline.claimsAfterAlert} later claims could have been avoided.` : 'Add the factors tested here to the daily warranty screen.'} Keep the same factors under continuous watch, with the same multiple-testing bar.</p>
 ${gate ? `<h3>Evidence gate at closure</h3><table><tbody>${gate.criteria.map((c) => `<tr><td>${esc(c.label)}</td><td class="${c.na ? '' : c.pass ? 'ok' : 'bad'}">${c.na ? 'N/A' : c.pass ? 'Pass' : 'Fail'}</td><td>${esc(c.detail)}</td></tr>`).join('')}</tbody></table>` : ''}

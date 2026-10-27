@@ -3,7 +3,7 @@
 // one of them reads exactly what the agent produced.
 import type { ActionPlan, EvidenceItem, ForestRow, GateCriterion, HypothesisNode, InvestigationEvent, Reveal, RobustnessRow } from './investigation';
 import { getRun } from './runRegistry';
-import { getCase } from './cases';
+import { caseForRun, getCase } from './cases';
 
 type Ev<T extends InvestigationEvent['type']> = Extract<InvestigationEvent, { type: T }>;
 
@@ -59,10 +59,10 @@ export function buildCaseView(events: InvestigationEvent[]): CaseView {
   };
 }
 
-/** Events of a run still in the registry, or of a case saved for review. */
+/** Events of a run still in the registry, or of a case saved for review (by its id, or by the id of the run it was shared from). */
 export function loadEvents(id: string): InvestigationEvent[] | null {
   const run = getRun(id);
   if (run) return run.events;
-  const saved = getCase(id);
+  const saved = getCase(id) ?? caseForRun(id);
   return saved ? saved.events : null;
 }
