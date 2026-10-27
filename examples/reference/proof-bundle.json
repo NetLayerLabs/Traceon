@@ -1,6 +1,6 @@
 {
  "scenario": "reference",
- "ledgerRoot": "d6e931f849d0e81cf0dcbf3b71a41e7b6dc7731e0e628ae32269b435eeba4793",
+ "ledgerRoot": "d7b6a08c0d27633042872e3b31d343b1198ee48a5f30ae94fe276d11e8eaec7d",
  "evidence": [
   {
    "kind": "feed",
@@ -650,7 +650,7 @@
        "lo": 9.883654020311628,
        "hi": 59.14434607796569
       },
-      "verdict": "Ruled out as a confounder. BMS-Orion only looks guilty because it shares units with CB-B-0917; holding cell_batch fixed, the effect disappears (p = 0.76).",
+      "verdict": "Ruled out as a confounder. BMS-Orion only looks guilty because it shares units with CB-B-0917; holding cell_batch fixed, the effect disappears (p = 0.97).",
       "adjusted": [
        {
         "controlFor": "H-HEAT",
@@ -679,8 +679,8 @@
        {
         "controlFor": "H-BATCH",
         "controlLabel": "cell_batch = 'CB-B-0917'",
-        "pLabel": "p = 0.76",
-        "p": 0.7649173488663676,
+        "pLabel": "p = 0.97",
+        "p": 0.972611706597843,
         "commonOddsRatio": 0.8185129808345794,
         "aliased": false
        }
@@ -795,11 +795,11 @@
        "E-39"
       ],
       "rawTest": {
-       "test": "Monte Carlo exact",
+       "test": "chi-square independence",
        "chi2": 13930.925299271197,
        "df": 59,
-       "p": 7.049139575459552e-231,
-       "negLog10P": 230.15186389016247,
+       "p": 0,
+       "negLog10P": 2945.74960615865,
        "groups": [
         {
          "group": "CB-A-0800",
@@ -1163,7 +1163,7 @@
         }
        ],
        "maxRateRatio": 271.7594202898551,
-       "pLabel": "p = 7.0e-231"
+       "pLabel": "p < 1e-300"
       },
       "hotGroup": "CB-B-0917",
       "rawRR": {
@@ -1429,7 +1429,7 @@
   {
    "kind": "sql",
    "label": "H-BATCH screen",
-   "summary": "cell_batch: chi2=13930.9, df=59, p = 7.0e-231",
+   "summary": "cell_batch: chi2=13930.9, df=59, p < 1e-300",
    "query": {
     "queryId": "Q-007",
     "sql": "SELECT cell_batch AS grp, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY cell_batch",
@@ -1746,7 +1746,7 @@
    },
    "proofHash": "632039dd82b7daf10f2bdc1d5d535e4e358c92e2895a700998ed8d2cd92263d7",
    "id": "E-14",
-   "chainHash": "9ece8bde37d5ce0aeabbb425087cd496f8c1542c7ce8f9cb641519deed11d92a"
+   "chainHash": "7d5613b41fd7e2ea33aee70f823bc61a4147776cb10a292a8ecf1e901d5cc38c"
   },
   {
    "kind": "stat",
@@ -1826,7 +1826,7 @@
     ]
    },
    "id": "E-15",
-   "chainHash": "46b6acd4e5a5bd88bc5953daaa707711620cb526032036e27068cbdeeed31a37"
+   "chainHash": "2b5872c23f578d3c6657a86f664f3ed2e213559ba107095cf61c69525046ef74"
   },
   {
    "kind": "stat",
@@ -1894,7 +1894,7 @@
     ]
    },
    "id": "E-16",
-   "chainHash": "dfad0888b6ad891ac85c4f5e6a863ef63a084ce32ed06b0ea368dd62affaef41"
+   "chainHash": "c9543763f1bf748f4303713740447fcbf7146cf7b68675b78cf970076f4d5469"
   },
   {
    "kind": "stat",
@@ -1946,7 +1946,7 @@
     ],
     "rowCount": 6,
     "proofHash": "678744b235f7c301b7b6b15dafb37bb2b76d31f9d8ac9a67de068b5d007dd3e3",
-    "latencyMs": 9,
+    "latencyMs": 10,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "678744b235f7c301b7b6b15dafb37bb2b76d31f9d8ac9a67de068b5d007dd3e3",
@@ -1974,7 +1974,7 @@
     ]
    },
    "id": "E-17",
-   "chainHash": "1b69ceda40ef815914f366b058aa321a5de9295306b21c3c3a0120f490e74292"
+   "chainHash": "de11c742febe6fe6e26aadf1bdd1d53934cee405c05acaa883d740072f5c7f82"
   },
   {
    "kind": "stat",
@@ -2738,7 +2738,7 @@
     ]
    },
    "id": "E-18",
-   "chainHash": "adc5c7276974635d2212889bd0e87afc0c0087e968d4a644cf03f36c9527f532"
+   "chainHash": "e369d09a8fab330d04fa1c97b45770360dc3ac0f4e46f841242a35761dd99aff"
   },
   {
    "kind": "stat",
@@ -2790,7 +2790,7 @@
     ],
     "rowCount": 6,
     "proofHash": "774a59e487222c036b7b2213570a4a3a98a2fbdf397dfe42b393f2607b7992b8",
-    "latencyMs": 9,
+    "latencyMs": 8,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "774a59e487222c036b7b2213570a4a3a98a2fbdf397dfe42b393f2607b7992b8",
@@ -2818,7 +2818,7 @@
     ]
    },
    "id": "E-19",
-   "chainHash": "694d0bb9cb7de88ed2bcb0ef7ca6856a84999c47b7bd0e12131ec04ff99dedba"
+   "chainHash": "88ee2a939d4ac0fca94927ed5c341dd52d7b3a59e36bd1c539cfd29b209b4086"
   },
   {
    "kind": "stat",
@@ -2898,7 +2898,7 @@
     ]
    },
    "id": "E-20",
-   "chainHash": "87d34cc9084d5ac66d3faf8cfe9bb462c9bae645f86120f497d576c430af2d43"
+   "chainHash": "197ac75eda327149d04b5cd5158664504a3cbb5bd721674e5e84a66dec91641e"
   },
   {
    "kind": "stat",
@@ -2945,7 +2945,7 @@
     "strata": []
    },
    "id": "E-21",
-   "chainHash": "66251d453b6399fa527feed95dcafd63508a2dbf0c386def0330d0c7f2042820"
+   "chainHash": "bc2278df4eae5e3a7e56ca4def322d465a6b4fcbed7894396e57894003a40ee2"
   },
   {
    "kind": "stat",
@@ -3342,7 +3342,7 @@
     ]
    },
    "id": "E-22",
-   "chainHash": "d28429acaa33b66f205dba164946424893ff0bb17ca7303c9621a26a2673f8da"
+   "chainHash": "df4d9e15b5a5bf25600a35ba4bc04d32573e69806f367a0d39872c17ce1066e0"
   },
   {
    "kind": "stat",
@@ -3382,7 +3382,7 @@
     ],
     "rowCount": 4,
     "proofHash": "3963eb1dce10ab194520c04c2c1da920bde597f1125262d380a76c3af9445fad",
-    "latencyMs": 8,
+    "latencyMs": 9,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "3963eb1dce10ab194520c04c2c1da920bde597f1125262d380a76c3af9445fad",
@@ -3410,7 +3410,7 @@
     ]
    },
    "id": "E-23",
-   "chainHash": "f1f4c04d5ec5d967053413c8791893ae9be96ad8dcb719ddc5f928d0b525dfdb"
+   "chainHash": "4cc48a1093fec9cf631c91b17a08b89cbddbb4eb8017f1ebb744ff37d3295ea4"
   },
   {
    "kind": "stat",
@@ -3490,7 +3490,7 @@
     ]
    },
    "id": "E-24",
-   "chainHash": "b37e8512c5d956a63fcbc4db51565fe5ba21d3fda68ce954394cb31ef9f07d15"
+   "chainHash": "82de93e76ab0224f8f979f6d8c3c7563a775aec16df350fc82781e634bbc727c"
   },
   {
    "kind": "stat",
@@ -3542,7 +3542,7 @@
     ],
     "rowCount": 6,
     "proofHash": "cbd5931442de353b2278c22584cdb2409b28e7dae0473742cb669ad80750a0b4",
-    "latencyMs": 8,
+    "latencyMs": 9,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "cbd5931442de353b2278c22584cdb2409b28e7dae0473742cb669ad80750a0b4",
@@ -3570,12 +3570,12 @@
     ]
    },
    "id": "E-25",
-   "chainHash": "4da0f59d9ee54b3b473e38e7d2a97158f12079cd0e964a6d6cb6c143c0c04080"
+   "chainHash": "ac44ff819d4eaae317fb20cd369895de3ea05334d1abf4845edbb76391d5ab0a"
   },
   {
    "kind": "stat",
    "label": "H-BMS | H-BATCH",
-   "summary": "CMH bms_supplier = 'BMS-Orion' controlling for cell_batch = 'CB-B-0917': p = 0.76",
+   "summary": "CMH bms_supplier = 'BMS-Orion' controlling for cell_batch = 'CB-B-0917': p = 0.97",
    "query": {
     "queryId": "Q-019",
     "sql": "SELECT bms_supplier AS exposure, cell_batch AS stratum, COUNT(*) AS units, SUM(failed) AS failures\nFROM unit_fact\nGROUP BY bms_supplier, cell_batch",
@@ -3952,9 +3952,9 @@
    "proofHash": "6c13216a602bf6632bcdc11e888d68ede5d8de3a9e2adec114ba556f7d34a585",
    "payload": {
     "test": "Cochran-Mantel-Haenszel",
-    "chi2": 0.08941878935947153,
-    "p": 0.7649173488663676,
-    "negLog10P": 0.1163854888600503,
+    "chi2": 0.0011787465863418534,
+    "p": 0.972611706597843,
+    "negLog10P": 0.012060507459340347,
     "commonOddsRatio": 0.8185129808345794,
     "strata": [
      {
@@ -3967,7 +3967,7 @@
     ]
    },
    "id": "E-26",
-   "chainHash": "b16ef893b307ede385a6bd3b9a99d9f91f3c51c02e6fd822e0d688f7b3ce680f"
+   "chainHash": "86504a552ff5287fbcc950f2006b4a77a27e7bc001b10d3dc78e86786dd9b806"
   },
   {
    "kind": "stat",
@@ -4047,7 +4047,7 @@
     ]
    },
    "id": "E-27",
-   "chainHash": "2be702b8f3a23e6942a5b3c71b6df65ee0e2cd77cf2640158286031527e53610"
+   "chainHash": "84303373bbdb14668d016a9b78a99eb84db48ce497e3f9cc54de0a24c73e1ed6"
   },
   {
    "kind": "stat",
@@ -4094,7 +4094,7 @@
     "strata": []
    },
    "id": "E-28",
-   "chainHash": "66df326b300de938b8d985bf339a7095456bbf2d438b5922e771e5fea51763c3"
+   "chainHash": "576257368d78e10e2caafc52c1958eeec3b4240d66a185254b305fca36b84081"
   },
   {
    "kind": "stat",
@@ -4174,7 +4174,7 @@
     ]
    },
    "id": "E-29",
-   "chainHash": "befcbe9af2e372feabe073035506005661afdd24c3d00828b259b5b06707fc8f"
+   "chainHash": "5a15bc1e281a965de433bd1e20b840e80a15cbe9ec22ac9e2bd4c166683fdcb3"
   },
   {
    "kind": "stat",
@@ -4550,7 +4550,7 @@
     ],
     "rowCount": 60,
     "proofHash": "a201dd208d5b062dd5def9846fb0e011c97677c753edac7f9c317389a04d66e5",
-    "latencyMs": 8,
+    "latencyMs": 9,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "a201dd208d5b062dd5def9846fb0e011c97677c753edac7f9c317389a04d66e5",
@@ -4571,7 +4571,7 @@
     ]
    },
    "id": "E-30",
-   "chainHash": "8b1b5eced0d74842a42dce832913e5ef4102474d7e028ac0ccfdd4fe7d25c4c8"
+   "chainHash": "126452f6310e3cec0e95c4837be82f219c9f43550d575b4ffb190d512d109fab"
   },
   {
    "kind": "stat",
@@ -5335,7 +5335,7 @@
     ]
    },
    "id": "E-31",
-   "chainHash": "283cb105f89c37794157942fa61fb8efa09ff976ad310f1c4c3b4864a1ad8ca4"
+   "chainHash": "050ebc7035640935e70fe1ca6632f2066473b3835519dc368e26206e09e9e025"
   },
   {
    "kind": "stat",
@@ -5732,7 +5732,7 @@
     ]
    },
    "id": "E-32",
-   "chainHash": "7f0884abc3bfe363dda10612a6d15986507ee9bfd96d79d98ee33cedb5a3564f"
+   "chainHash": "ab5b2023fa32748047aa0a0abcdfbe3f504e2de501e2280712b98a8da7c1d03e"
   },
   {
    "kind": "stat",
@@ -6129,7 +6129,7 @@
     ]
    },
    "id": "E-33",
-   "chainHash": "fd25a2745eb3822b2b53c89f9747e8eeb95e2538b09b1db8a106c704d0ae5069"
+   "chainHash": "d43b6db8a44a8db104dff5419169708b37667ac9d9d60e38b097ab340f608ef4"
   },
   {
    "kind": "stat",
@@ -6526,7 +6526,7 @@
     ]
    },
    "id": "E-34",
-   "chainHash": "3178935df83d417c497a3d9625126369fbb92d0fdcd20cb476a8ac2bfb1f0416"
+   "chainHash": "f9ca905c9148587da2ea2e7290d02e0c06b6d0ca8423206b74f4f5cddb6b64c3"
   },
   {
    "kind": "stat",
@@ -7627,7 +7627,7 @@
    },
    "proofHash": "43f3bf6b7414a93ff50f96ab4744aeb249125056b97dd74b72c0d87be4b4a2ed",
    "id": "E-35",
-   "chainHash": "61d3371bfd4b831e4f761e928e8c57f9ba0fead3a427dad30f2da07e90252ddd"
+   "chainHash": "e67797828c5b6aa89578d0092a9703501ccdaf1a038ff296bdd9d8ada3b2fee0"
   },
   {
    "kind": "stat",
@@ -8728,7 +8728,7 @@
    },
    "proofHash": "deaca4a2f3ccd4b286a22e357591d7d8df08b9bc8d6eb0ce9aca707d489aabf6",
    "id": "E-36",
-   "chainHash": "3d2b4a1b74d128f2e167959d8c25a02b55b585354ac73623f4276dfa4f689d79"
+   "chainHash": "0efacc0cd19592eed1f976c002e894029f1b60fe16592427043a944142c8f3cf"
   },
   {
    "kind": "stat",
@@ -9469,7 +9469,7 @@
    },
    "proofHash": "9f0eed4aeacf9b28d55f5a2bd1ebd0cf7e6041ff5756b44ec4b3b4e16c344ce5",
    "id": "E-37",
-   "chainHash": "7ae6aa95986eb94cc4b89e1d1362eb87c398fb4ff2b5e91f60db06821ff1b58b"
+   "chainHash": "2ea39e61c78d7e5e90a69e46430b3d3a5d592b4a347a6f084ea3e9b65b4c8a9d"
   },
   {
    "kind": "stat",
@@ -9850,7 +9850,7 @@
    },
    "proofHash": "faff08de2ee25614b9a9d13853765957c952007e77330a84cb4f6222c8413580",
    "id": "E-38",
-   "chainHash": "2d2ac8c739ffe8fa5e289b33a2154ac0a74ae0958de5d315fbdd23a6c83eb915"
+   "chainHash": "a50d95d3ace8d6214095e6f3e033d5b65ea9dffcdfd04fd3a8f5b478940acc84"
   },
   {
    "kind": "stat",
@@ -12380,12 +12380,12 @@
     ],
     "rowCount": 419,
     "proofHash": "e94203775d75915bf16cf594a4cb98dafa118fc4bdf2885898b522cd983d4c91",
-    "latencyMs": 11,
+    "latencyMs": 10,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "e94203775d75915bf16cf594a4cb98dafa118fc4bdf2885898b522cd983d4c91",
    "id": "E-39",
-   "chainHash": "0f87e4e73ae1028ba9f03aac2a002509f8ef00365db5f97a38925a9de0aeee1a"
+   "chainHash": "ba7f9f310a24af784bb0128976bfce8ca72e9a6e468f0087d8a927b6e6961370"
   },
   {
    "kind": "sql",
@@ -12419,7 +12419,7 @@
    },
    "proofHash": "cb201dd7e62bc0cc924bcb2523bd606c19fcbcf4df8b5705db805cb297f1a736",
    "id": "E-40",
-   "chainHash": "e51770b5e758148c5af9bc34a234b38ef8e064531096510922fb657ee6757e98"
+   "chainHash": "19df05fa526e553d817fadc483cd40248a2d941499f8cf219e23db5d6aafd48c"
   },
   {
    "kind": "sql",
@@ -12456,7 +12456,7 @@
    },
    "proofHash": "9e59ac8bc7e7b038aaf5346c0cb36a574bb715c7d164e8b9072413da6ed64ae0",
    "id": "E-41",
-   "chainHash": "3caac5351f7671892c8d6eb29e26f7531ef1fd6bbbcef14f9ea566025f3de810"
+   "chainHash": "de8f981e8ed775dd7eb28e2f04410e7743c32992e6a63f8e451eeee15a65eaeb"
   },
   {
    "kind": "sql",
@@ -13053,12 +13053,12 @@
     ],
     "rowCount": 116,
     "proofHash": "c5201db273ef6878110aaa4b638b0840adfed4edcd40ef5cc325f0592e8773df",
-    "latencyMs": 45,
+    "latencyMs": 48,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "c5201db273ef6878110aaa4b638b0840adfed4edcd40ef5cc325f0592e8773df",
    "id": "E-42",
-   "chainHash": "bae1aa8840aaf433dfa7bcf962c87fc365e3fade39b7858de69c9b2bbef52116"
+   "chainHash": "0f3417f90a8ebea94505e55bfd4451c11afbc7225bba1d791cfb10239545775a"
   },
   {
    "kind": "sql",
@@ -13082,12 +13082,12 @@
     ],
     "rowCount": 2,
     "proofHash": "97aa72ce3b5ca42897da0137ce7334a741f0880ed0a21a42b2273dd6ebe751fe",
-    "latencyMs": 15,
+    "latencyMs": 17,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "97aa72ce3b5ca42897da0137ce7334a741f0880ed0a21a42b2273dd6ebe751fe",
    "id": "E-43",
-   "chainHash": "4dc849575a044722d7c770a156e1e6a6c1d7cfd18b359b80193b0e5a3e242887"
+   "chainHash": "296f41e47dc2a842222bf53f15461508f1bc74c09e229941fdae820243bff38d"
   },
   {
    "kind": "sql",
@@ -13145,7 +13145,7 @@
    },
    "proofHash": "7f3c13d9e65d250e1332099a9c768ba81d8be95b8f99668957f1c8d0fe00cc0b",
    "id": "E-44",
-   "chainHash": "21006fbff3716582abe38b45f642df7e9b456ba65d37ac17981de4c09de34e1e"
+   "chainHash": "d1360423e9379e20d059117eafe5949b95ab1bcc7aa4c3327988af47a9c9fc3e"
   },
   {
    "kind": "sql",
@@ -13182,7 +13182,7 @@
    },
    "proofHash": "e1ec376d994fc971c3d867e335bf8ecadd873cda55234fd5ff931d843ca3d4f4",
    "id": "E-45",
-   "chainHash": "9924807dd8239f69532a0b364a4898cea19a74fbf1b122e4afeb966d66f3b0cf"
+   "chainHash": "44c7c56d8c31b6c5528a2d3f6031f9ad46dd8f1fa55ae941652bbdaf84b6b6a8"
   },
   {
    "kind": "sql",
@@ -13219,7 +13219,7 @@
    },
    "proofHash": "add11d6d19ce40d5860e91108b53ccd74ccda56c6536c5d40dbd3af585d57e7e",
    "id": "E-46",
-   "chainHash": "ee51c9ef8b9a7323901c3de041b28558bf82af1452b387862670f915aaf867ca"
+   "chainHash": "f822c24c21f2000ca3ce67f9f6289cdb401d375b8f8d68c1b010d581c58e665e"
   },
   {
    "kind": "sql",
@@ -13251,7 +13251,7 @@
    },
    "proofHash": "c88cf3e45f31b462513034f654fb03ec7beb756dd83e3b7a8d19c2aff1fdd3d3",
    "id": "E-47",
-   "chainHash": "a03b4e222e4709232fa1275ac6e81966ea1165da4541afe935ae6858f2634a9b"
+   "chainHash": "bb73923eaf9a19126e3872ef460798d9119203ff150c1a8d8f194c4de5845f8c"
   },
   {
    "kind": "sql",
@@ -13288,7 +13288,7 @@
    },
    "proofHash": "e77d068bf50810b0bc2a36970393af6fc5a80d4817dbd06b67baf354c5018037",
    "id": "E-48",
-   "chainHash": "773059cf26b62f3f3ce0eea1a1dbb6c7db5d478d0dcf4d207227117a4222300f"
+   "chainHash": "16a4f4822f40ac33af7b50ee542554782bc844cfc48ac83bca76c99fc3062694"
   },
   {
    "kind": "sql",
@@ -13320,7 +13320,7 @@
    },
    "proofHash": "8c452ea876acaf49734b5eae2e3cd5899c0a61daac457c46df732f20c2ba8461",
    "id": "E-49",
-   "chainHash": "25087c43b4808ae9e6623f676031ca653d0fa754ac4d94ad054c9cec7af7b164"
+   "chainHash": "9a63d48e11ebdaae37a9718739141f90cf416adc55e754d7aaa97c16b2200b8e"
   },
   {
    "kind": "sql",
@@ -13352,12 +13352,12 @@
     ],
     "rowCount": 3,
     "proofHash": "4cbc87d02c5b6b8141af9d8282c484542cb4d40bb94d0cbaffe5f5aa9724acb0",
-    "latencyMs": 6,
+    "latencyMs": 5,
     "executedVia": "LOCAL_FEDERATED_MIRROR"
    },
    "proofHash": "4cbc87d02c5b6b8141af9d8282c484542cb4d40bb94d0cbaffe5f5aa9724acb0",
    "id": "E-50",
-   "chainHash": "ba32fa8b48eebdd23eb1245c51eec0673d4ff0c21455386887ac418929356346"
+   "chainHash": "a45a4e5f754fe21d79faf953dead0ab17b14e1a1eab6aa567707fd7590a8c205"
   },
   {
    "kind": "sql",
@@ -13674,7 +13674,7 @@
    },
    "proofHash": "2303cf641400d3d0d392188c909db87e2757497e259e169cf41039e60e031939",
    "id": "E-51",
-   "chainHash": "356052ed7c8a70414406d243efecab418b498a6a9c3ec998abf555295cb299b4"
+   "chainHash": "b0b28f47fc55b2975f9d63e78933a22571d2942b81e64623601d28f6964f21b3"
   },
   {
    "kind": "model",
@@ -13706,7 +13706,7 @@
       "objection": "With this many groups tested, one will look bad by chance.",
       "check": "chance",
       "survived": true,
-      "result": "CB-B-0917: p = 7.0e-231 after testing 7 hypotheses; Bonferroni alpha 1.4e-3"
+      "result": "CB-B-0917: p < 1e-300 after testing 7 hypotheses; Bonferroni alpha 1.4e-3"
      },
      {
       "objection": "Maybe the problem is broader and we are about to under-recall.",
@@ -13724,8 +13724,8 @@
     "reasoning": ""
    },
    "id": "E-52",
-   "proofHash": "098ed326bbc22e07f78e25eb43e844d15b5cab1843d2013dd803525a42a4f223",
-   "chainHash": "f483173aeb91ad9fd3d6c6974a261164b25b3629ec341a6afe5648960090856d"
+   "proofHash": "ce738b75f33b3becc625c7d6225aabcaa94fe25b068b259b0b31d8b7ec777acc",
+   "chainHash": "c2cc2520c88ceea0bf4d07f473e073c8c0856566c2c84e272992d7d139a298dc"
   },
   {
    "kind": "stat",
@@ -13937,22 +13937,22 @@
      {
       "date": "2026-10-10",
       "claims": 3,
-      "negLog10P": 4
+      "negLog10P": 36.6
      },
      {
       "date": "2026-10-11",
       "claims": 8,
-      "negLog10P": 13.23
+      "negLog10P": 60
      },
      {
       "date": "2026-10-12",
       "claims": 16,
-      "negLog10P": 28.95
+      "negLog10P": 60
      },
      {
       "date": "2026-10-13",
       "claims": 23,
-      "negLog10P": 43.08
+      "negLog10P": 60
      },
      {
       "date": "2026-10-14",
@@ -14017,8 +14017,8 @@
     "claimsAfterAlert": 113
    },
    "id": "E-53",
-   "proofHash": "9cd790be551d6a56e486d32775d326147ad0d67951de029520420e67912a2c34",
-   "chainHash": "e0315f83daf6e17e8dc3854981de66d3f0989fffc228d430dd4c781a30fef4aa"
+   "proofHash": "4f879c4ba250e0d53373b282683cce5e4f4083045eec34352415907a9573a2df",
+   "chainHash": "5f27977f1fa449ae40cdf4cbf09dcca49cb63d8062682c01436444fa7f460e8e"
   },
   {
    "kind": "sql",
@@ -14043,7 +14043,7 @@
    },
    "proofHash": "803c6b79ef7de9ac12a6e71261fddd6ea769655064b1a08b8fd80eacd1d09f99",
    "id": "E-54",
-   "chainHash": "3bce8457e5395ff236b7cbe910ea016428e6a374b7525cebfa419257cde61d93"
+   "chainHash": "b11d677a4f743e3ea2a1f35e8bf2648fab09da9389c9e0e77f7bda3afddb3ba2"
   },
   {
    "kind": "sql",
@@ -14069,7 +14069,7 @@
    },
    "proofHash": "a6762c10c70083bb711ff6b9da2cbadca90cb0835053b615c89015003a550b59",
    "id": "E-55",
-   "chainHash": "7715895568ad6b9a96b8322e90a15fcb84389f1eea2f272c9493c048a9bc81c9"
+   "chainHash": "6059c1927f9af1dc39e5887016535e866c9a1c43a280027d81d5114b0d60739c"
   },
   {
    "kind": "model",
@@ -14078,7 +14078,7 @@
    "payload": "Traceon traced 116 thermal incidents on the VR-48 pack to Defective cell batch: Supplier B CB-B-0917 (116 incidents, 1668x the baseline rate; L-409 (plant P2, built 2026-10-02 to 2026-10-04, serials SN-88400 to SN-89779)). Together they account for 92.8% of all thermal claims.\n\nFirmware overcharge bug, Carrier transit shock showed no significant association. Sun Belt heat exposure, Plant assembly defect, BMS board supplier, Cell supplier quality looked guilty on raw numbers only because they share units with the real cause; holding the cause fixed, the effect is no longer significant.\n\nEach confirmed cause survives adjustment for every other factor, holds across firmware, carrier, climate and warehouse subgroups, and has a consistent failure signature.\n\nRecommended action: surgical quarantine for 1,380 units, instead of recalling 180,000, saving $4,465,500. Without action, a constant-hazard projection gives about 200 more incidents in 30 days. This was detectable on 2026-10-10, after 3 claims.",
    "id": "E-56",
    "proofHash": "ef908f2f04aa21cab20c5592833323145e29b02b72fa3568b2ac4a467901e4a0",
-   "chainHash": "d6e931f849d0e81cf0dcbf3b71a41e7b6dc7731e0e628ae32269b435eeba4793"
+   "chainHash": "d7b6a08c0d27633042872e3b31d343b1198ee48a5f30ae94fe276d11e8eaec7d"
   }
  ]
 }

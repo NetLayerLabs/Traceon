@@ -1,14 +1,14 @@
 # Traceon sample run
 
-Run 2026-10-27T01:15:53.398Z: offline, no keys, no network. Model steps use labelled templates; every statistic, verdict and proof is computed exactly as in live mode.
+Run 2026-10-27T01:24:28.945Z: offline, no keys, no network. Model steps use labelled templates; every statistic, verdict and proof is computed exactly as in live mode.
 
 ## 1. Reference case: 125 thermal claims, seven suspects
 - Verdict: **cell_batch = CB-B-0917**, relative risk 1668x, explains 92.8% of incidents
 - Ruled out as confounders: Sun Belt heat exposure, Plant assembly defect, BMS board supplier, Cell supplier quality
 - Evidence gate: PASSED (7/7 criteria)
 - Action: hold 1,380 units instead of recalling 180,000, saving $4,465,500
-- Proof: 56 exhibits; replayed 46 SQL queries, root matches (d6e931f849d0e81c…)
-- 1.1 s
+- Proof: 56 exhibits; replayed 46 SQL queries, root matches (d7b6a08c0d276330…)
+- 1.0 s
 - Outputs in reference/, next to this summary: proof bundle, replay result, explanation, 8D report and supplier claim
 
 ## 2. Verify the fix (simulated 30 days)
@@ -28,7 +28,7 @@ Run 2026-10-27T01:15:53.398Z: offline, no keys, no network. Model steps use labe
 - Verdict: resin_lot=R-2207; night shift: ruled out as a confounder; gate PASSED
 
 ## 5. Real uploaded data: Backblaze hard drives, Q2 2026 (355,689 drives)
-- Worst model: HGST HUH721212ALN604 (p = 1.1e-57); gate BLOCKED
+- Worst model: HGST HUH721212ALN604 (p = 2.9e-205); gate BLOCKED
 - model: Not material on its own. With sac2 excluded, HGST HUH721212ALN604 fails at 42/10k vs 34/10k for the rest (RR 1.2, below the 2x bar): its excess is concentrated where sac2 is.
 - datacenter: Not material on its own. With HGST HUH721212ALN604 excluded, sac2 fails at 56/10k vs 34/10k for the rest (RR 1.6, below the 2x bar): its excess is concentrated where HGST HUH721212ALN604 is.
 - age_band: Ruled out as a confounder. 7y+ only looks guilty because it shares units with HGST HUH721212ALN604; holding model fixed, the effect disappears (p = 0.16).
