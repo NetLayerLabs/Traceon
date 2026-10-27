@@ -11,7 +11,7 @@ import crypto from 'node:crypto';
 import { AS_OF, getEnterpriseMesh, PRODUCT_NAME, scenarioTruth, SKU, UNIT_COST_USD } from './enterpriseData';
 import { convergeSignals, ingestSignals, readWorldModel, runBoundedChain, updateWorldModel } from './meterless';
 import type { Convergence, IncomingSignal } from './meterless';
-import { aiName, aiPrimaryName, extractJson, nemotronChat, NEMOTRON_FAST_MODEL, NO_PROVIDER } from './nemotron';
+import { aiLive, aiName, aiPrimaryName, extractJson, nemotronChat, NEMOTRON_FAST_MODEL, NO_PROVIDER } from './nemotron';
 import { recordScore } from './scoreboard';
 import { fetchAllFeeds } from './signals';
 import type { FeedResult } from './signals';
@@ -55,6 +55,8 @@ export interface HypothesisNode {
   rawRR?: { rr: number; lo: number; hi: number };
   adjusted?: { controlFor: string; controlLabel: string; pLabel: string; p: number; commonOddsRatio: number; aliased?: boolean }[];
   verdict?: string;
+  /** The exhibit that holds the verdict's figures: the screen, or the adjustment that explained the suspect away. */
+  verdictEvidenceId?: string;
   evidenceIds: string[];
 }
 
@@ -81,6 +83,10 @@ export interface VisionFinding {
   visualEvidenceSummary: string;
   bbox?: { x: number; y: number; w: number; h: number };
   reasoning?: string;
+  /** Why the first provider did not answer, when another one did (e.g. Nightshift has no vision route). */
+  fallbackFrom?: string;
+  /** Replayed from the reply cache rather than answered just now. */
+  cached?: boolean;
 }
 
 export interface GateCriterion {
@@ -205,13 +211,13 @@ export type InvestigationEvent =
   | { type: 'log'; text: string; tone?: 'info' | 'good' | 'warn' | 'bad' | 'model' }
   | { type: 'feeds'; feeds: { feed: string; status: string; note: string; count: number }[] }
   | { type: 'convergence'; data: Convergence & { totalSignals: number } }
-  | { type: 'plan'; source: 'nemotron' | 'catalog'; via?: string; by?: string; reasoning: string; untestable: string[]; hypotheses: HypothesisNode[] }
+  | { type: 'plan'; source: 'nemotron' | 'catalog'; via?: string; by?: string; cached?: boolean; reasoning: string; untestable: string[]; hypotheses: HypothesisNode[] }
   | { type: 'hypothesis'; node: HypothesisNode }
   | { type: 'evidence'; item: EvidenceItem }
   | { type: 'robustness'; data: RobustnessRow[] }
   | { type: 'granularity'; data: { cause: string; pLabel: string; p: number; groups: { group: string; ratePer10k: number }[]; implicated: boolean } }
   | { type: 'vision'; data: VisionFinding & { concordance: { claimsMentioningConnector: number; claimsInBatch: number } } }
-  | { type: 'redteam'; source: 'nemotron' | 'built-in'; via?: string; objections: { objection: string; check: string; result: string; survived: boolean }[]; reasoning: string }
+  | { type: 'redteam'; source: 'nemotron' | 'built-in'; via?: string; cached?: boolean; objections: { objection: string; check: string; result: string; survived: boolean }[]; reasoning: string }
   | { type: 'timeline'; data: { cause: string; days: { date: string; claims: number; negLog10P: number }[]; threshold: number; alertDate: string | null; firstClaimDate: string; claimsAtAlert: number; claimsAfterAlert: number } }
   | { type: 'gate'; pass: boolean; criteria: GateCriterion[]; blanket?: { units: number; costUsd: number } }
   | { type: 'narrative'; source: 'nemotron' | 'template'; via?: string; fallbackFrom?: string; text: string; reasoning: string; cached?: boolean; guard: { checked: number; verified: number; unverified: string[] } }
@@ -265,6 +271,8 @@ function hottest(test: IndependenceTest) {
 }
 
 const fmtRate = (r: number) => `${r.toFixed(r < 10 ? 1 : 0)}/10k`;
+// Ratios below 10 keep a decimal, so a lower bound of 0.7 never prints as 1.
+const fmtRR = (v: number) => v.toFixed(v < 10 ? 1 : 0);
 const usd = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 const sqlStr = (v: string) => {
   // alasql reads \' as an escaped quote, so a backslash could end the literal early.
@@ -310,6 +318,8 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
   const unitCost = mesh.unitCost ?? UNIT_COST_USD;
   if (mesh.units.length === 0) throw new Error(`No units were in the field${mesh.scenario.asOf ? ` as of ${mesh.scenario.asOf}` : ''}; there is nothing to investigate`);
   const dims: Dimension[] = mesh.dimensions ?? DIMENSIONS;
+  // Factor names in sentences people read: uploaded data uses the user's own column name, not the f_ SQL column.
+  const colName = (d: Dimension) => (mesh.custom ? d.title : d.column);
   const cap = mesh.capabilities;
   const chain = new ProofChain(scenarioId);
   const record = (item: Parameters<ProofChain['add']>[0]) => {
@@ -353,10 +363,10 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
   await sleep(pacing);
 
   // ---- 3. Plan ----
-  emit({ type: 'phase', phase: 'plan', label: `${aiPrimaryName()} planning hypotheses` });
-  const plan = await planHypotheses(conv, opts.vision ?? null, scenarioId, log, dims);
+  emit({ type: 'phase', phase: 'plan', label: aiLive() ? `${aiPrimaryName()} planning hypotheses` : 'Planning hypotheses (no model configured: every factor, in catalog order)' });
+  const plan = await planHypotheses(conv, opts.vision ?? null, scenarioId, log, dims, Boolean(mesh.custom), mesh.warehouses);
   emit({ type: 'plan', ...plan });
-  if (plan.source === 'nemotron') log(`${plan.by} ranked ${plan.hypotheses.length} hypotheses (${plan.via})`, 'model');
+  if (plan.source === 'nemotron') log(`${plan.by} ranked ${plan.hypotheses.length} hypotheses (${plan.via}${plan.cached ? ' · cached' : ''})`, 'model');
   record({ kind: 'model', label: 'Hypothesis plan', summary: plan.hypotheses.map((h) => h.id).join(' > '), payload: plan });
   const nodes = new Map(plan.hypotheses.map((h) => [h.id, h]));
   const update = (node: HypothesisNode) => emit({ type: 'hypothesis', node: { ...node } });
@@ -374,6 +384,9 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
   let redteam: Extract<InvestigationEvent, { type: 'redteam' }> | null = null;
   let connectorConcordance = { claimsMentioningConnector: 0, claimsInBatch: 0 };
   const cleanTest = new Map<Screened, IndependenceTest>();
+  // `${a}|${b}`: every unit of a's hot group is also in b's (a drive model inside its manufacturer).
+  const nested = new Set<string>();
+  const inside = (a: Screened, b: Screened) => nested.has(`${a.node.id}|${b.node.id}`);
   let residual: { dim: Dimension; test: IndependenceTest; hot: string; pLabel: string }[] = [];
   let residualMinP = 1;
 
@@ -410,7 +423,9 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
         if (test.p >= alpha) {
           node.status = 'NO_ASSOCIATION';
           const lo = [...test.groups].sort((a, b) => a.ratePer10k - b.ratePer10k)[0];
-          node.verdict = `Ruled out. Failure rate is flat across ${dim.column} (${fmtRate(lo.ratePer10k)} to ${fmtRate(hot.ratePer10k)}, ${pLabel}).`;
+          // Sparse groups can spread widely by chance, so "not significant", never "flat".
+          node.verdict = `Ruled out. No significant association across ${colName(dim)} (${fmtRate(lo.ratePer10k)} to ${fmtRate(hot.ratePer10k)}, ${pLabel}).`;
+          node.verdictEvidenceId = ev.id;
           log(`${h.id} ruled out: no association (${pLabel})`, 'good');
         } else {
           node.status = 'SIGNIFICANT';
@@ -429,6 +444,7 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
         emit({ type: 'phase', phase: 'adjudicate', label: 'Separating causes from confounders' });
         const fails = new Map<Screened, Screened>(); // suspect -> the factor that explains it away
         const aliases = new Map<Screened, Screened[]>();
+        const pairEv = new Map<string, string>(); // `${suspect}|${control}` -> the exhibit of that adjustment
         for (const s of screened) {
           s.node.adjusted = [];
           for (const other of screened) {
@@ -444,6 +460,9 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
             s.node.adjusted.push({ controlFor: other.node.id, controlLabel: cond(other.dim.column, other.hot), pLabel, p: aliased ? NaN : cmh.p, commonOddsRatio: cmh.commonOddsRatio, aliased });
             const ev = record({ kind: 'stat', label: `${s.node.id} | ${other.node.id}`, summary: `CMH ${cond(s.dim.column, s.hot)} controlling for ${cond(other.dim.column, other.hot)}: ${pLabel}`, query: res, proofHash: res.proofHash, payload: cmh });
             s.node.evidenceIds.push(ev.id);
+            pairEv.set(`${s.node.id}|${other.node.id}`, ev.id);
+            // The same cross-tab shows nesting: no unit of s's hot group lies outside other's.
+            if (!res.rows.some((r) => String(r.exposure) === s.hot && String(r.stratum) !== other.hot && Number(r.units) > 0)) nested.add(`${s.node.id}|${other.node.id}`);
             if (aliased) aliases.set(s, [...(aliases.get(s) ?? []), other]);
             // The hot group was picked post hoc from G groups, so its adjusted test pays for that selection.
             else if (cmh.p >= alpha / Math.max(1, s.test.groups.length - 1) && !fails.has(s)) fails.set(s, other);
@@ -460,9 +479,12 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
         }
         survivors = survivors.filter((s) => !redundant.has(s));
         // Each survivor's strength is measured with the other survivors' units
-        // excluded, so two real causes don't inflate each other's baseline.
+        // excluded, so two real causes don't inflate each other's baseline. A
+        // survivor that contains s stays in: excluding it would leave no s unit.
+        const excludedFor = (s: Screened) => survivors.filter((o) => o !== s && !inside(s, o));
+        const cleanEv = new Map<Screened, string>();
         for (const s of survivors) {
-          const others = survivors.filter((o) => o !== s).map((o) => cond(o.dim.column, o.hot));
+          const others = excludedFor(s).map((o) => cond(o.dim.column, o.hot));
           if (!others.length) {
             cleanTest.set(s, s.test);
             continue;
@@ -471,47 +493,58 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
           cleanTest.set(s, chiSquareIndependence(toGroups(res.rows)));
           const ev = record({ kind: 'sql', label: `${s.node.id} excluding other causes`, summary: `${s.dim.column} with ${others.join(', ')} excluded`, query: res, proofHash: res.proofHash });
           s.node.evidenceIds.push(ev.id);
+          cleanEv.set(s, ev.id);
         }
         const strength = (s: Screened) => {
           const t = cleanTest.get(s)!;
-          const hot = t.groups.find((g) => g.group === s.hot) ?? hottest(t);
+          // Only s's own group counts; never score s with another group's numbers.
+          const hot = t.groups.find((g) => g.group === s.hot);
+          if (!hot) return null; // every s unit was excluded with the other survivors
           const rest = t.groups.filter((g) => g.group !== hot.group);
           const restUnits = rest.reduce((a, g) => a + g.units, 0);
           const restFail = rest.reduce((a, g) => a + g.failures, 0);
           return { hot, restUnits, restFail, rr: relativeRisk(hot.failures, hot.units, restFail, restUnits) };
         };
-        // A cause must also be material: at least double the baseline rate.
-        confirmed = survivors.filter((s) => strength(s).rr.rr >= 2);
+        // A cause must also be material: at least double the baseline rate, with a
+        // 95% interval that excludes no effect (a handful of failures can't carry it).
+        confirmed = survivors.filter((s) => {
+          const st = strength(s);
+          return Boolean(st && st.rr.rr >= 2 && st.rr.lo > 1);
+        });
 
         for (const s of screened) {
           if (confirmed.includes(s)) continue;
           s.node.status = 'CONFOUNDED';
           const by = fails.get(s) ?? redundant.get(s);
           const adj = by && s.node.adjusted?.find((a) => a.controlFor === by.node.id);
+          s.node.verdictEvidenceId = by ? pairEv.get(`${s.node.id}|${by.node.id}`) : (cleanEv.get(s) ?? s.node.evidenceIds[0]);
           s.node.verdict = redundant.has(s)
             ? `Ruled out as redundant. ${s.hot} covers exactly the same units as ${by!.hot}, which is the more specific explanation.`
             : by && adj
-              ? `Ruled out as a confounder. ${s.hot} only looks guilty because it shares units with ${by.hot}; holding ${by.dim.column} fixed, the effect disappears (${adj.pLabel}).`
+              ? `Ruled out as a confounder. ${s.hot} only looks guilty because it shares units with ${by.hot}; holding ${colName(by.dim)} fixed, ${adj.p < 0.05 ? 'the effect is no longer significant after correction' : 'the effect disappears'} (${adj.pLabel}).`
               : (() => {
                   // Not material on its own: say what was excluded and what was left.
                   const st = strength(s);
-                  const others = survivors.filter((o) => o !== s).map((o) => o.hot);
+                  const others = excludedFor(s).map((o) => o.hot);
                   const rate = (f: number, n: number) => fmtRate(n ? (f / n) * 1e4 : 0);
+                  if (!st) return `Not material on its own. Every ${s.hot} unit also belongs to ${others.join(' or ')}, so nothing of it is left to measure once those are excluded.`;
+                  const why = st.rr.rr < 2 ? `RR ${st.rr.rr.toFixed(1)}, below the 2x bar` : `RR ${st.rr.rr.toFixed(1)}, but its 95% CI ${fmtRR(st.rr.lo)}-${fmtRR(st.rr.hi)} includes 1`;
                   return others.length
-                    ? `Not material on its own. With ${others.join(' and ')} excluded, ${s.hot} fails at ${rate(st.hot.failures, st.hot.units)} vs ${rate(st.restFail, st.restUnits)} for the rest (RR ${st.rr.rr.toFixed(1)}, below the 2x bar): its excess is concentrated where ${others.join(' and ')} is.`
-                    : `Not material: ${s.hot} fails at ${rate(st.hot.failures, st.hot.units)} vs ${rate(st.restFail, st.restUnits)} (RR ${st.rr.rr.toFixed(1)}, below the 2x bar).`;
+                    ? `Not material on its own. With ${others.join(' and ')} excluded, ${s.hot} fails at ${rate(st.hot.failures, st.hot.units)} vs ${rate(st.restFail, st.restUnits)} for the rest (${why}): its excess is concentrated where ${others.join(' and ')} is.`
+                    : `Not material: ${s.hot} fails at ${rate(st.hot.failures, st.hot.units)} vs ${rate(st.restFail, st.restUnits)} (${why}).`;
                 })();
           update(s.node);
-          log(`${s.node.id} unmasked as ${redundant.has(s) ? 'redundant' : 'confounder'}`, 'good');
+          log(`${s.node.id} unmasked as ${redundant.has(s) ? 'redundant' : by ? 'confounder' : 'not material on its own'}`, 'good');
           await sleep(pacing);
         }
         for (const c of confirmed) {
           c.node.status = 'CONFIRMED';
-          const { hot: cleanHot, restUnits, restFail, rr } = strength(c);
+          const { hot: cleanHot, restUnits, restFail, rr } = strength(c)!;
           const hot = { ...cleanHot, ...(c.test.groups.find((g) => g.group === c.hot) ?? cleanHot) };
           const totalFail = c.test.groups.reduce((a, g) => a + g.failures, 0);
           const coverage = hot.failures / Math.max(1, totalFail);
-          c.node.verdict = `Confirmed. ${hot.group} fails at ${fmtRate(hot.ratePer10k)} vs ${fmtRate((restFail / restUnits) * 1e4)} elsewhere (RR ${rr.rr.toFixed(0)}x, 95% CI ${rr.lo.toFixed(0)}-${rr.hi.toFixed(0)}). It holds up after adjusting for every other factor and accounts for ${(coverage * 100).toFixed(0)}% of incidents.`;
+          c.node.verdict = `Confirmed. ${hot.group} fails at ${fmtRate(hot.ratePer10k)} vs ${fmtRate((restFail / restUnits) * 1e4)} elsewhere (RR ${fmtRR(rr.rr)}x, 95% CI ${fmtRR(rr.lo)}-${fmtRR(rr.hi)}). It holds up after adjusting for every other factor and accounts for ${(coverage * 100).toFixed(0)}% of incidents.`;
+          c.node.verdictEvidenceId = cleanEv.get(c) ?? c.node.evidenceIds[0];
           findings.set(c.node.id, {
             hypothesisId: c.node.id,
             title: c.dim.title,
@@ -535,7 +568,7 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
           update(c.node);
           log(`${c.node.id} survives all adjustments: ${c.hot}`, 'good');
         }
-        if (!confirmed.length) log(screened.length ? 'No suspect survives adjustment' : 'No suspect beats the multiple-testing bar', 'warn');
+        if (!confirmed.length) log(screened.length ? 'No suspect holds up once the others are accounted for' : 'No suspect beats the multiple-testing bar', 'warn');
         const top = plan.hypotheses[0];
         if (plan.source === 'nemotron' && top && !confirmed.some((c) => c.node.id === top.id)) {
           log(`${plan.by ?? 'The model'}'s top suspect was ${top.id} (${top.title}); the evidence overruled it: ${nodes.get(top.id)?.status === 'CONFOUNDED' ? 'a confounder' : 'no association'}`, 'model');
@@ -556,7 +589,8 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
             .slice(0, 5);
           const f0 = findings.get(c.node.id)!;
           const exposedRate = f0.failures / f0.units;
-          const others = confirmed.filter((o) => o !== c).map((o) => cond(o.dim.column, o.hot));
+          // As in the clean measurement: a cause that contains c stays in.
+          const others = confirmed.filter((o) => o !== c && !inside(c, o)).map((o) => cond(o.dim.column, o.hot));
           const where = others.length ? `\nWHERE NOT (${others.join(' OR ')})` : '';
           for (const f of factors) {
             const res = await q(
@@ -705,10 +739,12 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
     {
       run: async () => {
         if (!confirmed.length) return { text: 'skipped', carryover: carry() };
-        emit({ type: 'phase', phase: 'redteam', label: `${aiPrimaryName()} red-teaming the verdict` });
-        redteam = await redTeam(confirmed, { alpha, granularity, exposure, geoCmh, geoBy, robustnessOut, screenedCount: k, batches: mesh.bom.length }, log);
+        emit({ type: 'phase', phase: 'redteam', label: aiLive() ? `${aiPrimaryName()} red-teaming the verdict` : 'Red-teaming the verdict (no model configured: built-in objections)' });
+        const factorName = (column: string) => (mesh.custom ? (dims.find((d) => d.column === column)?.title ?? column) : column);
+        redteam = await redTeam(confirmed, { alpha, granularity, exposure, geoCmh, geoBy, robustnessOut, screenedCount: k, batches: mesh.bom.length, factorName }, log);
         emit(redteam);
-        record({ kind: 'model', label: 'Red-team review', summary: `${redteam.objections.filter((o) => o.survived).length}/${redteam.objections.length} objections answered by evidence`, payload: redteam });
+        const rc = redTeamCounts(redteam.objections);
+        record({ kind: 'model', label: 'Red-team review', summary: `${rc.answered}/${rc.tested} testable objections answered by evidence${rc.open ? `; ${rc.open} open question${rc.open > 1 ? 's' : ''} logged` : ''}`, payload: redteam });
         return { text: 'redteam', carryover: carry() };
       },
     },
@@ -736,7 +772,8 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
     const rv = mesh.scenario.truthKnown ? reveal(gateBlocked) : null;
     if (rv) emit({ type: 'reveal', data: rv });
     const top = plan.hypotheses[0];
-    if (plan.source === 'nemotron' && top) {
+    // A plan replayed from the reply cache is not a new guess; the run that first made it was counted.
+    if (plan.source === 'nemotron' && top && !plan.cached) {
       const truthKeys = new Set((rv?.truth ?? []).map((t) => t.column));
       recordScore({
         at: new Date().toISOString(),
@@ -777,10 +814,13 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
           label: 'At least one factor survives testing',
           pass: false,
           detail: screened.length
-            ? `${screened.length} suspect(s) looked associated on raw data, but none survived adjustment for the others.`
+            ? `${screened.length} suspect(s) looked associated on raw data, but none holds up on its own once the others are accounted for.`
             : `No suspect beat the multiple-testing bar (best: ${best?.id} ${best?.rawTest?.pLabel}, alpha ${alpha.toExponential(1)}).`,
         },
-        { id: 'noise', label: 'Complaints are consistent with baseline noise', pass: true, detail: `${mesh.claims.length} claims across ${mesh.units.length.toLocaleString('en-US')} units; ${screened.length ? 'every association found was explained by another factor' : 'no structure in any factor'}` },
+        // Noise only when nothing stood out: suspects that explain each other are structure, not noise.
+        screened.length
+          ? { id: 'noise', label: 'Complaints are consistent with baseline noise', pass: false, detail: `Not baseline noise: ${screened.map((s) => s.hot).join(', ')} looked associated on raw data, though ${screened.length > 1 ? 'none explains the failures on its own' : 'it is not material on its own'}` }
+          : { id: 'noise', label: 'Complaints are consistent with baseline noise', pass: true, detail: `${mesh.claims.length} claims across ${mesh.units.length.toLocaleString('en-US')} units; no structure in any factor` },
       ],
     });
     emit({ type: 'phase', phase: 'explain', label: 'Writing the explanation' });
@@ -791,11 +831,12 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
       units: mesh.units.length,
       suspectsTested: k,
       bestSuspect: best ? `${best.title} (${best.rawTest?.pLabel})` : 'none',
+      suspectsAssociatedOnRawData: screened.map((s) => `${s.dim.title}: ${s.hot}`),
       ruledOut: [...nodes.values()].map((n) => ({ title: n.title, verdict: n.verdict })),
       blanketRecallCostAvoidedUsd: mesh.units.length * unitCost,
       recommendation: 'No recall. Keep monitoring; re-run when new claims arrive.',
     };
-    const narrative = await explain(facts, noCauseTemplate(facts), log);
+    const narrative = await explain(facts, noCauseTemplate(facts), log, 'none');
     emit({ type: 'narrative', ...narrative });
     record({ kind: 'model', label: 'Explanation', summary: `${narrative.guard.verified}/${narrative.guard.checked} figures verified against evidence`, payload: narrative.text });
     emitForest();
@@ -823,7 +864,8 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
   const explained = Number(union.rows[0]?.failures ?? 0);
   const coverage = explained / Math.max(1, totalFailures);
   record({ kind: 'sql', label: 'Combined coverage', summary: `Confirmed causes explain ${explained}/${totalFailures} incidents (${(coverage * 100).toFixed(1)}%)`, query: union, proofHash: union.proofHash });
-  const quarantineWhere = confirmed.filter((c) => REMEDY_FOR[c.dim.column] === 'QUARANTINE').map((c) => `(${cond(c.dim.column, c.hot)})`);
+  // The remedy each finding carries (uploaded factors default to quarantine), the same one /api/quarantine acts on.
+  const quarantineWhere = causeList.filter((f) => f.remedy === 'QUARANTINE').map((f) => `(${cond(f.column, f.group)})`);
   let quarantineUnits = 0;
   if (quarantineWhere.length) {
     const qu = await q(`SELECT COUNT(*) AS units\nFROM unit_fact\nWHERE ${quarantineWhere.join(' OR ')}`, ['unit_fact']);
@@ -846,7 +888,8 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
   }
   const plan2: ActionPlan = {
     causes: causeList,
-    affectedUnits: quarantineUnits + causeList.filter((f) => f.remedy !== 'QUARANTINE').reduce((a, f) => a + f.units, 0),
+    // Distinct units: a unit that carries two causes is acted on once.
+    affectedUnits: Number(union.rows[0]?.units ?? 0),
     blanketUnits,
     surgicalCostUsd,
     blanketCostUsd: blanketUnits * unitCost,
@@ -900,10 +943,14 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
   // ---- 12. Evidence gate ----
   const rt = redteam as Extract<InvestigationEvent, { type: 'redteam' }> | null;
   const vision = opts.vision;
-  const corroborated = (f: CauseFinding) =>
-    (f.concordance.family !== 'general' && f.concordance.share >= 0.4) ||
-    // Only a live model reading of a photo counts; the offline reference analysis never does.
-    (f.concordance.family === 'connector' && Boolean(vision?.live && vision.isManufacturingDefectLikely));
+  // Only a live model reading of a photo counts; the offline reference analysis never does,
+  // and neither does a photo the model judged not to show a manufacturing defect.
+  const photoCounts = Boolean(vision?.live && vision.isManufacturingDefectLikely);
+  const photoNote = !vision ? '' : photoCounts ? `, photo: ${vision.suspectedComponent}` : vision.live ? ', photo not counted (the model judged it not a manufacturing defect)' : ', photo not counted (offline reference analysis)';
+  const corroborated = (f: CauseFinding) => (f.concordance.family !== 'general' && f.concordance.share >= 0.4) || (f.concordance.family === 'connector' && photoCounts);
+  // Open questions (objections the data cannot test) are logged, never counted as answered.
+  // They do not block: nothing in the data contradicts the verdict on them.
+  const rc = rt ? redTeamCounts(rt.objections) : null;
   const criteria: GateCriterion[] = [
     { id: 'sig', label: 'Association beats multiple-testing bar', pass: confirmed.every((c) => c.test.p < alpha), detail: confirmed.map((c) => `${c.hot}: ${c.node.rawTest?.pLabel}`).join('; ') + ` (Bonferroni alpha ${alpha.toExponential(1)})` },
     {
@@ -919,7 +966,7 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
       label: 'Nothing unexplained remains',
       pass: residual.length === 0,
       detail: residual.length
-        ? `Structure remains after removing the causes: ${residual.map((r) => `${r.dim.column}=${r.hot} (${r.pLabel})`).join(', ')}`
+        ? `Structure remains after removing the causes: ${residual.map((r) => `${colName(r.dim)}=${r.hot} (${r.pLabel})`).join(', ')}`
         : `Causes explain ${(coverage * 100).toFixed(1)}% of claims; the rest is spread evenly across all ${dims.length} factors`,
     },
     {
@@ -928,10 +975,15 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
       na: !cap.symptoms,
       pass: cap.symptoms ? causeList.every(corroborated) : true,
       detail: cap.symptoms
-        ? causeList.map((f) => `${f.group}: ${Math.round(f.concordance.share * f.concordance.claims)}/${f.concordance.claims} "${f.concordance.family}"${f.concordance.family === 'connector' && vision ? ', photo: ' + vision.suspectedComponent : ''}`).join('; ')
+        ? causeList.map((f) => `${f.group}: ${Math.round(f.concordance.share * f.concordance.claims)}/${f.concordance.claims} "${f.concordance.family}"${f.concordance.family === 'connector' ? photoNote : ''}`).join('; ')
         : 'Not assessable: the data has no symptom column',
     },
-    { id: 'redteam', label: 'Red-team objections answered', pass: Boolean(rt && rt.objections.every((o) => o.survived)), detail: rt ? `${rt.objections.filter((o) => o.survived).length}/${rt.objections.length} answered with evidence` : 'not run' },
+    {
+      id: 'redteam',
+      label: 'Red-team objections answered',
+      pass: Boolean(rt && rt.objections.every((o) => o.check === 'untestable' || o.survived)),
+      detail: rc ? `${rc.answered}/${rc.tested} testable objections answered with evidence${rc.open ? `; ${rc.open} open question${rc.open > 1 ? 's' : ''} logged, not blocking (the data cannot test ${rc.open > 1 ? 'them' : 'it'})` : ''}` : 'not run',
+    },
     {
       id: 'scope',
       label: 'Scope mapped to exact units',
@@ -959,16 +1011,16 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
   // ---- 13. Explanation with number guard ----
   emit({ type: 'phase', phase: 'explain', label: 'Writing the explanation' });
   const tl = timeline;
-  const facts = {
+  // Each key says what its figure measures, so the explanation cannot attach a
+  // share of incidents to units, or one cause's rate to the whole product.
+  const base: CauseFactsBase = {
     product: mesh.custom ? mesh.scenario.label : PRODUCT_NAME,
     custom: Boolean(mesh.custom),
-    subgroupFactors: [...new Set(robustnessOut.map((r) => dims.find((d) => d.column === r.factor)?.title ?? r.factor))].join(', '),
     causes: causeList.map((f) => ({
       cause: `${f.title}: ${f.supplier ? `${f.supplier} ` : ''}${f.group}`,
-      remedy: REMEDY[f.remedy].label,
       units: f.units,
       incidents: f.failures,
-      ratePer10k: Number(f.ratePer10k.toFixed(1)),
+      ratePer10kInCauseUnits: Number(f.ratePer10k.toFixed(1)),
       relativeRisk: Math.round(f.rr.rr),
       lots: f.lots.slice(0, 3).map((l) => `${l.lot_id} (plant ${l.plant_id}, built ${l.build_start} to ${l.build_end}, serials SN-${l.serial_start} to SN-${l.serial_end})`),
       lotCount: f.lots.length,
@@ -976,20 +1028,33 @@ export async function runInvestigation(emit: Emit, opts: { vision?: VisionFindin
     })),
     ruledOut: [...nodes.values()]
       .filter((n) => n.status !== 'CONFIRMED')
-      .map((n) => ({ id: n.id, title: n.title, kind: n.status === 'CONFOUNDED' ? 'confounder: looked guilty, explained away by the cause' : 'no association at all', verdict: n.verdict })),
-    coveragePct: Number((coverage * 100).toFixed(1)),
-    affectedUnits: plan2.affectedUnits,
-    blanketUnits: plan2.blanketUnits,
-    surgicalCostUsd: plan2.surgicalCostUsd,
-    savingsUsd: plan2.savingsUsd,
-    incidentsSoFar: plan2.incidentsSoFar,
-    projectedIncidents30d: plan2.projectedIncidents30d,
-    alertDate: tl.alertDate,
-    claimsAtAlert: tl.claimsAtAlert,
+      .map((n) => ({ id: n.id, title: n.title, kind: ruledOutKind(n), verdict: n.verdict })),
+    incidentsExplained: explained,
+    totalIncidents: totalFailures,
+    shareOfIncidentsExplainedPct: Number((coverage * 100).toFixed(1)),
     gatePassed: pass,
-    visionCorroborated: causeList.some((f) => f.concordance.family === 'connector') && Boolean(vision?.isManufacturingDefectLikely),
+    visionCorroborated: causeList.some((f) => f.concordance.family === 'connector') && photoCounts,
   };
-  const narrative = await explain(facts, causeTemplate(facts), log);
+  let narrative: Awaited<ReturnType<typeof explain>>;
+  if (pass) {
+    const facts: ActionFacts = {
+      ...base,
+      subgroupFactors: [...new Set(robustnessOut.map((r) => dims.find((d) => d.column === r.factor)?.title ?? r.factor))].join(', '),
+      causes: base.causes.map((c, i) => ({ ...c, remedy: REMEDY[causeList[i].remedy].label })),
+      affectedUnits: plan2.affectedUnits,
+      blanketUnits: plan2.blanketUnits,
+      surgicalCostUsd: plan2.surgicalCostUsd,
+      savingsUsd: plan2.savingsUsd,
+      projectedIncidents30d: plan2.projectedIncidents30d,
+      alertDate: tl.alertDate,
+      claimsAtAlert: tl.claimsAtAlert,
+    };
+    narrative = await explain(facts, causeTemplate(facts), log, 'action');
+  } else {
+    // Blocked: no remedy, cost or savings figure reaches the explanation, so none can be recommended.
+    const facts: BlockedFacts = { ...base, unitsInField: blanketUnits, failedCriteria: criteria.filter((c) => !c.na && !c.pass).map((c) => ({ criterion: c.label, detail: c.detail })) };
+    narrative = await explain(facts, blockedTemplate(facts), log, 'blocked');
+  }
   emit({ type: 'narrative', ...narrative });
   record({ kind: 'model', label: 'Explanation', summary: `${narrative.guard.verified}/${narrative.guard.checked} figures verified against evidence`, payload: narrative.text });
 
@@ -1063,7 +1128,15 @@ function earlyWarningReplay(scenarioId: string, column: string, hot: string) {
   return { days, threshold: Number(threshold.toFixed(2)), alertDate, firstClaimDate: first, claimsAtAlert, claimsAfterAlert: alertDate ? finalClaims - claimsAtAlert : 0 };
 }
 
-async function planHypotheses(conv: Convergence, vision: VisionFinding | null, scenarioId: string, log: (t: string, tone?: 'warn') => void, dims: Dimension[]) {
+async function planHypotheses(
+  conv: Convergence,
+  vision: VisionFinding | null,
+  scenarioId: string,
+  log: (t: string, tone?: 'warn') => void,
+  dims: Dimension[],
+  custom: boolean,
+  warehouses: { city: string; climate_zone: string }[]
+) {
   const catalog = dims.map((d) => ({ id: d.id, title: d.title, claim: d.claim }));
   const fallbackRationale: Record<string, string> =
     scenarioId === 'reference'
@@ -1085,35 +1158,69 @@ async function planHypotheses(conv: Convergence, vision: VisionFinding | null, s
           'H-SUPPLIER': 'Cell quality varies by supplier.',
           'H-BATCH': 'A single bad incoming batch is the classic recall pattern.',
         };
+  // Uploaded data stays on this server: the planner sees how many failure records
+  // converged, never the rows (serials, free-text symptoms). Generated data: a
+  // sample spread across cities, plus every city's count and climate.
+  const cityOf = (content: string) => content.match(/\[([^\]]+)\]$/)?.[1] ?? '';
+  const byCity = new Map<string, Convergence['matched']>();
+  for (const m of conv.matched) byCity.set(cityOf(m.content), [...(byCity.get(cityOf(m.content)) ?? []), m]);
+  const sample: Convergence['matched'] = [];
+  for (let i = 0; sample.length < 25 && [...byCity.values()].some((l) => i < l.length); i++) for (const l of byCity.values()) if (i < l.length && sample.length < 25) sample.push(l[i]);
+  const zone = new Map(warehouses.map((w) => [w.city, w.climate_zone === 'SUNBELT' ? 'Sun Belt' : 'temperate']));
+  const cities = Object.entries(conv.cities).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const signals = custom
+    ? `${conv.matched.length} uploaded failure records (${conv.firstSeen} to ${conv.lastSeen}); the records themselves are not shared.`
+    : `${sample.map((m) => `- ${m.content}`).join('\n')}\nCities by number of signals (all ${conv.matched.length} signals): ${cities.map(([c, n]) => `${c} ${n}${zone.has(c) ? ` (${zone.get(c)})` : ''}`).join(', ')}`;
   // Planning needs structured output quickly: the lightweight model, thinking off (~3s).
   const reply = await nemotronChat({
     model: NEMOTRON_FAST_MODEL,
     thinking: false,
     system: 'You are the planning module of Traceon, a product-safety root-cause agent. You rank hypotheses; you never compute statistics.',
-    user: `Converged signals (H-MEM):\n${conv.matched.slice(0, 25).map((m) => `- ${m.content}`).join('\n')}\nCities: ${JSON.stringify(conv.cities)}\n${vision ? `Photo finding: ${vision.physicalFailureMode} at ${vision.suspectedComponent}\n` : ''}
+    user: `Converged signals (H-MEM):\n${signals}\n${vision?.live ? `Photo finding: ${vision.physicalFailureMode} at ${vision.suspectedComponent}\n` : ''}
 Testable hypotheses (each maps to a SQL test the system will run):\n${JSON.stringify(catalog)}
 Return ONLY JSON: {"ranking":[{"id":"H-...","rationale":"one sentence citing the signals"}], "untestable":["hypotheses worth investigating that this data cannot test"], "reasoning":"2 sentences"}
-Rank ALL ids, most likely first.`,
+Rank ALL ids, most likely first. Refer to cities and signals in words; do not state counts, ratios or percentages.`,
     maxTokens: 2000,
     timeoutMs: 20_000,
   });
   if (reply.fallbackFrom) log(`${reply.fallbackFrom}; ${reply.via} planned instead`, 'warn');
   const parsed = reply.live ? extractJson<{ ranking: { id: string; rationale: string }[]; untestable?: string[]; reasoning?: string }>(reply.text) : null;
   if (!parsed && reply.error !== NO_PROVIDER) log(`Model planning unavailable (${reply.via ?? 'no provider answered'}: ${reply.error ?? 'reply was not valid JSON'}); testing every factor in catalog order`, 'warn');
-  const ranked = (parsed?.ranking ?? []).filter((r) => dims.some((d) => d.id === r.id));
+  // The plan is shown to people, so its figures get the explanation's check: a
+  // sentence citing a figure that is not in the signals is left out.
+  const planFacts = { signals: conv.matched.length, cities: conv.cities, sample: custom ? [] : sample.map((m) => m.content), hypotheses: dims.length };
+  const dropped = new Set<string>();
+  const checked = (s: unknown) =>
+    typeof s !== 'string'
+      ? ''
+      : s
+          .split(/(?<=[.!?])\s+/)
+          .filter((x) => {
+            const u = numberGuard(x, planFacts).unverified;
+            u.forEach((n) => dropped.add(n));
+            return !u.length;
+          })
+          .join(' ');
+  const ranked = (Array.isArray(parsed?.ranking) ? parsed.ranking : []).filter((r) => dims.some((d) => d.id === r?.id));
   const order = [...new Set([...ranked.map((r) => r.id), ...dims.map((d) => d.id)])];
   const hypotheses: HypothesisNode[] = order.map((id, i) => {
     const d = dims.find((x) => x.id === id)!;
-    return { id, title: d.title, claim: d.claim, rationale: ranked.find((r) => r.id === id)?.rationale ?? fallbackRationale[id] ?? `${d.title} is one of the factors recorded in this data.`, priority: i + 1, status: 'QUEUED', silo: d.silo, evidenceIds: [] };
+    return { id, title: d.title, claim: d.claim, rationale: checked(ranked.find((r) => r.id === id)?.rationale) || fallbackRationale[id] || `${d.title} is one of the factors recorded in this data.`, priority: i + 1, status: 'QUEUED', silo: d.silo, evidenceIds: [] };
   });
+  const catalogLine = 'Exhaustive screen of every testable factor in the federated mesh.';
+  const reasoning = parsed?.reasoning
+    ? checked(parsed.reasoning) || 'Ranked by the model; its reasoning is not shown because it cited figures that are not in the signals.'
+    : (reply.reasoning && checked(reply.reasoning.slice(0, 600))) || catalogLine;
+  if (dropped.size) log(`Plan text cited figures that are not in the signals (${[...dropped].join(', ')}); those sentences are left out`, 'warn');
+  // The model sometimes lists hypothesis ids here (H-AGE_BAND too); only keep genuinely untestable ideas.
+  const isId = (u: string) => dims.some((d) => d.id === u.trim()) || /^H-[A-Z0-9_-]+$/i.test(u.trim());
+  const ideas = (Array.isArray(parsed?.untestable) ? parsed.untestable : []).filter((u): u is string => typeof u === 'string' && u.trim() !== '' && !isId(u)).slice(0, 4);
   return {
     source: parsed ? ('nemotron' as const) : ('catalog' as const),
-    ...(parsed ? { via: reply.via, by: aiName(reply) } : {}),
-    reasoning: parsed?.reasoning ?? (reply.reasoning ? reply.reasoning.slice(0, 600) : 'Exhaustive screen of every testable factor in the federated mesh.'),
-    // The model sometimes lists hypothesis ids here; only keep genuinely untestable ideas.
-    untestable: (parsed?.untestable?.filter((u) => typeof u === 'string' && !/^H-[A-Z]+$/.test(u.trim())).slice(0, 4) ?? []).concat(
-      parsed?.untestable?.some((u) => typeof u === 'string' && !/^H-[A-Z]+$/.test(u.trim())) ? [] : ['Customer charging habits (no charger telemetry)', 'Counterfeit replacement packs (no authenticity data)']
-    ),
+    ...(parsed ? { via: reply.via, by: aiName(reply), ...(reply.cached ? { cached: true } : {}) } : {}),
+    reasoning,
+    // The built-in open questions are about e-bike packs, and are not the model's: catalog plans on generated data only.
+    untestable: parsed ? ideas : custom ? [] : ['Customer charging habits (no charger telemetry)', 'Counterfeit replacement packs (no authenticity data)'],
     hypotheses,
   };
 }
@@ -1129,10 +1236,13 @@ async function redTeam(
     robustnessOut: RobustnessRow[];
     screenedCount: number;
     batches: number;
+    /** The factor's name as people know it (an uploaded column's own name). */
+    factorName: (column: string) => string;
   },
   log: (t: string, tone?: 'warn') => void
 ): Promise<Extract<InvestigationEvent, { type: 'redteam' }>> {
   // Each objection type maps to a deterministic check, run for every confirmed cause.
+  // The result says what the check found, whichever way it went.
   const perCause: Record<string, (c: Screened) => { result: string; survived: boolean } | null> = {
     confounding: (c) => {
       const adj = (c.node.adjusted ?? []).filter((a) => !a.aliased);
@@ -1141,18 +1251,32 @@ async function redTeam(
     geography: (c) => {
       const g = ctx.geoCmh.get(c.node.id);
       const by = ctx.geoBy.get(c.node.id) ?? 'warehouse';
-      return g
-        ? { survived: g.p < ctx.alpha, result: `Within each ${by} ${c.hot} still fails far more often (CMH ${formatP(g.p, g.negLog10P)}).${by === 'warehouse' ? ' Regional reporting habits cannot explain it.' : ''}` }
-        : null;
+      // No stratum holds both kinds of unit (e.g. the factor is nested in the cause): nothing to compare.
+      if (!g || !g.strata.length) return null;
+      return g.p < ctx.alpha
+        ? { survived: true, result: `Within each ${by} ${c.hot} still fails far more often (CMH ${formatP(g.p, g.negLog10P)}).${by === 'warehouse' ? ' Regional reporting habits cannot explain it.' : ''}` }
+        : { survived: false, result: `Within each ${by}, ${c.hot} does not fail significantly more often (CMH ${formatP(g.p, g.negLog10P)}), so this objection stands.` };
     },
     exposure_time: (c) => {
       const e = ctx.exposure.get(c.node.id);
       if (!e) return null;
       const less = e.exposedDays <= e.otherDays;
-      // If exposed units are older, the robustness strata (same warehouse/firmware/carrier) still hold; report honestly.
+      // If exposed units are older, the effect must hold within every subgroup; report honestly either way.
+      const rows = ctx.robustnessOut.filter((r) => r.cause === c.hot);
+      const holds = rows.length > 0 && rows.every((r) => r.consistent);
+      const ratio = e.exposedDays / Math.max(e.otherDays, 1e-9);
+      const longer = ratio < 1.2 ? 'Slightly longer in the field' : `${ratio.toFixed(1)} times as long in the field`;
       return {
-        survived: less || ctx.robustnessOut.filter((r) => r.cause === c.hot).every((r) => r.consistent),
-        result: `${c.hot} units: ${e.exposedDays.toFixed(1)} days in field on average vs ${e.otherDays.toFixed(1)} for others. ${less ? 'Less exposure yet more failures, so wear-out bias works against the finding.' : 'Slightly more exposure, but the effect size is far beyond what age explains and holds within every subgroup.'}`,
+        survived: less || holds,
+        result: `${c.hot} units: ${e.exposedDays.toFixed(1)} days in field on average vs ${e.otherDays.toFixed(1)} for others. ${
+          less
+            ? 'Less exposure yet more failures, so wear-out bias works against the finding.'
+            : holds
+              ? `${longer}, but the effect holds within every subgroup.`
+              : rows.length
+                ? `${longer}, and the effect is not consistent across subgroups, so age may explain part of it.`
+                : `${longer}, and with no other factor to check it within, age cannot be ruled out.`
+        }`,
       };
     },
     chance: (c) => ({ survived: c.test.p < ctx.alpha, result: `${c.hot}: ${formatP(c.test.p, c.test.negLog10P)} after testing ${ctx.screenedCount} hypotheses; Bonferroni alpha ${ctx.alpha.toExponential(1)}` }),
@@ -1162,9 +1286,24 @@ async function redTeam(
     },
     subgroups: (c) => {
       const rows = ctx.robustnessOut.filter((r) => r.cause === c.hot);
-      return { survived: rows.every((r) => r.consistent), result: `${c.hot}: ${rows.map((r) => `${r.factor} ${r.consistent ? 'consistent' : 'inconsistent'}`).join(', ')}` };
+      if (!rows.length) return null; // no other factor to stratify by
+      return { survived: rows.every((r) => r.consistent), result: `${c.hot}: ${rows.map((r) => `${ctx.factorName(r.factor)} ${r.consistent ? 'consistent' : 'inconsistent'}`).join(', ')}` };
     },
   };
+  // The model names the check; code confirms the check can answer the objection. One
+  // about something the data does not record is an open question, whatever was named.
+  const UNMEASURED = /\b(demographic|usage pattern|user behaviou?r|customer behaviou?r|rider behaviou?r|charging habit|misclassif|data[- ]entry|selective(ly)? report|under-?report|competing failure|unmeasured|unobserved|counterfeit)/i;
+  const fit = (objection: string, name: string) => {
+    if (UNMEASURED.test(objection)) return 'untestable';
+    // granularity asks whether the wider supplier is affected; a worry about small counts is chance's.
+    if (name === 'granularity' && !/broad|wide|supplier|other (batch|lot)|scope|under-?recall|spread/i.test(objection))
+      return /\b(chance|fluke|handful|few|small|artifact|inflat)/i.test(objection) ? 'chance' : 'untestable';
+    // subgroups stratifies by the recorded factors only, never by kinds of user.
+    if (name === 'subgroups' && /\b(segment|voltage|age group|demographic|customer|user|rider|owner)/i.test(objection)) return 'untestable';
+    return name;
+  };
+  const strataBy = [...new Set(ctx.geoBy.values())].join(' / ') || 'warehouse';
+  const subgroupFactors = [...new Set(ctx.robustnessOut.map((r) => ctx.factorName(r.factor)))].join(', ');
   const check = (name: string) => {
     const fn = perCause[name];
     if (!fn) return null;
@@ -1186,71 +1325,181 @@ async function redTeam(
     model: NEMOTRON_FAST_MODEL,
     thinking: false,
     system: 'You are a skeptical product-safety statistician red-teaming a root-cause verdict. Be adversarial and specific.',
-    user: `Verdict under review: ${verdicts}\nAvailable deterministic checks: ${Object.keys(perCause).join(', ')}.\nCheck meanings: confounding = effect persists after adjusting for each other measured factor; geography = effect persists within every warehouse; exposure_time = units' time in field; chance = multiple-testing correction; granularity = whether the wider supplier is affected; subgroups = effect consistent in every subgroup.
+    user: `Verdict under review: ${verdicts}\nAvailable deterministic checks: ${Object.keys(perCause).join(', ')}.\nCheck meanings: confounding = effect persists after adjusting for each other measured factor; geography = effect persists within every ${strataBy}; exposure_time = units' time in field; chance = multiple-testing correction, which also covers small counts; granularity = whether other batches from the same supplier are also affected (not sample size); subgroups = effect consistent within each subgroup of the recorded factors${subgroupFactors ? ` (${subgroupFactors})` : ''}.
 Map each objection to the ONE check that directly tests it. If an objection concerns something the data does not measure (unmeasured variables, data-entry errors, user behaviour), use "untestable".
 Return ONLY JSON: {"objections":[{"objection":"strongest specific challenge","check":"one of the check names, or 'untestable'"}],"reasoning":"1-2 sentences"}. Give 4-6 objections.`,
     maxTokens: 1500,
     timeoutMs: 20_000,
   });
   const parsed = reply.live ? extractJson<{ objections: { objection: string; check: string }[]; reasoning?: string }>(reply.text) : null;
+  const fromModel = Boolean(parsed && Array.isArray(parsed.objections) && parsed.objections.length);
   if (reply.fallbackFrom) log(`${reply.fallbackFrom}; ${reply.via} red-teamed instead`, 'warn');
-  if (!parsed?.objections?.length && reply.error !== NO_PROVIDER) log(`Model red team unavailable (${reply.via ?? 'no provider answered'}: ${reply.error ?? 'reply was not valid JSON'}); using built-in objections`, 'warn');
-  const list = parsed?.objections?.length ? parsed.objections.slice(0, 6) : defaults;
+  if (!fromModel && reply.error !== NO_PROVIDER) log(`Model red team unavailable (${reply.via ?? 'no provider answered'}: ${reply.error ?? 'reply was not valid JSON'}); using built-in objections`, 'warn');
+  const list = fromModel ? parsed!.objections.slice(0, 6) : defaults;
   const objections = list
     .map((o) => {
-      const r = check(o.check);
-      if (!perCause[o.check]) return { objection: o.objection, check: 'untestable', result: 'Cannot be tested with the federated data available; logged as an open question for the quality team.', survived: true };
-      return r ? { objection: o.objection, check: o.check, ...r } : null;
+      const objection = String(o?.objection ?? '');
+      const name = fit(objection, String(o?.check ?? ''));
+      if (!perCause[name]) return { objection, check: 'untestable', result: 'Cannot be tested with the federated data available; logged as an open question for the quality team.', survived: true };
+      const r = check(name);
+      return r ? { objection, check: name, ...r } : null;
     })
     .filter((x): x is { objection: string; check: string; result: string; survived: boolean } => Boolean(x));
-  return { type: 'redteam', source: parsed ? 'nemotron' : 'built-in', ...(parsed ? { via: reply.via } : {}), objections, reasoning: parsed?.reasoning ?? reply.reasoning.slice(0, 500) };
+  return { type: 'redteam', source: fromModel ? 'nemotron' : 'built-in', ...(fromModel ? { via: reply.via, ...(reply.cached ? { cached: true } : {}) } : {}), objections, reasoning: parsed?.reasoning ?? reply.reasoning.slice(0, 500) };
 }
 
-type CauseFacts = {
+/** Open questions are logged, never counted as answered. */
+function redTeamCounts(objections: { check: string; survived: boolean }[]) {
+  const tested = objections.filter((o) => o.check !== 'untestable');
+  return { tested: tested.length, answered: tested.filter((o) => o.survived).length, open: objections.length - tested.length };
+}
+
+/** What a ruled-out suspect is, in words the explanation must respect. */
+function ruledOutKind(n: HypothesisNode) {
+  if (n.status !== 'CONFOUNDED') return 'no significant association';
+  if (n.verdict?.startsWith('Ruled out as redundant')) return 'redundant: the same units as a more specific suspect';
+  if (n.verdict?.startsWith('Not material')) return 'not material: too weak on its own once the other suspects are excluded';
+  return 'confounder: looked guilty, explained away by the cause';
+}
+
+type FactCause = { cause: string; units: number; incidents: number; ratePer10kInCauseUnits: number; relativeRisk: number; lots: string[]; lotCount: number; signature: string };
+type CauseFactsBase = {
   product: string;
   custom: boolean;
-  subgroupFactors: string;
-  causes: { cause: string; remedy: string; units: number; incidents: number; relativeRisk: number; lots: string[]; lotCount: number; signature: string }[];
+  causes: FactCause[];
   ruledOut: { title: string; verdict?: string }[];
-  coveragePct: number;
+  incidentsExplained: number;
+  totalIncidents: number;
+  shareOfIncidentsExplainedPct: number;
+  gatePassed: boolean;
+  visionCorroborated: boolean;
+};
+/** The gate passed: the remedy, its cost and the projection may be quoted. */
+type ActionFacts = Omit<CauseFactsBase, 'causes'> & {
+  causes: (FactCause & { remedy: string })[];
+  subgroupFactors: string;
   affectedUnits: number;
   blanketUnits: number;
+  surgicalCostUsd: number;
   savingsUsd: number;
-  incidentsSoFar: number;
   projectedIncidents30d: number;
   alertDate: string | null;
   claimsAtAlert: number;
-  visionCorroborated: boolean;
 };
+/** The gate blocked action: no remedy, cost or savings, only why it held. */
+type BlockedFacts = CauseFactsBase & { unitsInField: number; failedCriteria: { criterion: string; detail: string }[] };
 
-function causeTemplate(f: CauseFacts): string {
-  const confounders = f.ruledOut.filter((r) => r.verdict?.includes('confounder'));
-  const flat = f.ruledOut.filter((r) => r.verdict?.startsWith('Ruled out. Failure rate is flat'));
-  const describe = (c: CauseFacts['causes'][number]) =>
+function ruledOutParagraph(ruledOut: CauseFactsBase['ruledOut'], cause: string, held: string) {
+  const confounders = ruledOut.filter((r) => r.verdict?.includes('confounder'));
+  const flat = ruledOut.filter((r) => r.verdict?.startsWith('Ruled out. No significant association'));
+  const other = ruledOut.filter((r) => !confounders.includes(r) && !flat.includes(r));
+  const names = (rs: typeof ruledOut) => rs.map((r) => r.title).join(', ');
+  const parts = [
+    flat.length ? `${names(flat)} showed no significant association.` : '',
+    confounders.length ? `${names(confounders)} looked guilty on raw numbers only because ${confounders.length === 1 ? 'it shares' : 'they share'} units with ${cause}; holding ${held} fixed, the effect is no longer significant.` : '',
+    other.length ? `${names(other)} did not hold up on ${other.length === 1 ? 'its' : 'their'} own once ${held} was accounted for.` : '',
+  ];
+  if (!confounders.length && !other.length) parts.push('No other suspect survived adjustment.');
+  return parts.filter(Boolean).join(' ');
+}
+
+function causeTemplate(f: ActionFacts): string {
+  const describe = (c: FactCause) =>
     `${c.cause} (${c.incidents} incidents, ${c.relativeRisk}x the baseline rate${c.lots.length ? `; ${c.lotCount === 1 ? c.lots[0] : `${c.lotCount} lots`}` : ''})`;
+  // A failure signature is claimed only when the data has symptoms to check it against.
+  const signature = !f.causes.some((c) => c.signature === 'n/a');
   return [
-    `Traceon traced ${f.incidentsSoFar} ${f.custom ? `failures in ${f.product}` : 'thermal incidents on the VR-48 pack'} to ${f.causes.length === 1 ? describe(f.causes[0]) : `${f.causes.length} independent causes: ${f.causes.map(describe).join('; and ')}`}. Together they account for ${f.coveragePct}% of all ${f.custom ? 'failures' : 'thermal claims'}.`,
-    `${flat.length ? `${flat.map((r) => r.title).join(', ')} showed no association at all. ` : ''}${confounders.length ? `${confounders.map((r) => r.title).join(', ')} looked guilty on raw numbers only because ${confounders.length === 1 ? 'it shares' : 'they share'} units with the real cause; holding the cause fixed, the effect vanishes.` : 'No other suspect survived adjustment.'}`,
-    `Each confirmed cause survives adjustment for every other factor, holds across ${f.custom ? `${f.subgroupFactors} subgroups` : 'firmware, carrier, climate and warehouse subgroups'}, and has a consistent failure signature${f.visionCorroborated ? ' that matches the photo evidence of connector scorching' : ''}.`,
+    `Traceon traced ${f.incidentsExplained} ${f.custom ? `failures in ${f.product}` : 'thermal incidents on the VR-48 pack'} to ${f.causes.length === 1 ? describe(f.causes[0]) : `${f.causes.length} independent causes: ${f.causes.map(describe).join('; and ')}`}. Together they account for ${f.shareOfIncidentsExplainedPct}% of all ${f.custom ? 'failures' : 'thermal claims'}.`,
+    ruledOutParagraph(f.ruledOut, 'the real cause', 'the cause'),
+    `Each confirmed cause survives adjustment for every other factor${signature ? ',' : ' and'} holds across ${f.custom ? `${f.subgroupFactors} subgroups` : 'firmware, carrier, climate and warehouse subgroups'}${signature ? `, and has a consistent failure signature${f.visionCorroborated ? ' that the live photo analysis also supports' : ''}` : ''}.`,
     `Recommended action: ${f.causes.map((c) => `${c.remedy.toLowerCase()} for ${c.units.toLocaleString('en-US')} units`).join(' plus ')}, instead of recalling ${f.blanketUnits.toLocaleString('en-US')}, saving ${usd(f.savingsUsd)}. Without action, a constant-hazard projection gives about ${f.projectedIncidents30d} more incidents in 30 days.${f.alertDate ? ` This was detectable on ${f.alertDate}, after ${f.claimsAtAlert} claims.` : ''}`,
   ].join('\n\n');
 }
 
-function noCauseTemplate(f: { product: string; custom: boolean; claims: number; units: number; suspectsTested: number; bestSuspect: string; blanketRecallCostAvoidedUsd: number }): string {
+/** The causes passed the statistics but the gate held: say what failed, recommend nothing, price nothing. */
+function blockedTemplate(f: BlockedFacts): string {
+  const one = f.causes.length === 1;
+  const describe = (c: FactCause) =>
+    `${c.cause} (${c.incidents} ${f.custom ? 'failures' : 'incidents'}, ${c.relativeRisk}x the baseline rate${c.lots.length ? `; ${c.lotCount === 1 ? c.lots[0] : `${c.lotCount} lots`}` : ''})`;
+  const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+  return [
+    `Traceon tested every recorded factor against ${f.totalIncidents.toLocaleString('en-US')} ${f.custom ? `failures in ${f.product}` : 'thermal incidents on the VR-48 pack'}. ${one ? `${describe(f.causes[0])} survives the statistical tests` : `${f.causes.length} suspects survive the statistical tests: ${f.causes.map(describe).join('; and ')}`}, and ${one ? 'it covers' : 'they cover'} ${f.incidentsExplained.toLocaleString('en-US')} of those ${f.custom ? 'failures' : 'incidents'} (${f.shareOfIncidentsExplainedPct}%).`,
+    ruledOutParagraph(f.ruledOut, one ? 'the leading suspect' : 'the leading suspects', one ? 'that suspect' : 'those suspects'),
+    `The evidence gate blocked action. Not met: ${f.failedCriteria.map((c) => lower(c.criterion)).join('; ')}.`,
+    `Recommendation: no quarantine or recall yet. Keep monitoring, look closer at ${one ? 'this suspect' : 'these suspects'}, and re-run as new ${f.custom ? 'failures' : 'claims'} arrive.`,
+  ].join('\n\n');
+}
+
+function noCauseTemplate(f: { product: string; custom: boolean; claims: number; units: number; suspectsTested: number; bestSuspect: string; suspectsAssociatedOnRawData: string[]; blanketRecallCostAvoidedUsd: number }): string {
+  // Suspects that stood out on raw data but did not hold up: structure, though not one factor's.
+  const leads = f.suspectsAssociatedOnRawData;
   return [
     f.custom
       ? `Traceon investigated ${f.claims} failures across ${f.units.toLocaleString('en-US')} units of ${f.product} and tested all ${f.suspectsTested} suspects.`
       : `Traceon investigated ${f.claims} thermal claims across ${f.units.toLocaleString('en-US')} VR-48 packs and tested all ${f.suspectsTested} suspects.`,
-    `None of them shows an association that survives multiple testing and adjustment for the others. The strongest was ${f.bestSuspect}. ${f.custom ? 'The failures show no structure the data can attribute to one factor' : 'The claims are spread evenly across firmware, carriers, plants, suppliers, batches and climates'}, which is what baseline failures look like.`,
-    `Recommendation: do not recall. The evidence gate blocks any action, which avoids a blanket recall that would cost ${usd(f.blanketRecallCostAvoidedUsd)} and fix nothing. Keep monitoring and re-run as new claims arrive.`,
+    leads.length
+      ? `${leads.length === 1 ? `One suspect looked associated on raw data (${leads[0]}), but it is not material on its own` : `${leads.length} suspects looked associated on raw data (${leads.join('; ')}), but none explains the failures on its own once the others are accounted for`}. The failures are not baseline noise, yet no single factor is a cause that action could target.`
+      : `None of them shows an association that survives multiple testing and adjustment for the others. The strongest was ${f.bestSuspect}. ${f.custom ? 'The failures show no structure the data can attribute to one factor' : 'The claims are spread evenly across firmware, carriers, plants, suppliers, batches and climates'}, which is what baseline failures look like.`,
+    `Recommendation: do not recall. The evidence gate blocks any action, which avoids a blanket recall that would cost ${usd(f.blanketRecallCostAvoidedUsd)}${leads.length ? '' : ' and fix nothing'}. Keep monitoring${leads.length ? `, look closer at ${leads.length === 1 ? 'that suspect' : 'these suspects'},` : ''} and re-run as new claims arrive.`,
   ].join('\n\n');
 }
 
+/**
+ * Meaning checks the number guard cannot make, since every figure here is real:
+ * the share of incidents explained stated as a share of units, every incident
+ * said to be explained when some are not, and, when the gate blocked action,
+ * an action (or, with causes, a cost) put forward anyway.
+ */
+export function explanationProblems(
+  text: string,
+  facts: { shareOfIncidentsExplainedPct?: unknown; incidentsExplained?: unknown; totalIncidents?: unknown },
+  mode: 'action' | 'blocked' | 'none'
+): string[] {
+  const problems: string[] = [];
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const { incidentsExplained: explained, totalIncidents: total } = facts;
+  if (typeof explained === 'number' && typeof total === 'number' && explained < total) {
+    for (const s of sentences)
+      if (/(?<!\b(?:of|nearly|almost)\s)\b(?:every|all)\s+(?:the\s+)?(?:[a-z-]+\s+)?(?:incident|claim|failure)s?\b/i.test(s) && !/\b(not|no|never|nor)\b/i.test(s))
+        problems.push(`it says every incident is explained, but ${explained} of ${total} are`);
+  }
+  const pct = facts.shareOfIncidentsExplainedPct;
+  if (typeof pct === 'number') {
+    const forms = [...new Set([String(pct), pct.toFixed(1), pct.toFixed(0)])].map((v) => v.replace('.', '\\.')).join('|');
+    const share = new RegExp(`(?<![\\d.])(?:${forms})\\s*(?:%|percent)`, 'i');
+    const ofUnits = new RegExp(`(?<![\\d.])(?:${forms})\\s*(?:%|percent)\\s+(?:of|across|among|in)\\s+(?:the\\s+|all\\s+|its\\s+|every\\s+)?(?:[\\d,.]+[\\s-]*)?(?:[a-z-]+\\s+){0,2}?(?:units?|packs?|population|fleet|devices?|drives?|products?|vehicles?|bikes?|chargers?)\\b`, 'i');
+    for (const s of sentences) {
+      if (!share.test(s)) continue;
+      const aboutUnits = /\b(population|fleet|units?|packs?|drives?|devices?)\b/i.test(s);
+      const aboutIncidents = /\b(incidents?|claims?|failures?|complaints?|returns?)\b/i.test(s);
+      if (ofUnits.test(s) || (aboutUnits && !aboutIncidents)) problems.push(`it states ${pct}% (a share of incidents) as a share of units`);
+    }
+  }
+  if (mode !== 'action') {
+    const action = /\b(quarantin\w*|recall\w*|roll[\s-]?back\w*|containment|reject\w*|stop[\s-]sale)\b/i;
+    const negated = /\b(no|not|never|nor|without|against|until|unless|before|cannot|can't|don't|blocked|blocks)\b/i;
+    for (const s of sentences) {
+      // With causes but a blocked gate, the facts hold no cost at all, so any dollar figure is put forward.
+      if (mode === 'blocked' && /\$\s?\d|\d\s?(USD|dollars)\b/i.test(s)) problems.push('it quotes a cost although the evidence gate blocked action');
+      else if (action.test(s) && !negated.test(s) && (/\b(recommend\w*|warrant\w*|should|must|advis\w*|propos\w*)\b/i.test(s) || /^\s*(quarantine|recall|roll back|reject)\b/i.test(s)))
+        problems.push('it recommends action although the evidence gate blocked it');
+    }
+  }
+  return [...new Set(problems)];
+}
+
 /** Writes the explanation, then checks every number in it against the evidence facts. */
-async function explain(facts: Record<string, unknown>, template: string, log: (t: string, tone?: 'warn') => void) {
+async function explain(facts: Record<string, unknown>, template: string, log: (t: string, tone?: 'warn') => void, mode: 'action' | 'blocked' | 'none') {
+  const task =
+    mode === 'blocked'
+      ? 'what the tests found, why the other suspects were ruled out, and why the evidence gate blocked action (name the failed criteria). The gate is blocked: do not recommend a quarantine, recall or any other action, and do not quote costs or savings; say what to examine next instead.'
+      : 'what happened, why the other suspects were ruled out, why the confirmed cause(s) are real (or why there is no actionable cause), and the recommended action with its cost impact.';
   const prompt = {
-    system: 'You are Traceon. Explain a product-safety root-cause finding to a VP of Quality. Use ONLY numbers that appear in the facts JSON. Do not round or invent figures. Respect each ruled-out suspect\'s "kind": never call a "no association" suspect a confounder.',
-    user: `Facts:\n${JSON.stringify(facts, null, 2)}\n\nWrite 3-4 short paragraphs (max 170 words total): what happened, why the other suspects were ruled out, why the confirmed cause(s) are real (or why there is no actionable cause), and the recommended action with its cost impact. Plain text, no markdown headings.`,
+    system:
+      'You are Traceon. Explain a product-safety root-cause finding to a VP of Quality. Use ONLY numbers that appear in the facts JSON. Do not round or invent figures. ' +
+      'Each figure keeps the meaning of its key: shareOfIncidentsExplainedPct is a share of incidents (claims), never of units, lots or the population; incidentsExplained counts the incidents in the cause groups and totalIncidents every incident recorded, so do not say every incident is explained unless the two are equal; ratePer10kInCauseUnits is the failure rate inside that cause\'s own units, not across the product. ' +
+      'Respect each ruled-out suspect\'s "kind": never call a "no significant association" suspect a confounder.',
+    user: `Facts:\n${JSON.stringify(facts, null, 2)}\n\nWrite 3-4 short paragraphs (max 170 words total): ${task} Plain text, no markdown headings.`,
   };
   let reply = await nemotronChat({
     ...prompt,
@@ -1267,9 +1516,22 @@ async function explain(facts: Record<string, unknown>, template: string, log: (t
   }
   const live = reply.live && reply.text.trim().length > 40;
   if (!live && reply.error !== NO_PROVIDER) log(`Model explanation unavailable (${reply.error ?? 'empty reply'}); using the template`, 'warn');
-  const text = live ? reply.text.trim() : template;
-  if (live && reply.fallbackFrom) log(`${reply.fallbackFrom}; ${reply.via} answered instead`, 'warn');
-  return { source: live ? ('nemotron' as const) : ('template' as const), ...(live ? { via: reply.via, fallbackFrom: reply.fallbackFrom } : {}), text, reasoning: reply.reasoning.slice(0, 4000), cached: reply.cached, guard: numberGuard(text, facts) };
+  // A real figure attached to the wrong quantity, or a blocked gate argued past, would pass
+  // the number guard; such a reply is not shown, and the template says it correctly.
+  const problems = live ? explanationProblems(reply.text, facts, mode) : [];
+  if (problems.length) log(`${reply.via ?? 'Model'} explanation not used: ${problems.join('; ')}; using the template`, 'warn');
+  const used = live && !problems.length;
+  const text = used ? reply.text.trim() : template;
+  if (used && reply.fallbackFrom) log(`${reply.fallbackFrom}; ${reply.via} answered instead`, 'warn');
+  return {
+    source: used ? ('nemotron' as const) : ('template' as const),
+    ...(used ? { via: reply.via, fallbackFrom: reply.fallbackFrom } : problems.length ? { fallbackFrom: `${reply.via ?? 'Model'} reply not used: ${problems.join('; ')}` } : {}),
+    text,
+    // A rejected or missing reply's reasoning does not belong under the template.
+    reasoning: used ? reply.reasoning.slice(0, 4000) : '',
+    ...(used && reply.cached ? { cached: true } : {}),
+    guard: numberGuard(text, facts),
+  };
 }
 
 /** Hallucination guard: every figure in the explanation must exist in the evidence. */

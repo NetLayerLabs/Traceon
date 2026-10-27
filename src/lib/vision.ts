@@ -28,8 +28,9 @@ const REFERENCE: VisionFinding = {
   suspectedComponent: 'Lithium-ion cell module / terminal connector',
   severityScore: 92,
   isManufacturingDefectLikely: true,
+  // Returned for any image when no model answers, so it says what it is: a description of the sample, not of this image.
   visualEvidenceSummary:
-    'Every cell is carbonised and the internal bus bars have melted, while the outer case is intact and burned from within: the fire started inside the pack, consistent with a cell-level fault propagating to its neighbours rather than external heat. The terminal connector block is charred.',
+    'Reference description of the bundled NTSB sample photo (JAL Boeing 787 APU battery, 2013); no model looked at this image. Every cell is carbonised and the internal bus bars have melted, while the outer case is intact and burned from within: the fire started inside the pack, consistent with a cell-level fault propagating to its neighbours rather than external heat. The terminal connector block is charred.',
   bbox: { x: 0.28, y: 0.11, w: 0.47, h: 0.47 },
 };
 
@@ -76,5 +77,14 @@ bbox is the damaged region as fractions of image width/height. If the image does
   if (!reply.live) return keep({ ...REFERENCE, reasoning: reply.error });
   const parsed = extractJson<Omit<VisionFinding, 'live' | 'model'>>(reply.text);
   if (!parsed?.physicalFailureMode) return keep({ ...REFERENCE, reasoning: `Model reply was not valid JSON: ${reply.text.slice(0, 200)}` });
-  return keep({ ...parsed, bbox: normalizeBbox(parsed.bbox), live: true, model: reply.via ?? reply.model, reasoning: reply.reasoning.slice(0, 1500) });
+  // Say when another provider answered and why (Nightshift has no vision route), and when the reply is a cache replay.
+  return keep({
+    ...parsed,
+    bbox: normalizeBbox(parsed.bbox),
+    live: true,
+    model: reply.via ?? reply.model,
+    reasoning: reply.reasoning.slice(0, 1500),
+    fallbackFrom: reply.fallbackFrom,
+    cached: reply.cached,
+  });
 }
