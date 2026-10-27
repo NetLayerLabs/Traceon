@@ -53,24 +53,55 @@ export function componentKey(c: string): string {
 }
 
 export async function fetchNhtsa(kind: 'complaints' | 'recalls', make: string, model: string, year: number, rawDir?: string): Promise<any[]> {
+  return (await lookupNhtsa(kind, make, model, year, rawDir)).rows;
+}
+
+/**
+ * One NHTSA lookup. `ok` is false when NHTSA did not answer (timeout, 429,
+ * 5xx), which is not the same as answering with nothing (400 or 404: no such
+ * vehicle or model year under that name). Only answers with rows are cached:
+ * an empty one may be a model year NHTSA adds later.
+ */
+async function lookupNhtsa(kind: 'complaints' | 'recalls', make: string, model: string, year: number, rawDir?: string, deadline = Infinity): Promise<{ rows: any[]; ok: boolean }> {
   const probeName = `${kind === 'complaints' ? 'c' : 'r'}-${make}-${model}-${year}.json`.replace(/ /g, '_');
-  if (rawDir && fs.existsSync(path.join(rawDir, probeName))) return JSON.parse(fs.readFileSync(path.join(rawDir, probeName), 'utf-8'));
+  if (rawDir && fs.existsSync(path.join(rawDir, probeName))) return { rows: JSON.parse(fs.readFileSync(path.join(rawDir, probeName), 'utf-8')), ok: true };
   const cached = path.join(cacheDir(), probeName);
-  if (fs.existsSync(cached)) return JSON.parse(fs.readFileSync(cached, 'utf-8'));
+  try {
+    const rows = JSON.parse(fs.readFileSync(cached, 'utf-8'));
+    if (Array.isArray(rows) && rows.length) return { rows, ok: true };
+  } catch {}
+  const left = deadline - Date.now();
+  if (left <= 0) return { rows: [], ok: false };
   const endpoint = kind === 'complaints' ? 'complaints/complaintsByVehicle' : 'recalls/recallsByVehicle';
   try {
-    const res = await fetch(`https://api.nhtsa.gov/${endpoint}?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${year}`, { signal: AbortSignal.timeout(30_000) });
-    // 400 means no such model year (cache the empty answer); 429 and 5xx are transient (do not).
-    if (!res.ok && res.status !== 400 && res.status !== 404) return [];
-    const rows = res.ok ? ((await res.json()).results ?? []) : [];
-    try {
-      fs.mkdirSync(cacheDir(), { recursive: true });
-      fs.writeFileSync(cached, JSON.stringify(rows));
-    } catch {}
-    return rows;
+    const res = await fetch(`https://api.nhtsa.gov/${endpoint}?make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}&modelYear=${year}`, { signal: AbortSignal.timeout(Math.min(30_000, left)) });
+    if (res.status === 400 || res.status === 404) return { rows: [], ok: true };
+    if (!res.ok) return { rows: [], ok: false };
+    const rows: any[] = (await res.json()).results ?? [];
+    if (rows.length) {
+      try {
+        fs.mkdirSync(cacheDir(), { recursive: true });
+        fs.writeFileSync(cached, JSON.stringify(rows));
+      } catch {}
+    }
+    return { rows, ok: true };
   } catch {
-    return [];
+    return { rows: [], ok: false };
   }
+}
+
+/** Run `fn` over `items`, at most `limit` at a time; results keep the order of `items`. */
+async function inPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
 }
 
 export interface TargetComplaint {
@@ -128,6 +159,10 @@ export interface Snapshot {
   comparators: ComparatorDay[];
   comparatorVehicles: string[];
   recalls: { campaign: string; date: string; component: string; summary: string; consequence: string }[];
+  /** Live runs: requested model years NHTSA has no complaints for under this name. */
+  missingYears?: number[];
+  /** Live runs: comparator model years missing from the pool ("FORD F-150 2021"). */
+  comparatorGaps?: string[];
 }
 
 export function loadSnapshot(id: string): Snapshot | null {
@@ -139,22 +174,44 @@ export function loadSnapshot(id: string): Snapshot | null {
   }
 }
 
+/** A live replay fetches four lookups at a time and stops asking after two minutes, well inside the request's limit. */
+const LIVE_BUDGET_MS = 120_000;
+
+/**
+ * Fetches the vehicle's complaints and recalls and the comparator pool. Throws
+ * if NHTSA did not answer for the vehicle itself; years and comparators NHTSA
+ * has nothing for are listed in the snapshot (and its source line), not hidden.
+ */
 export async function liveSnapshot(make: string, model: string, years: number[]): Promise<Snapshot> {
-  const complaints: any[] = [];
-  const recalls: any[] = [];
-  for (const y of years) {
-    complaints.push(...(await fetchNhtsa('complaints', make, model, y)));
-    recalls.push(...(await fetchNhtsa('recalls', make, model, y)));
-  }
-  const comp: any[] = [];
-  for (const [mk, md] of COMPARATORS) for (const y of years) if (!(mk === make && md === model)) comp.push(...(await fetchNhtsa('complaints', mk, md, y)));
+  if (process.env.TRACEON_OFFLINE === '1') throw new Error('live lookups are off in sample mode (TRACEON_OFFLINE=1); the bundled vehicles replay offline');
+  const deadline = Date.now() + LIVE_BUDGET_MS;
+  type Job = { kind: 'complaints' | 'recalls'; make: string; model: string; year: number; target: boolean };
+  const jobs: Job[] = [
+    ...years.flatMap((year): Job[] => [
+      { kind: 'complaints', make, model, year, target: true },
+      { kind: 'recalls', make, model, year, target: true },
+    ]),
+    ...COMPARATORS.filter(([mk, md]) => !(mk === make && md === model)).flatMap(([mk, md]) => years.map((year): Job => ({ kind: 'complaints', make: mk, model: md, year, target: false }))),
+  ];
+  const answers = await inPool(jobs, 4, (j) => lookupNhtsa(j.kind, j.make, j.model, j.year, undefined, deadline));
+  const unanswered = jobs.filter((j, i) => j.target && !answers[i].ok);
+  if (unanswered.length) throw new Error(`no answer from api.nhtsa.gov for ${make} ${model} (${unanswered.map((j) => `${j.year} ${j.kind}`).join(', ')}); try again in a minute`);
+  const rowsOf = (pick: (j: Job) => boolean) => jobs.flatMap((j, i) => (pick(j) ? answers[i].rows : []));
+  const complaints = rowsOf((j) => j.target && j.kind === 'complaints');
+  const recalls = rowsOf((j) => j.target && j.kind === 'recalls');
+  const comp = rowsOf((j) => !j.target);
+  const missingYears = years.filter((y) => !jobs.some((j, i) => j.target && j.kind === 'complaints' && j.year === y && answers[i].rows.length));
+  const comparatorGaps = jobs.flatMap((j, i) => (!j.target && !answers[i].rows.length ? [`${j.make} ${j.model} ${j.year}${answers[i].ok ? '' : ' (no answer)'}`] : []));
+  const gaps = [missingYears.length ? `no complaints under this name for ${missingYears.join(', ')}` : '', comparatorGaps.length ? `comparators missing: ${comparatorGaps.join(', ')}` : ''].filter(Boolean);
   const seen = new Set<string>();
   return {
     id: `live-${make}-${model}`.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
     vehicle: `${make} ${model}`,
-    years,
+    years: years.filter((y) => !missingYears.includes(y)),
+    missingYears,
+    comparatorGaps,
     fetchedAt: new Date().toISOString().slice(0, 10),
-    source: 'api.nhtsa.gov (live)',
+    source: `api.nhtsa.gov (live)${gaps.map((g) => `; ${g}`).join('')}`,
     complaints: compactTarget(complaints),
     comparators: compactComparators(comp),
     comparatorVehicles: COMPARATORS.map(([a, b]) => `${a} ${b}`),
@@ -193,6 +250,9 @@ export interface Backtest {
   fireRecalls: { campaign: string; date: string; component: string; key: string; summary: string }[];
   /** After each fire recall of the headline component: did the fix hold? */
   followUp?: RecallFollowUp[];
+  /** Live runs: what NHTSA had nothing for (see Snapshot). */
+  missingYears?: number[];
+  comparatorGaps?: string[];
 }
 
 /** Replay the complaint history day by day and find each component's first signal. */
@@ -280,6 +340,7 @@ export function analyze(s: Snapshot): Backtest {
     series: headline ? seriesByComp[headline.component] ?? [] : [],
     firesBeforeAlert,
     fireRecalls,
+    ...(s.missingYears ? { missingYears: s.missingYears, comparatorGaps: s.comparatorGaps } : {}),
   };
 }
 

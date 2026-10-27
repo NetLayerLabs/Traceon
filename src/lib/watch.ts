@@ -24,7 +24,8 @@ export interface WatchReplay {
   label: string;
   threshold: number; // -log10 of the Bonferroni alpha
   days: WatchDay[];
-  alert: { date: string; id: string; title: string; group: string; claims: number; caseId: string } | null;
+  /** `claims`: every claim filed so far; `failures`: those in the alerting group (the alert waits for WATCH_MIN_FAILURES of them). */
+  alert: { date: string; id: string; title: string; group: string; claims: number; failures: number; caseId: string } | null;
 }
 
 const cache = new Map<string, WatchReplay>();
@@ -93,7 +94,7 @@ export function watchReplay(scenarioId: string): WatchReplay {
     }
     days.push({ date, units: ui, claims: ci, newClaims, top });
     if (!alert && top && top.negLog10P >= threshold && top.failures >= WATCH_MIN_FAILURES) {
-      alert = { date, id: top.id, title: top.title, group: top.group, claims: ci, caseId: `${scenario.id}@${date}` };
+      alert = { date, id: top.id, title: top.title, group: top.group, claims: ci, failures: top.failures, caseId: `${scenario.id}@${date}` };
     }
   }
   const replay: WatchReplay = { scenarioId: scenario.id, label: scenario.hidden ? 'Hidden scenario' : scenario.label, threshold, days, alert };

@@ -187,6 +187,17 @@ export function resetMeterless() {
   hmems.clear();
 }
 
+/**
+ * Whether POST /api/reset may clear that memory. A production server is
+ * usually shared (the live demo is), so there reset is off unless
+ * TRACEON_ENABLE_RESET=1; `next dev` allows it. TRACEON_DISABLE_RESET=1
+ * turns it off everywhere.
+ */
+export function resetEnabled() {
+  if (process.env.TRACEON_DISABLE_RESET === '1') return false;
+  return process.env.NODE_ENV !== 'production' || process.env.TRACEON_ENABLE_RESET === '1';
+}
+
 // ---------- Markovian bounded investigation chain ----------
 export interface ChainStep {
   /** Runs one investigation step; returns display text plus the compact state to carry forward. */
